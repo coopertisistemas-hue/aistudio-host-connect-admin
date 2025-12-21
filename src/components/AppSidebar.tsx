@@ -29,6 +29,7 @@ import {
   ListOrdered, // Ícone para Como Funciona
   Wifi, // Ícone para Integrações
   Brush, // Ícone para Governança
+  Construction, // Ícone para Manutenção
 } from "lucide-react";
 import {
   Sidebar,
@@ -58,6 +59,7 @@ const menuGroups = [
       { title: "Partidas", url: "/departures", icon: LogOut },
       { title: "Quadro de Quartos", url: "/operation/rooms", icon: BedDouble },
       { title: "Governança", url: "/operation/housekeeping", icon: Brush },
+      { title: "Manutenção", url: "/operation/demands", icon: Construction },
       { title: "Reservas", url: "/bookings", icon: Calendar },
       { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe }, // NEW
       { title: "Tarefas", url: "/tasks", icon: ListTodo },

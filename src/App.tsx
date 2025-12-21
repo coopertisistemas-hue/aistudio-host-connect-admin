@@ -40,6 +40,8 @@ import ChannelManagerPage from "./pages/ChannelManagerPage";
 import RoomsBoardPage from "./pages/RoomsBoardPage";
 import RoomOperationDetailPage from "./pages/RoomOperationDetailPage";
 import HousekeepingPage from "./pages/HousekeepingPage";
+import DemandsPage from "./pages/DemandsPage";
+import DemandDetailPage from "./pages/DemandDetailPage";
 import ArrivalsPage from "./pages/ArrivalsPage";
 import DeparturesPage from "./pages/DeparturesPage";
 
@@ -114,6 +116,22 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <HousekeepingPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/operation/demands"
+                  element={
+                    <ProtectedRoute>
+                      <DemandsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/operation/demands/:id"
+                  element={
+                    <ProtectedRoute>
+                      <DemandDetailPage />
                     </ProtectedRoute>
                   }
                 />
