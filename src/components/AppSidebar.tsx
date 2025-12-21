@@ -33,6 +33,7 @@ import {
   Construction,
   CalendarClock,
   TrendingUp,
+  ChevronDown,
 } from "lucide-react";
 import {
   Sidebar,
@@ -47,6 +48,11 @@ import {
   SidebarFooter,
   useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
@@ -65,40 +71,39 @@ const AppSidebar = () => {
 
   const menuGroups = [
     {
-      label: "Operações Diárias",
+      label: "Operacional",
       icon: Briefcase,
       items: [
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
         { title: "Front Desk", url: "/front-desk", icon: Monitor },
-        { title: "Chegadas", url: "/arrivals", icon: LogIn },
-        { title: "Partidas", url: "/departures", icon: LogOut },
         { title: "Quadro de Quartos", url: "/operation/rooms", icon: BedDouble },
         { title: "Governança", url: "/operation/housekeeping", icon: Brush },
         { title: "Manutenção", url: "/operation/demands", icon: Construction },
-        { title: "Reservas", url: "/bookings", icon: Calendar },
-        { title: "Motor de Reservas", url: "/book", icon: Globe },
-        { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe },
         { title: "Tarefas", url: "/tasks", icon: ListTodo },
       ]
     },
     {
-      label: "Gestão de Equipes",
-      icon: Users,
-      items: [
-        { title: "Plantões (Shifts)", url: "/ops/shifts", icon: CalendarClock },
-        { title: "Meus Plantões", url: "/me/shifts", icon: Calendar },
-        { title: "Colaboradores", url: "/ops/staff", icon: Users },
-      ]
-    },
-    {
-      label: "Célula de Reservas",
+      label: "Vendas & Reservas",
       icon: TrendingUp,
       items: [
         { title: "Funil (Pipeline)", url: "/reservations/pipeline", icon: TrendingUp },
+        { title: "Reservas", url: "/bookings", icon: Calendar },
+        { title: "Chegadas", url: "/arrivals", icon: LogIn },
+        { title: "Partidas", url: "/departures", icon: LogOut },
+        { title: "Motor de Reservas", url: "/book", icon: Globe },
       ]
     },
     {
-      label: "Gestão de Propriedades",
+      label: "Marketing & Canais",
+      icon: Zap,
+      items: [
+        { title: "Overview", url: "/marketing/overview", icon: BarChart3 },
+        { title: "Conectores", url: "/marketing/connectors", icon: Globe },
+        { title: "Google Performance", url: "/marketing/google", icon: Monitor },
+      ]
+    },
+    {
+      label: "Configuração de Unidades",
       icon: Home,
       items: [
         { title: "Propriedades", url: "/properties", icon: Building2 },
@@ -106,10 +111,11 @@ const AppSidebar = () => {
         { title: "Quartos", url: "/rooms", icon: Bed },
         { title: "Comodidades", url: "/amenities", icon: ListChecks },
         { title: "Serviços", url: "/services", icon: ConciergeBell },
+        { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe },
       ]
     },
     {
-      label: "Financeiro & Hóspedes",
+      label: "Financeiro",
       icon: BarChart3,
       items: [
         { title: "Financeiro", url: "/financial", icon: DollarSign },
@@ -119,18 +125,20 @@ const AppSidebar = () => {
       ]
     },
     {
-      label: "Configurações",
+      label: "Gestão & Admin",
       icon: Settings,
       items: [
-        { title: "Minha Conta", url: "/settings", icon: User },
-        { title: "Configurações do Site", url: "/website-settings", icon: Globe },
+        { title: "Plantões (Shifts)", url: "/ops/shifts", icon: CalendarClock },
+        { title: "Meus Plantões", url: "/me/shifts", icon: Calendar },
+        { title: "Colaboradores", url: "/ops/staff", icon: Users },
+        { title: "Configurações", url: "/settings", icon: User },
+        { title: "Website", url: "/website-settings", icon: Globe },
         { title: "Painel Admin", url: "/admin-panel", icon: ShieldCheck, roles: ['admin'] },
-        { title: "Gerenciar Planos", url: "/admin/pricing-plans", icon: CreditCard, roles: ['admin'] },
-        { title: "Gerenciar Funcionalidades", url: "/admin/features", icon: Zap, roles: ['admin'] },
-        { title: "Gerenciar FAQ", url: "/admin/faqs", icon: HelpCircle, roles: ['admin'] },
-        { title: "Gerenciar Depoimentos", url: "/admin/testimonials", icon: Star, roles: ['admin'] },
-        { title: "Gerenciar Passos", url: "/admin/how-it-works", icon: ListOrdered, roles: ['admin'] },
-        { title: "Gerenciar Integrações", url: "/admin/integrations", icon: Wifi, roles: ['admin'] },
+        { title: "Planos", url: "/admin/pricing-plans", icon: CreditCard, roles: ['admin'] },
+        { title: "Funcionalidades", url: "/admin/features", icon: Zap, roles: ['admin'] },
+        { title: "FAQ", url: "/admin/faqs", icon: HelpCircle, roles: ['admin'] },
+        { title: "Depoimentos", url: "/admin/testimonials", icon: Star, roles: ['admin'] },
+        { title: "Integrações", url: "/admin/integrations", icon: Wifi, roles: ['admin'] },
       ]
     },
   ];
@@ -152,7 +160,6 @@ const AppSidebar = () => {
 
       <SidebarContent>
         {menuGroups.map((group, gIndex) => {
-          // Filter items by role if specified
           const filteredItems = group.items.filter(item =>
             !item.roles || (userRole && item.roles.includes(userRole))
           );
@@ -160,33 +167,52 @@ const AppSidebar = () => {
           if (filteredItems.length === 0) return null;
 
           const GroupIcon = group.icon;
+          const isSomeItemActive = filteredItems.some(item => isActive(item.url));
 
           return (
-            <SidebarGroup key={gIndex}>
-              {!isCollapsed && (
-                <SidebarGroupLabel className="flex items-center gap-2 px-2">
-                  <GroupIcon className="h-3.5 w-3.5 opacity-70" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider">{group.label}</span>
+            <Collapsible
+              key={gIndex}
+              asChild
+              defaultOpen={isSomeItemActive || gIndex === 0}
+              className="group/collapsible"
+            >
+              <SidebarGroup>
+                <SidebarGroupLabel asChild>
+                  <CollapsibleTrigger>
+                    <div className="flex w-full items-center gap-2">
+                      <GroupIcon className="h-3.5 w-3.5 opacity-70" />
+                      {!isCollapsed && (
+                        <>
+                          <span className="flex-1 text-[10px] font-bold uppercase tracking-wider text-left">
+                            {group.label}
+                          </span>
+                          <ChevronDown className="ml-auto h-3 w-3 transition-transform duration-200 group-data-[state=open]/collapsible:rotate-180" />
+                        </>
+                      )}
+                    </div>
+                  </CollapsibleTrigger>
                 </SidebarGroupLabel>
-              )}
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {filteredItems.map((item) => {
-                    const ItemIcon = item.icon;
-                    return (
-                      <SidebarMenuItem key={item.title}>
-                        <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={isCollapsed ? item.title : undefined}>
-                          <Link to={item.url} className="flex items-center gap-3">
-                            <ItemIcon className="h-4 w-4" />
-                            {!isCollapsed && <span className="text-sm font-medium">{item.title}</span>}
-                          </Link>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
+                <CollapsibleContent>
+                  <SidebarGroupContent>
+                    <SidebarMenu>
+                      {filteredItems.map((item) => {
+                        const ItemIcon = item.icon;
+                        return (
+                          <SidebarMenuItem key={item.title}>
+                            <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={isCollapsed ? item.title : undefined}>
+                              <Link to={item.url} className="flex items-center gap-3">
+                                <ItemIcon className="h-4 w-4" />
+                                {!isCollapsed && <span className="text-sm font-medium">{item.title}</span>}
+                              </Link>
+                            </SidebarMenuButton>
+                          </SidebarMenuItem>
+                        );
+                      })}
+                    </SidebarMenu>
+                  </SidebarGroupContent>
+                </CollapsibleContent>
+              </SidebarGroup>
+            </Collapsible>
           );
         })}
       </SidebarContent>
