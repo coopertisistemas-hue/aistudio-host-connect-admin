@@ -28,6 +28,7 @@ import {
   Star, // Ícone para Depoimentos
   ListOrdered, // Ícone para Como Funciona
   Wifi, // Ícone para Integrações
+  Brush, // Ícone para Governança
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,6 +57,7 @@ const menuGroups = [
       { title: "Chegadas", url: "/arrivals", icon: LogIn },
       { title: "Partidas", url: "/departures", icon: LogOut },
       { title: "Quadro de Quartos", url: "/operation/rooms", icon: BedDouble },
+      { title: "Governança", url: "/operation/housekeeping", icon: Brush },
       { title: "Reservas", url: "/bookings", icon: Calendar },
       { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe }, // NEW
       { title: "Tarefas", url: "/tasks", icon: ListTodo },

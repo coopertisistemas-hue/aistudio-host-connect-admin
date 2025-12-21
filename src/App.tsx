@@ -39,6 +39,7 @@ import AdminIntegrationsPage from "./pages/AdminIntegrationsPage";
 import ChannelManagerPage from "./pages/ChannelManagerPage";
 import RoomsBoardPage from "./pages/RoomsBoardPage";
 import RoomOperationDetailPage from "./pages/RoomOperationDetailPage";
+import HousekeepingPage from "./pages/HousekeepingPage";
 import ArrivalsPage from "./pages/ArrivalsPage";
 import DeparturesPage from "./pages/DeparturesPage";
 
@@ -105,6 +106,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <RoomOperationDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/operation/housekeeping"
+                  element={
+                    <ProtectedRoute>
+                      <HousekeepingPage />
                     </ProtectedRoute>
                   }
                 />
