@@ -63,7 +63,10 @@ const MarketingConnectors = () => {
         // Mock connection for Google
         connectProvider.mutate({
             provider: providerId,
-            config: { location_id: "L-123", account_name: "Mock Account" }
+            config: {
+                hotel_id: providerId === 'google' ? "L-123" : "OTA-999",
+                account_name: "Mock Account"
+            }
         });
     };
 
@@ -124,10 +127,10 @@ const MarketingConnectors = () => {
                                                         className="flex-1"
                                                         asChild
                                                     >
-                                                        <a href={`/marketing/${p.id}`}>
+                                                        <Link to={p.id === 'google' ? "/marketing/google" : `/marketing/ota/${p.id}`}>
                                                             <Settings2 className="mr-2 h-4 w-4" />
                                                             Configurar
-                                                        </a>
+                                                        </Link>
                                                     </Button>
                                                     <Button variant="ghost" size="icon" className="text-destructive">
                                                         <Lock className="h-4 w-4" />

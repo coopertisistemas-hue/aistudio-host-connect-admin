@@ -34,6 +34,7 @@ import {
   CalendarClock,
   TrendingUp,
   ChevronDown,
+  Hash,
 } from "lucide-react";
 import {
   Sidebar,
@@ -97,6 +98,7 @@ const AppSidebar = () => {
       label: "Marketing & Canais",
       icon: Zap,
       items: [
+        { title: "Inbox Unificada", url: "/marketing/inbox", icon: Hash },
         { title: "Overview", url: "/marketing/overview", icon: BarChart3 },
         { title: "Conectores", url: "/marketing/connectors", icon: Globe },
         { title: "Google Performance", url: "/marketing/google", icon: Monitor },

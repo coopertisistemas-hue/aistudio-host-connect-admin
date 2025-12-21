@@ -53,6 +53,8 @@ import LeadDetailPage from "./pages/LeadDetailPage";
 import MarketingOverview from "./pages/MarketingOverview";
 import MarketingConnectors from "./pages/MarketingConnectors";
 import GoogleMarketingDetails from "./pages/GoogleMarketingDetails";
+import OTAMarketingDetails from "./pages/OTAMarketingDetails";
+import SocialInbox from "./pages/SocialInbox";
 
 const queryClient = new QueryClient();
 
@@ -72,6 +74,12 @@ const App = () => (
                 <Route path="/book/:propertyId?" element={<BookingEnginePage />} />
                 <Route path="/booking-success" element={<BookingSuccessPage />} />
                 <Route path="/booking-cancel" element={<BookingCancelPage />} />
+                <Route path="/marketing/overview" element={<ProtectedRoute><MarketingOverview /></ProtectedRoute>} />
+                <Route path="/marketing/connectors" element={<ProtectedRoute><MarketingConnectors /></ProtectedRoute>} />
+                <Route path="/marketing/google" element={<ProtectedRoute><GoogleMarketingDetails /></ProtectedRoute>} />
+                <Route path="/marketing/ota/:provider" element={<ProtectedRoute><OTAMarketingDetails /></ProtectedRoute>} />
+                <Route path="/marketing/inbox" element={<ProtectedRoute><SocialInbox /></ProtectedRoute>} />
+                <Route path="/marketing/inbox/:id" element={<ProtectedRoute><SocialInbox /></ProtectedRoute>} />
                 <Route
                   path="/dashboard"
                   element={
