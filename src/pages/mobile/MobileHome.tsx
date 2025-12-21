@@ -1,104 +1,126 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import {
-    User,
-    LogOut,
-    Settings,
-    Shield,
+    Calendar,
+    Bed,
+    Brush,
+    Construction,
+    Utensils,
+    TrendingUp,
+    BarChart,
     Bell,
-    HelpCircle,
-    FileText
+    User,
+    CheckCircle2,
+    Clock,
+    LayoutDashboard,
+    CalendarCheck
 } from "lucide-react";
 import {
     MobileShell,
-    MobilePageHeader
+    MobileTopHeader
 } from "@/components/mobile/MobileShell";
 import {
-    CardContainer,
-    SectionTitleRow,
-    QuickAccessCard
+    KpiGrid,
+    KpiCard,
+    QuickAccessCard,
+    SectionTitleRow
 } from "@/components/mobile/MobileUI";
-import { useAuth } from "@/hooks/useAuth";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { useSelectedProperty } from "@/hooks/useSelectedProperty";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
-const MobileProfile: React.FC = () => {
-    const { user, userRole, userPlan, signOut } = useAuth();
+const MobileHome: React.FC = () => {
+    const navigate = useNavigate();
+    const { selectedPropertyId } = useSelectedProperty();
+
+    const menuItems = [
+        {
+            title: "Operação Agora",
+            subtitle: "Painel operacional do dia",
+            icon: LayoutDashboard,
+            iconColor: "text-blue-500",
+            path: "/m/ops-now",
+            badge: 3
+        },
+        {
+            title: "Quartos",
+            subtitle: "Status de ocupação e limpeza",
+            icon: Bed,
+            iconColor: "text-emerald-500",
+            path: "/m/rooms"
+        },
+        {
+            title: "Governança",
+            subtitle: "Tarefas de limpeza e vistorias",
+            icon: Brush,
+            iconColor: "text-purple-500",
+            path: "/m/housekeeping",
+            badge: "8"
+        },
+        {
+            title: "Manutenção",
+            subtitle: "Demandas e preventivas",
+            icon: Construction,
+            iconColor: "text-orange-500",
+            path: "/m/maintenance"
+        },
+        {
+            title: "Célula de Reservas",
+            subtitle: "Leads e pipeline de vendas",
+            icon: TrendingUp,
+            iconColor: "text-rose-500",
+            path: "/m/reservations",
+            badge: "NOVO"
+        },
+        {
+            title: "Resumo Executivo",
+            subtitle: "KPIs e faturamento hoje",
+            icon: BarChart,
+            iconColor: "text-blue-600",
+            path: "/m/summary"
+        }
+    ];
 
     return (
         <MobileShell>
-            <MobilePageHeader
-                title="Meu Perfil"
-                subtitle="Gerencie sua conta e preferências"
-            />
+            <MobileTopHeader />
 
-            <div className="px-5 pb-8">
-                <CardContainer className="p-6 flex flex-col items-center text-center gap-4 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border-none">
-                    <Avatar className="h-20 w-20 border-4 border-white shadow-md">
-                        <AvatarImage src={user?.user_metadata?.avatar_url} />
-                        <AvatarFallback className="bg-primary/10 text-primary font-bold text-xl uppercase">
-                            {user?.user_metadata?.full_name?.slice(0, 2).toUpperCase() || "UN"}
-                        </AvatarFallback>
-                    </Avatar>
+            <ScrollArea className="h-[calc(100vh-100px)]">
+                <div className="pb-8">
+                    <SectionTitleRow title="Visão Geral de Hoje" />
+                    <KpiGrid>
+                        <KpiCard label="Check-ins" value="12" icon={CalendarCheck} />
+                        <KpiCard label="Check-outs" value="08" icon={Clock} />
+                        <KpiCard label="Pendentes" value="04" icon={CheckCircle2} />
+                        <KpiCard label="Ocorrências" value="02" icon={Bell} />
+                    </KpiGrid>
 
-                    <div className="flex flex-col gap-1">
-                        <h2 className="text-xl font-bold text-[#1A1C1E]">{user?.user_metadata?.full_name || "Usuário"}</h2>
-                        <p className="text-sm text-neutral-500">{user?.email}</p>
+                    <SectionTitleRow title="Acesso Rápido" />
+                    <div className="px-5">
+                        {menuItems.map((item, idx) => (
+                            <QuickAccessCard
+                                key={idx}
+                                title={item.title}
+                                subtitle={item.subtitle}
+                                icon={item.icon}
+                                iconColor={item.iconColor}
+                                badge={item.badge}
+                                onClick={() => navigate(item.path)}
+                            />
+                        ))}
                     </div>
 
-                    <div className="flex gap-2">
-                        <Badge variant="outline" className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-primary/5 text-primary border-primary/20">
-                            {userRole}
-                        </Badge>
-                        <Badge variant="outline" className="px-3 py-1 text-[10px] font-bold uppercase tracking-wider bg-neutral-100 border-neutral-200">
-                            {userPlan}
-                        </Badge>
+                    <div className="mt-12 text-center px-8">
+                        <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">
+                            Host Connect v2.4.0 • Edição Mobile
+                        </p>
+                        <p className="text-[10px] text-neutral-300 mt-1 uppercase">
+                            Sistema Operacional de Hotelaria
+                        </p>
                     </div>
-                </CardContainer>
-
-                <SectionTitleRow title="Configurações" />
-                <QuickAccessCard
-                    title="Notificações"
-                    subtitle="Alertas de novas reservas e tarefas"
-                    icon={Bell}
-                    iconColor="text-blue-500"
-                    onClick={() => { }}
-                />
-                <QuickAccessCard
-                    title="Segurança"
-                    subtitle="Senhas e autenticação"
-                    icon={Shield}
-                    iconColor="text-indigo-500"
-                    onClick={() => { }}
-                />
-
-                <SectionTitleRow title="Suporte" />
-                <QuickAccessCard
-                    title="Ajuda & FAQ"
-                    subtitle="Tire suas dúvidas ou fale conosco"
-                    icon={HelpCircle}
-                    iconColor="text-emerald-500"
-                    onClick={() => { }}
-                />
-                <QuickAccessCard
-                    title="Termos de Uso"
-                    subtitle="Políticas e diretrizes"
-                    icon={FileText}
-                    iconColor="text-neutral-500"
-                    onClick={() => { }}
-                />
-
-                <div className="mt-8">
-                    <button
-                        onClick={signOut}
-                        className="w-full h-14 rounded-2xl bg-rose-50 text-rose-600 font-bold flex items-center justify-center gap-2 active:scale-[0.98] transition-all border border-rose-100"
-                    >
-                        <LogOut className="h-5 w-5" />
-                        Sair da Conta
-                    </button>
                 </div>
-            </div>
+            </ScrollArea>
         </MobileShell>
     );
 };
 
-export default MobileProfile;
+export default MobileHome;

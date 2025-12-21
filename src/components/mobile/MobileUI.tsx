@@ -1,6 +1,7 @@
 import React from "react";
 import { ChevronRight, LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 /**
  * CardContainer: Base wrapper for standard mobile cards

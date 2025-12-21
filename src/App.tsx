@@ -55,6 +55,8 @@ import MarketingConnectors from "./pages/MarketingConnectors";
 import GoogleMarketingDetails from "./pages/GoogleMarketingDetails";
 import OTAMarketingDetails from "./pages/OTAMarketingDetails";
 import SocialInbox from "./pages/SocialInbox";
+import MobileHome from "./pages/mobile/MobileHome";
+import MobileProfile from "./pages/mobile/MobileProfile";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +82,10 @@ const App = () => (
                 <Route path="/marketing/ota/:provider" element={<ProtectedRoute><OTAMarketingDetails /></ProtectedRoute>} />
                 <Route path="/marketing/inbox" element={<ProtectedRoute><SocialInbox /></ProtectedRoute>} />
                 <Route path="/marketing/inbox/:id" element={<ProtectedRoute><SocialInbox /></ProtectedRoute>} />
+
+                {/* Mobile Routes */}
+                <Route path="/m" element={<ProtectedRoute><MobileHome /></ProtectedRoute>} />
+                <Route path="/m/profile" element={<ProtectedRoute><MobileProfile /></ProtectedRoute>} />
                 <Route
                   path="/dashboard"
                   element={
