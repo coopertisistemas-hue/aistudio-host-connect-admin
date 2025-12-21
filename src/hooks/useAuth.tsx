@@ -50,12 +50,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.email);
+        console.log('[useAuth] Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
+          console.log('[useAuth] User detected, fetching profile...');
           await fetchUserProfile(session.user.id);
         } else {
+          console.log('[useAuth] No user session, clearing profile data');
           setUserRole(null);
           setUserPlan(null);
         }
@@ -63,16 +65,35 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       }
     );
 
+    console.log('[useAuth] Initializing session check...');
     supabase.auth.getSession().then(async ({ data: { session } }) => {
+      console.log('[useAuth] Initial session:', session?.user?.email || 'none');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
         await fetchUserProfile(session.user.id);
       }
       setLoading(false);
+    }).catch(err => {
+      console.error('[useAuth] getSession error:', err);
+      setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Safety timeout: If after 10 seconds we are still loading, force loading to false
+    const safetyTimeout = setTimeout(() => {
+      setLoading(currentLoading => {
+        if (currentLoading) {
+          console.error('[useAuth] SAFETY TIMEOUT: Loading took too long (>10s), forcing ready state.');
+          return false;
+        }
+        return currentLoading;
+      });
+    }, 10000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(safetyTimeout);
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -120,7 +141,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   const signUp = async (email: string, password: string, fullName: string, phone?: string | null) => { // Adicionado phone
     try {
       const redirectUrl = `${window.location.origin}/`;
-      
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -172,7 +193,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
-      
+
       toast({
         title: "Sessão encerrada",
         description: "Você foi desconectado com sucesso.",

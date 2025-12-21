@@ -6,6 +6,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SelectedPropertyProvider } from "@/hooks/useSelectedProperty"; // NEW IMPORT
 import ProtectedRoute from "@/components/ProtectedRoute";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import DebugOverlay from "@/components/DebugOverlay";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
@@ -35,215 +37,236 @@ import AdminTestimonialsPage from "./pages/AdminTestimonialsPage";
 import AdminHowItWorksPage from "./pages/AdminHowItWorksPage";
 import AdminIntegrationsPage from "./pages/AdminIntegrationsPage";
 import ChannelManagerPage from "./pages/ChannelManagerPage";
+import ArrivalsPage from "./pages/ArrivalsPage";
+import DeparturesPage from "./pages/DeparturesPage";
 
 const queryClient = new QueryClient();
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AuthProvider>
-          <SelectedPropertyProvider> {/* WRAP WITH PROPERTY PROVIDER */}
-            <Routes>
-              <Route path="/" element={<Landing />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/book/:propertyId?" element={<BookingEnginePage />} />
-              <Route path="/booking-success" element={<BookingSuccessPage />} />
-              <Route path="/booking-cancel" element={<BookingCancelPage />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/front-desk"
-                element={
-                  <ProtectedRoute>
-                    <FrontDeskPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/channel-manager"
-                element={
-                  <ProtectedRoute>
-                    <ChannelManagerPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/properties"
-                element={
-                  <ProtectedRoute>
-                    <Properties />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/room-types"
-                element={
-                  <ProtectedRoute>
-                    <RoomTypesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/amenities"
-                element={
-                  <ProtectedRoute>
-                    <AmenitiesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/rooms"
-                element={
-                  <ProtectedRoute>
-                    <RoomsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/pricing-rules"
-                element={
-                  <ProtectedRoute>
-                    <PricingRulesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/services"
-                element={
-                  <ProtectedRoute>
-                    <ServicesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/bookings"
-                element={
-                  <ProtectedRoute>
-                    <Bookings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/tasks"
-                element={
-                  <ProtectedRoute>
-                    <TasksPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/expenses"
-                element={
-                  <ProtectedRoute>
-                    <ExpensesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/financial"
-                element={
-                  <ProtectedRoute>
-                    <Financial />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/guests"
-                element={
-                  <ProtectedRoute>
-                    <Guests />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/settings"
-                element={
-                  <ProtectedRoute>
-                    <Settings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/website-settings"
-                element={
-                  <ProtectedRoute>
-                    <WebsiteSettingsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin-panel"
-                element={
-                  <ProtectedRoute>
-                    <AdminPanel />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/pricing-plans"
-                element={
-                  <ProtectedRoute>
-                    <AdminPricingPlansPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/features"
-                element={
-                  <ProtectedRoute>
-                    <AdminFeaturesPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/faqs"
-                element={
-                  <ProtectedRoute>
-                    <AdminFaqsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/testimonials"
-                element={
-                  <ProtectedRoute>
-                    <AdminTestimonialsPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/how-it-works"
-                element={
-                  <ProtectedRoute>
-                    <AdminHowItWorksPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin/integrations"
-                element={
-                  <ProtectedRoute>
-                    <AdminIntegrationsPage />
-                  </ProtectedRoute>
-                }
-              />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </SelectedPropertyProvider>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AuthProvider>
+            <SelectedPropertyProvider> {/* WRAP WITH PROPERTY PROVIDER */}
+              <DebugOverlay />
+              <Routes>
+                <Route path="/" element={<Landing />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/book/:propertyId?" element={<BookingEnginePage />} />
+                <Route path="/booking-success" element={<BookingSuccessPage />} />
+                <Route path="/booking-cancel" element={<BookingCancelPage />} />
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/front-desk"
+                  element={
+                    <ProtectedRoute>
+                      <FrontDeskPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/arrivals"
+                  element={
+                    <ProtectedRoute>
+                      <ArrivalsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/departures"
+                  element={
+                    <ProtectedRoute>
+                      <DeparturesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/channel-manager"
+                  element={
+                    <ProtectedRoute>
+                      <ChannelManagerPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/properties"
+                  element={
+                    <ProtectedRoute>
+                      <Properties />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-types"
+                  element={
+                    <ProtectedRoute>
+                      <RoomTypesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/amenities"
+                  element={
+                    <ProtectedRoute>
+                      <AmenitiesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/rooms"
+                  element={
+                    <ProtectedRoute>
+                      <RoomsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/pricing-rules"
+                  element={
+                    <ProtectedRoute>
+                      <PricingRulesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/services"
+                  element={
+                    <ProtectedRoute>
+                      <ServicesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/bookings"
+                  element={
+                    <ProtectedRoute>
+                      <Bookings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/tasks"
+                  element={
+                    <ProtectedRoute>
+                      <TasksPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/expenses"
+                  element={
+                    <ProtectedRoute>
+                      <ExpensesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/financial"
+                  element={
+                    <ProtectedRoute>
+                      <Financial />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/guests"
+                  element={
+                    <ProtectedRoute>
+                      <Guests />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings"
+                  element={
+                    <ProtectedRoute>
+                      <Settings />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/website-settings"
+                  element={
+                    <ProtectedRoute>
+                      <WebsiteSettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin-panel"
+                  element={
+                    <ProtectedRoute>
+                      <AdminPanel />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/pricing-plans"
+                  element={
+                    <ProtectedRoute>
+                      <AdminPricingPlansPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/features"
+                  element={
+                    <ProtectedRoute>
+                      <AdminFeaturesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/faqs"
+                  element={
+                    <ProtectedRoute>
+                      <AdminFaqsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/testimonials"
+                  element={
+                    <ProtectedRoute>
+                      <AdminTestimonialsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/how-it-works"
+                  element={
+                    <ProtectedRoute>
+                      <AdminHowItWorksPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/integrations"
+                  element={
+                    <ProtectedRoute>
+                      <AdminIntegrationsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </SelectedPropertyProvider>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </ErrorBoundary>
 );
 
 export default App;

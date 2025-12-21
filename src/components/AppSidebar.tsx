@@ -5,6 +5,7 @@ import {
   DollarSign,
   LayoutDashboard,
   LogOut,
+  LogIn,
   Settings,
   Users,
   BedDouble,
@@ -52,6 +53,8 @@ const menuGroups = [
     items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       { title: "Front Desk", url: "/front-desk", icon: Monitor },
+      { title: "Chegadas", url: "/arrivals", icon: LogIn },
+      { title: "Partidas", url: "/departures", icon: LogOut },
       { title: "Reservas", url: "/bookings", icon: Calendar },
       { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe }, // NEW
       { title: "Tarefas", url: "/tasks", icon: ListTodo },
@@ -131,7 +134,7 @@ function AppSidebar() {
           <SidebarGroupContent>
             {menuGroups.map((group, groupIndex) => {
               // Filter items based on user role
-              const visibleItems = group.items.filter(item => 
+              const visibleItems = group.items.filter(item =>
                 !item.roles || (userRole && item.roles.includes(userRole)) || (group.roles.includes(userRole || 'user'))
               );
 

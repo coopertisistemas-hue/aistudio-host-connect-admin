@@ -9,12 +9,12 @@ export const getStatusBadge = (status: BookingStatus) => {
     confirmed: { label: "Confirmada", variant: "default" as const, icon: CheckCircle2, color: "text-success" },
     pending: { label: "Pendente", variant: "secondary" as const, icon: Clock, color: "text-muted-foreground" },
     cancelled: { label: "Cancelada", variant: "destructive" as const, icon: XCircle, color: "text-destructive" },
-    completed: { label: "Concluída", variant: "outline" as const, icon: CheckCheck, color: "text-primary" },
+    completed: { label: "Concluída", variant: "outline" as const, icon: CheckCircle2, color: "text-primary" },
   };
 
   const config = statusConfig[status];
   if (!config) return null;
-  
+
   const Icon = config.icon;
 
   return (

@@ -61,25 +61,36 @@ export const useBookings = () => {
         .order('check_in', { ascending: false });
 
       if (error) throw error;
+      if (!data) return [];
 
-      const bookingsWithServiceDetails = await Promise.all(
-        data.map(async (booking) => {
-          if (booking.services_json && booking.services_json.length > 0) {
-            const { data: servicesData, error: servicesError } = await supabase
-              .from('services')
-              .select('id, name, price, is_per_person, is_per_day')
-              .in('id', booking.services_json);
+      // Collect all unique service IDs to fetch them in a single query (batch)
+      const allServiceIds = Array.from(new Set(data.flatMap(b => b.services_json || [])));
 
-            if (servicesError) {
-              console.error('Error fetching services for booking:', servicesError);
-              return { ...booking, service_details: [] };
-            }
-            return { ...booking, service_details: servicesData as Service[] };
-          }
-          return { ...booking, service_details: [] };
-        })
-      );
-      
+      let servicesMap: Record<string, Service> = {};
+
+      if (allServiceIds.length > 0) {
+        const { data: servicesData, error: servicesError } = await supabase
+          .from('services')
+          .select('id, name, price, is_per_person, is_per_day')
+          .in('id', allServiceIds);
+
+        if (servicesError) {
+          console.error('Error fetching services batch:', servicesError);
+        } else if (servicesData) {
+          servicesData.forEach(s => {
+            servicesMap[s.id] = s as Service;
+          });
+        }
+      }
+
+      // Map services back to each booking
+      const bookingsWithServiceDetails = data.map((booking) => ({
+        ...booking,
+        service_details: (booking.services_json || [])
+          .map(id => servicesMap[id])
+          .filter(Boolean) as Service[]
+      }));
+
       return bookingsWithServiceDetails as Booking[];
     },
   });
@@ -142,7 +153,7 @@ export const useBookings = () => {
   const updateBooking = useMutation({
     mutationFn: async ({ id, booking }: { id: string; booking: Partial<BookingInput & { current_room_id?: string | null }> }) => {
       const updateData: any = { ...booking };
-      
+
       if (booking.check_in) {
         updateData.check_in = booking.check_in.toISOString().split('T')[0];
       }
