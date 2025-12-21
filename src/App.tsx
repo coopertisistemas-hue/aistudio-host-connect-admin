@@ -42,6 +42,7 @@ import RoomOperationDetailPage from "./pages/RoomOperationDetailPage";
 import HousekeepingPage from "./pages/HousekeepingPage";
 import DemandsPage from "./pages/DemandsPage";
 import DemandDetailPage from "./pages/DemandDetailPage";
+import FolioPage from "./pages/FolioPage";
 import ArrivalsPage from "./pages/ArrivalsPage";
 import DeparturesPage from "./pages/DeparturesPage";
 
@@ -132,6 +133,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <DemandDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/operation/folio/:id"
+                  element={
+                    <ProtectedRoute>
+                      <FolioPage />
                     </ProtectedRoute>
                   }
                 />

@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,13 +21,14 @@ import { supabase } from "@/integrations/supabase/client"; // Import supabase
 const FrontDeskPage = () => {
   const { properties, isLoading: propertiesLoading } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
-  
-  const { 
-    allocatedRooms, 
-    isLoading: frontDeskLoading, 
-    checkIn, 
-    checkOutStart, 
-    finalizeCheckOut, 
+  const navigate = useNavigate();
+
+  const {
+    allocatedRooms,
+    isLoading: frontDeskLoading,
+    checkIn,
+    checkOutStart,
+    finalizeCheckOut,
     updateRoomStatus,
     propertyBookings,
   } = useFrontDesk(selectedPropertyId);
@@ -57,8 +59,17 @@ const FrontDeskPage = () => {
   };
 
   const handleCheckOut = async (bookingId: string, roomId: string) => {
+    const booking = propertyBookings.find(b => b.id === bookingId);
+    if (booking && booking.total_amount > 0) {
+      // For Sprint 1.6, we redirect to Folio for ALL checkouts that have financial value
+      // This ensures the receptionist reviews the granular folio items
+      navigate(`/operation/folio/${bookingId}`);
+      return;
+    }
+
     setIsProcessingPayment(true);
     try {
+      // Fallback for zero-amount or legacy
       const invoice = await checkOutStart(bookingId);
       const booking = propertyBookings.find(b => b.id === bookingId);
 
@@ -92,7 +103,7 @@ const FrontDeskPage = () => {
 
     const totalDue = booking.total_amount;
     const newPaidAmount = updatedInvoice.paid_amount || 0;
-    
+
     if (newPaidAmount >= totalDue) {
       // Finalize Check-out (Update Booking Status to 'completed' and Room Status to 'available')
       await finalizeCheckOut({ bookingId: booking.id, roomId });
