@@ -37,6 +37,8 @@ import AdminTestimonialsPage from "./pages/AdminTestimonialsPage";
 import AdminHowItWorksPage from "./pages/AdminHowItWorksPage";
 import AdminIntegrationsPage from "./pages/AdminIntegrationsPage";
 import ChannelManagerPage from "./pages/ChannelManagerPage";
+import RoomsBoardPage from "./pages/RoomsBoardPage";
+import RoomOperationDetailPage from "./pages/RoomOperationDetailPage";
 import ArrivalsPage from "./pages/ArrivalsPage";
 import DeparturesPage from "./pages/DeparturesPage";
 
@@ -87,6 +89,22 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <DeparturesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/operation/rooms"
+                  element={
+                    <ProtectedRoute>
+                      <RoomsBoardPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/operation/rooms/:id"
+                  element={
+                    <ProtectedRoute>
+                      <RoomOperationDetailPage />
                     </ProtectedRoute>
                   }
                 />

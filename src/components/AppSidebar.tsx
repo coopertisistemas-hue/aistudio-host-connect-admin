@@ -55,6 +55,7 @@ const menuGroups = [
       { title: "Front Desk", url: "/front-desk", icon: Monitor },
       { title: "Chegadas", url: "/arrivals", icon: LogIn },
       { title: "Partidas", url: "/departures", icon: LogOut },
+      { title: "Quadro de Quartos", url: "/operation/rooms", icon: BedDouble },
       { title: "Reservas", url: "/bookings", icon: Calendar },
       { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe }, // NEW
       { title: "Tarefas", url: "/tasks", icon: ListTodo },
