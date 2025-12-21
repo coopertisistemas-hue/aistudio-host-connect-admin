@@ -48,6 +48,8 @@ import DeparturesPage from "./pages/DeparturesPage";
 import ShiftPlannerPage from "./pages/ShiftPlannerPage";
 import MyShiftsPage from "./pages/MyShiftsPage";
 import StaffManagementPage from "./pages/StaffManagementPage";
+import PipelinePage from "./pages/PipelinePage";
+import LeadDetailPage from "./pages/LeadDetailPage";
 
 const queryClient = new QueryClient();
 
@@ -176,6 +178,22 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <StaffManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reservations/pipeline"
+                  element={
+                    <ProtectedRoute>
+                      <PipelinePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reservations/leads/:id"
+                  element={
+                    <ProtectedRoute>
+                      <LeadDetailPage />
                     </ProtectedRoute>
                   }
                 />

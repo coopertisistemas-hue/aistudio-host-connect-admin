@@ -31,6 +31,7 @@ import {
   Brush, // Ícone para Governança
   Construction, // Ícone para Manutenção
   CalendarClock,
+  TrendingUp,
 } from "lucide-react";
 import {
   Sidebar,
@@ -74,6 +75,8 @@ const menuGroups = [
       { title: "Plantões (Shifts)", url: "/ops/shifts", icon: CalendarClock },
       { title: "Meus Plantões", url: "/me/shifts", icon: Calendar },
       { title: "Colaboradores", url: "/ops/staff", icon: Users },
+      { type: "separator", label: "Célula de Reservas" },
+      { title: "Funil (Pipeline)", url: "/reservations/pipeline", icon: TrendingUp },
     ]
   },
   {
