@@ -6,6 +6,7 @@ import { Search } from "lucide-react";
 interface OperationPageTemplateProps {
     title: string;
     subtitle?: string;
+    headerIcon?: ReactNode;
     headerActions?: ReactNode;
     kpiSection?: ReactNode;
     searchPlaceholder?: string;
@@ -18,6 +19,7 @@ interface OperationPageTemplateProps {
 export const OperationPageTemplate = ({
     title,
     subtitle,
+    headerIcon,
     headerActions,
     kpiSection,
     searchPlaceholder = "Buscar...",
@@ -31,9 +33,12 @@ export const OperationPageTemplate = ({
             <div className="space-y-6 max-w-5xl mx-auto pb-10">
                 {/* Header */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between px-1">
-                    <div>
-                        <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-                        {subtitle && <p className="text-muted-foreground text-sm">{subtitle}</p>}
+                    <div className="flex items-center gap-3">
+                        {headerIcon && <div className="p-2 bg-primary/10 rounded-lg">{headerIcon}</div>}
+                        <div>
+                            <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
+                            {subtitle && <p className="text-muted-foreground text-sm">{subtitle}</p>}
+                        </div>
                     </div>
                     {headerActions && <div className="flex items-center gap-2">{headerActions}</div>}
                 </div>

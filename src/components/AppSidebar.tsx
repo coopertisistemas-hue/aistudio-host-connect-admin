@@ -30,6 +30,7 @@ import {
   Wifi, // Ícone para Integrações
   Brush, // Ícone para Governança
   Construction, // Ícone para Manutenção
+  CalendarClock,
 } from "lucide-react";
 import {
   Sidebar,
@@ -63,6 +64,16 @@ const menuGroups = [
       { title: "Reservas", url: "/bookings", icon: Calendar },
       { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe }, // NEW
       { title: "Tarefas", url: "/tasks", icon: ListTodo },
+    ]
+  },
+  {
+    label: "Gestão de Equipes",
+    icon: Users,
+    roles: ['user', 'admin'],
+    items: [
+      { title: "Plantões (Shifts)", url: "/ops/shifts", icon: CalendarClock },
+      { title: "Meus Plantões", url: "/me/shifts", icon: Calendar },
+      { title: "Colaboradores", url: "/ops/staff", icon: Users },
     ]
   },
   {

@@ -45,6 +45,9 @@ import DemandDetailPage from "./pages/DemandDetailPage";
 import FolioPage from "./pages/FolioPage";
 import ArrivalsPage from "./pages/ArrivalsPage";
 import DeparturesPage from "./pages/DeparturesPage";
+import ShiftPlannerPage from "./pages/ShiftPlannerPage";
+import MyShiftsPage from "./pages/MyShiftsPage";
+import StaffManagementPage from "./pages/StaffManagementPage";
 
 const queryClient = new QueryClient();
 
@@ -149,6 +152,30 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <ChannelManagerPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/ops/shifts"
+                  element={
+                    <ProtectedRoute>
+                      <ShiftPlannerPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/me/shifts"
+                  element={
+                    <ProtectedRoute>
+                      <MyShiftsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/ops/staff"
+                  element={
+                    <ProtectedRoute>
+                      <StaffManagementPage />
                     </ProtectedRoute>
                   }
                 />
