@@ -57,6 +57,8 @@ import OTAMarketingDetails from "./pages/OTAMarketingDetails";
 import SocialInbox from "./pages/SocialInbox";
 import MobileHome from "./pages/mobile/MobileHome";
 import MobileProfile from "./pages/mobile/MobileProfile";
+import HousekeepingList from "./pages/mobile/HousekeepingList";
+import HousekeepingDetail from "./pages/mobile/HousekeepingDetail";
 
 const queryClient = new QueryClient();
 
@@ -86,6 +88,8 @@ const App = () => (
                 {/* Mobile Routes */}
                 <Route path="/m" element={<ProtectedRoute><MobileHome /></ProtectedRoute>} />
                 <Route path="/m/profile" element={<ProtectedRoute><MobileProfile /></ProtectedRoute>} />
+                <Route path="/m/housekeeping" element={<ProtectedRoute><HousekeepingList /></ProtectedRoute>} />
+                <Route path="/m/housekeeping/task/:id" element={<ProtectedRoute><HousekeepingDetail /></ProtectedRoute>} />
                 <Route
                   path="/dashboard"
                   element={
