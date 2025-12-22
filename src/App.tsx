@@ -60,6 +60,9 @@ import MobileProfile from "./pages/mobile/MobileProfile";
 import HousekeepingList from "./pages/mobile/HousekeepingList";
 import HousekeepingDetail from "./pages/mobile/HousekeepingDetail";
 import MobileNotifications from "./pages/mobile/MobileNotifications";
+import LaundryList from "./pages/mobile/LaundryList";
+import PantryList from "./pages/mobile/PantryList";
+import MobileFinancial from "./pages/mobile/MobileFinancial";
 import { MobileRouteGuard } from "./components/mobile/MobileRouteGuard";
 
 const queryClient = new QueryClient();
@@ -93,6 +96,9 @@ const App = () => (
                 <Route path="/m/housekeeping" element={<ProtectedRoute><MobileRouteGuard><HousekeepingList /></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/housekeeping/task/:id" element={<ProtectedRoute><MobileRouteGuard><HousekeepingDetail /></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/notifications" element={<ProtectedRoute><MobileRouteGuard><MobileNotifications /></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/laundry" element={<ProtectedRoute><MobileRouteGuard><LaundryList /></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/pantry" element={<ProtectedRoute><MobileRouteGuard><PantryList /></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/financial" element={<ProtectedRoute><MobileRouteGuard><MobileFinancial /></MobileRouteGuard></ProtectedRoute>} />
                 <Route
                   path="/dashboard"
                   element={

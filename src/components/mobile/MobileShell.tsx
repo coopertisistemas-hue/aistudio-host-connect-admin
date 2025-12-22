@@ -1,4 +1,6 @@
 import React from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { ChevronLeft, LogOut, User, Bell, MapPin, BadgeCheck, RotateCw } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -7,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
 import { useProperties } from "@/hooks/useProperties";
+import { useNotifications } from "@/hooks/useNotifications";
 
 /**
  * MobileShell: The root layout for all mobile-only pages (/m/*)
@@ -33,17 +36,26 @@ export const MobileTopHeader: React.FC = () => {
     const { user, signOut } = useAuth();
     const { selectedPropertyId } = useSelectedProperty();
     const { properties } = useProperties();
+    const { unreadCount } = useNotifications();
+    const queryClient = useQueryClient();
     const navigate = useNavigate();
     const [isRefreshing, setIsRefreshing] = React.useState(false);
 
     const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
-    const handleRefresh = () => {
+    const handleRefresh = async () => {
         if (isRefreshing) return;
         setIsRefreshing(true);
-        setTimeout(() => {
-            window.location.reload();
-        }, 800);
+
+        try {
+            // Invalidate all queries to force a background refetch
+            await queryClient.invalidateQueries();
+            // Optional: short delay to ensure the spin animation is visible and feels "real"
+            await new Promise(resolve => setTimeout(resolve, 800));
+            toast.success("Dados atualizados");
+        } finally {
+            setIsRefreshing(false);
+        }
     };
 
     return (
@@ -63,7 +75,16 @@ export const MobileTopHeader: React.FC = () => {
                 </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
+                <button
+                    onClick={() => navigate("/m/notifications")}
+                    className="h-10 w-10 rounded-full flex items-center justify-center active:scale-95 transition-all text-neutral-400 relative"
+                >
+                    <Bell className="h-5 w-5" />
+                    {unreadCount > 0 && (
+                        <span className="absolute top-2 right-2 h-2.5 w-2.5 bg-rose-500 rounded-full border-2 border-white shadow-sm" />
+                    )}
+                </button>
                 <button
                     onClick={handleRefresh}
                     disabled={isRefreshing}
@@ -127,12 +148,12 @@ export const MobileFooter: React.FC = () => {
     const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
     return (
-        <footer className="mt-auto px-[var(--ui-spacing-page,20px)] py-8 pb-[calc(env(safe-area-inset-bottom,0px)+16px)] text-center">
-            <p className="text-[10px] font-medium text-[var(--ui-color-text-muted)] opacity-50 uppercase tracking-[0.2em] mb-1">
+        <footer className="mt-auto px-[var(--ui-spacing-page,20px)] py-12 pb-[calc(env(safe-area-inset-bottom,0px)+32px)] text-center opacity-40">
+            <p className="text-[9px] font-bold text-neutral-400 uppercase tracking-[0.25em] mb-2">
                 DESENVOLVIDO POR URUBICI CONNECT • v2.4.0
             </p>
-            <p className="text-[10px] font-bold text-[var(--ui-color-text-muted)] opacity-40 uppercase tracking-wide">
-                Operador: {selectedProperty?.name || "Host Connect"} {new Date().getFullYear()}
+            <p className="text-[9px] font-medium text-neutral-400 uppercase tracking-[0.15em]">
+                {selectedProperty?.name || "Host Connect"} © {new Date().getFullYear()}
             </p>
         </footer>
     );

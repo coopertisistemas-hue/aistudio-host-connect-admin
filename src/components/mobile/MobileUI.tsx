@@ -139,7 +139,7 @@ export const ListRow: React.FC<{
 );
 
 /**
- * QuickAccessCard: Large action card for main modules
+ * QuickAccessCard: Large individual card for main modules (Delivery Connect Pattern)
  */
 export const QuickAccessCard: React.FC<{
     title: string;
@@ -149,18 +149,21 @@ export const QuickAccessCard: React.FC<{
     onClick: () => void;
     badge?: string | number;
 }> = ({ title, subtitle, icon: Icon, iconColor = "text-primary", onClick, badge }) => (
-    <CardContainer className="px-5 py-4 mb-[var(--ui-spacing-card-gap,12px)] border-none flex items-center gap-4 active:scale-[0.98] transition-all cursor-pointer" noPadding>
-        <div onClick={onClick} className="flex flex-1 items-center gap-4 p-5">
-            <div className={cn("h-12 w-12 rounded-[var(--ui-radius-button)] flex items-center justify-center shrink-0 bg-[var(--ui-surface-neutral)]")}>
+    <CardContainer
+        className="shadow-[var(--ui-shadow-soft)] active:scale-[0.98] transition-all cursor-pointer border-[var(--ui-color-border)]/50"
+        noPadding
+    >
+        <div onClick={onClick} className="flex items-center gap-4 p-5">
+            <div className={cn("h-12 w-12 rounded-[var(--ui-radius-button)] flex items-center justify-center shrink-0 bg-[var(--ui-surface-neutral)]/80")}>
                 <Icon className={cn("h-6 w-6", iconColor)} />
             </div>
             <div className="flex-1 min-w-0">
-                <h3 className="text-[15px] font-bold text-[var(--ui-color-text-main)] mb-0.5">{title}</h3>
+                <h3 className="text-[15px] font-bold text-[var(--ui-color-text-main)] mb-0.5 leading-tight">{title}</h3>
                 <p className="text-[13px] text-[var(--ui-color-text-muted)] line-clamp-1">{subtitle}</p>
             </div>
             <div className="flex items-center gap-2">
                 {badge !== undefined && (
-                    <span className="px-2 py-0.5 rounded-full bg-primary/10 text-primary font-bold text-[10px]">
+                    <span className="px-2.5 py-1 rounded-full bg-primary/10 text-primary font-bold text-[10px]">
                         {badge}
                     </span>
                 )}
