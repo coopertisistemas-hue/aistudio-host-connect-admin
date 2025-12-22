@@ -13,7 +13,14 @@ import {
     CheckCircle2,
     Clock,
     LayoutDashboard,
-    CalendarCheck
+    CalendarCheck,
+    PlusCircle,
+    DollarSign,
+    Wallet,
+    BookOpen,
+    Store,
+    BarChart3,
+    Package
 } from "lucide-react";
 import {
     MobileShell,
@@ -22,8 +29,11 @@ import {
 import {
     KpiGrid,
     KpiCard,
-    QuickAccessCard,
-    SectionTitleRow
+    ListRow,
+    SectionTitleRow,
+    CardContainer,
+    HeroSection,
+    QuickAccessCard
 } from "@/components/mobile/MobileUI";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -34,91 +44,81 @@ const MobileHome: React.FC = () => {
 
     const menuItems = [
         {
-            title: "Operação Agora",
-            subtitle: "Painel operacional do dia",
-            icon: LayoutDashboard,
+            title: "Pedidos Agora",
+            subtitle: "Fila de produção em tempo real",
+            icon: Package,
             iconColor: "text-blue-500",
-            path: "/m/ops-now",
-            badge: 3
+            path: "/m/ops-now"
         },
         {
-            title: "Quartos",
-            subtitle: "Status de ocupação e limpeza",
-            icon: Bed,
+            title: "Novo Pedido",
+            subtitle: "Lançar pedido de balcão/mesa",
+            icon: PlusCircle,
             iconColor: "text-emerald-500",
-            path: "/m/rooms"
+            path: "/m/new-order"
         },
         {
-            title: "Governança",
-            subtitle: "Tarefas de limpeza e vistorias",
-            icon: Brush,
-            iconColor: "text-purple-500",
-            path: "/m/housekeeping",
-            badge: "8"
+            title: "Pagamentos",
+            subtitle: "Confirmar Pix e caixa",
+            icon: DollarSign,
+            iconColor: "text-amber-500",
+            path: "/m/payments"
         },
         {
-            title: "Manutenção",
-            subtitle: "Demandas e preventivas",
-            icon: Construction,
+            title: "Controle de Caixa",
+            subtitle: "Reforços, sangrias e saldo",
+            icon: Wallet,
+            iconColor: "text-teal-600",
+            path: "/m/cash-control"
+        },
+        {
+            title: "Cardápio",
+            subtitle: "Pausar/Ativar produtos",
+            icon: BookOpen,
             iconColor: "text-orange-500",
-            path: "/m/maintenance"
+            path: "/m/menu"
         },
         {
-            title: "Célula de Reservas",
-            subtitle: "Leads e pipeline de vendas",
-            icon: TrendingUp,
-            iconColor: "text-rose-500",
-            path: "/m/reservations",
-            badge: "NOVO"
+            title: "Status Loja",
+            subtitle: "Abrir ou fechar operação",
+            icon: Store,
+            iconColor: "text-purple-500",
+            path: "/m/status"
         },
         {
-            title: "Resumo Executivo",
-            subtitle: "KPIs e faturamento hoje",
-            icon: BarChart,
-            iconColor: "text-blue-600",
+            title: "Resumo",
+            subtitle: "Métricas do dia até agora",
+            icon: BarChart3,
+            iconColor: "text-slate-500",
             path: "/m/summary"
         }
     ];
 
     return (
-        <MobileShell>
-            <MobileTopHeader />
+        <MobileShell header={<MobileTopHeader />}>
+            <div className="px-[var(--ui-spacing-page,20px)] pb-8">
+                <HeroSection />
 
-            <ScrollArea className="h-[calc(100vh-100px)]">
-                <div className="pb-8">
-                    <SectionTitleRow title="Visão Geral de Hoje" />
-                    <KpiGrid>
-                        <KpiCard label="Check-ins" value="12" icon={CalendarCheck} />
-                        <KpiCard label="Check-outs" value="08" icon={Clock} />
-                        <KpiCard label="Pendentes" value="04" icon={CheckCircle2} />
-                        <KpiCard label="Ocorrências" value="02" icon={Bell} />
-                    </KpiGrid>
+                <KpiGrid>
+                    <KpiCard label="Pedidos Hoje" value="0" unit="vol" />
+                    <KpiCard label="Faturamento" value="0" unit="R$" />
+                </KpiGrid>
 
-                    <SectionTitleRow title="Acesso Rápido" />
-                    <div className="px-5">
-                        {menuItems.map((item, idx) => (
-                            <QuickAccessCard
-                                key={idx}
-                                title={item.title}
-                                subtitle={item.subtitle}
-                                icon={item.icon}
-                                iconColor={item.iconColor}
-                                badge={item.badge}
-                                onClick={() => navigate(item.path)}
-                            />
-                        ))}
-                    </div>
+                <SectionTitleRow title="Acesso Rápido" />
 
-                    <div className="mt-12 text-center px-8">
-                        <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-widest">
-                            Host Connect v2.4.0 • Edição Mobile
-                        </p>
-                        <p className="text-[10px] text-neutral-300 mt-1 uppercase">
-                            Sistema Operacional de Hotelaria
-                        </p>
-                    </div>
+                <div className="space-y-3">
+                    {menuItems.map((item, idx) => (
+                        <QuickAccessCard
+                            key={idx}
+                            title={item.title}
+                            subtitle={item.subtitle}
+                            icon={item.icon}
+                            iconColor={item.iconColor}
+                            onClick={() => navigate(item.path)}
+                        />
+                    ))}
                 </div>
-            </ScrollArea>
+            </div>
         </MobileShell>
     );
 };

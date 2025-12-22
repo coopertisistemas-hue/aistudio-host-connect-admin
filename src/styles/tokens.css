@@ -1,0 +1,30 @@
+/* Host Connect — UI.1 Premium Tokens */
+
+:root {
+    /* Surfaces & Backgrounds */
+    --ui-surface-bg: #F8FAF9;
+    --ui-surface-card: #FFFFFF;
+    --ui-surface-neutral: #F1F3F2;
+
+    /* Radius Scale */
+    --ui-radius-card: 22px;
+    --ui-radius-button: 16px;
+    --ui-radius-input: 12px;
+    --ui-radius-badge: 100px;
+
+    /* Elevation & Shadows */
+    --ui-shadow-soft: 0 4px 12px rgba(0, 0, 0, 0.03);
+    --ui-shadow-medium: 0 8px 24px rgba(0, 0, 0, 0.05);
+
+    /* Contextual Colors (Sync with index.css HSL but keep hex for reference or utility) */
+    --ui-color-primary: hsl(186, 100%, 18%);
+    --ui-color-accent: hsl(90, 60%, 51%);
+    --ui-color-text-main: #1A1C1E;
+    --ui-color-text-muted: #71717A;
+    --ui-color-border: #E4E4E7;
+
+    /* Spacing System (Standardized gaps) */
+    --ui-spacing-page: 20px;
+    --ui-spacing-section: 20px;
+    --ui-spacing-card-gap: 12px;
+}

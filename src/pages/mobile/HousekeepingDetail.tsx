@@ -51,8 +51,7 @@ const HousekeepingDetail: React.FC = () => {
 
     if (!task) {
         return (
-            <MobileShell>
-                <MobilePageHeader title="Tarefa não encontrada" />
+            <MobileShell header={<MobilePageHeader title="Tarefa não encontrada" />}>
                 <div className="p-10 text-center">
                     <p className="text-neutral-500">Essa tarefa pode ter sido removida ou você não tem acesso.</p>
                 </div>
@@ -98,12 +97,14 @@ const HousekeepingDetail: React.FC = () => {
     };
 
     return (
-        <MobileShell>
-            <MobilePageHeader
-                title={`Quarto ${task.room?.room_number}`}
-                subtitle={task.room?.name}
-            />
-
+        <MobileShell
+            header={
+                <MobilePageHeader
+                    title={`Quarto ${task.room?.room_number}`}
+                    subtitle={task.room?.name}
+                />
+            }
+        >
             <div className="px-5 pb-32">
                 {/* Reservation Info Card */}
                 <SectionTitleRow title="Reserva & Hóspede" />

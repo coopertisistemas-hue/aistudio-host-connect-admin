@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "./styles/tokens.css";
+
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
 */
@@ -17,9 +19,11 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 15% 12%;
 
-    --primary: 186 100% 18%; /* Dark Teal from logo */
+    --primary: 186 100% 18%;
+    /* Dark Teal from logo */
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 186 100% 30%; /* Adjusted glow for new primary */
+    --primary-glow: 186 100% 30%;
+    /* Adjusted glow for new primary */
 
     --secondary: 220 14% 96%;
     --secondary-foreground: 220 15% 12%;
@@ -27,9 +31,11 @@ All colors MUST be HSL.
     --muted: 220 14% 95%;
     --muted-foreground: 220 9% 46%;
 
-    --accent: 90 60% 51%; /* Bright Green from logo */
+    --accent: 90 60% 51%;
+    /* Bright Green from logo */
     --accent-foreground: 0 0% 100%;
-    --accent-glow: 90 60% 65%; /* Adjusted glow for new accent */
+    --accent-glow: 90 60% 65%;
+    /* Adjusted glow for new accent */
 
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
@@ -39,20 +45,24 @@ All colors MUST be HSL.
 
     --border: 220 13% 91%;
     --input: 220 13% 91%;
-    --ring: 186 100% 18%; /* Using new primary for ring */
+    --ring: 186 100% 18%;
+    /* Using new primary for ring */
 
     --radius: 0.75rem;
 
     --sidebar-background: 220 18% 20%;
     --sidebar-foreground: 220 14% 95%;
-    --sidebar-primary: 186 100% 18%; /* Dark Teal from logo */
+    --sidebar-primary: 186 100% 18%;
+    /* Dark Teal from logo */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 18% 25%;
     --sidebar-accent-foreground: 220 14% 95%;
     --sidebar-border: 220 18% 25%;
-    --sidebar-ring: 186 100% 18%; /* Using new primary for ring */
+    --sidebar-ring: 186 100% 18%;
+    /* Using new primary for ring */
 
-    --gradient-hero: linear-gradient(135deg, hsl(186 100% 18%) 0%, hsl(90 60% 51%) 100%); /* Updated gradient */
+    --gradient-hero: linear-gradient(135deg, hsl(186 100% 18%) 0%, hsl(90 60% 51%) 100%);
+    /* Updated gradient */
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(220 17% 99%) 100%);
     --shadow-soft: 0 2px 8px -2px hsl(220 15% 12% / 0.08);
     --shadow-medium: 0 8px 24px -6px hsl(220 15% 12% / 0.12);
@@ -60,10 +70,14 @@ All colors MUST be HSL.
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
     /* Chart colors for Financial page */
-    --chart-1: 186 100% 18%; /* primary */
-    --chart-2: 90 60% 51%;  /* accent */
-    --chart-3: 142 76% 36%; /* success */
-    --chart-4: 0 84% 60%;   /* destructive */
+    --chart-1: 186 100% 18%;
+    /* primary */
+    --chart-2: 90 60% 51%;
+    /* accent */
+    --chart-3: 142 76% 36%;
+    /* success */
+    --chart-4: 0 84% 60%;
+    /* destructive */
   }
 
   .dark {
@@ -76,7 +90,8 @@ All colors MUST be HSL.
     --popover: 220 18% 12%;
     --popover-foreground: 220 14% 95%;
 
-    --primary: 186 100% 18%; /* Dark Teal from logo */
+    --primary: 186 100% 18%;
+    /* Dark Teal from logo */
     --primary-foreground: 0 0% 100%;
     --primary-glow: 186 100% 30%;
 
@@ -86,7 +101,8 @@ All colors MUST be HSL.
     --muted: 220 18% 16%;
     --muted-foreground: 220 9% 60%;
 
-    --accent: 90 60% 51%; /* Bright Green from logo */
+    --accent: 90 60% 51%;
+    /* Bright Green from logo */
     --accent-foreground: 0 0% 100%;
     --accent-glow: 90 60% 65%;
 
@@ -98,28 +114,36 @@ All colors MUST be HSL.
 
     --border: 220 18% 20%;
     --input: 220 18% 20%;
-    --ring: 186 100% 18%; /* Using new primary for ring */
+    --ring: 186 100% 18%;
+    /* Using new primary for ring */
 
     --sidebar-background: 220 18% 10%;
     --sidebar-foreground: 220 14% 95%;
-    --sidebar-primary: 186 100% 18%; /* Dark Teal from logo */
+    --sidebar-primary: 186 100% 18%;
+    /* Dark Teal from logo */
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 220 18% 18%;
     --sidebar-accent-foreground: 220 14% 95%;
     --sidebar-border: 220 18% 18%;
-    --sidebar-ring: 186 100% 18%; /* Using new primary for ring */
+    --sidebar-ring: 186 100% 18%;
+    /* Using new primary for ring */
 
-    --gradient-hero: linear-gradient(135deg, hsl(186 100% 18%) 0%, hsl(90 60% 51%) 100%); /* Updated gradient */
+    --gradient-hero: linear-gradient(135deg, hsl(186 100% 18%) 0%, hsl(90 60% 51%) 100%);
+    /* Updated gradient */
     --gradient-card: linear-gradient(180deg, hsl(220 18% 12%) 0%, hsl(220 18% 14%) 100%);
     --shadow-soft: 0 2px 8px -2px hsl(0 0% 0% / 0.3);
     --shadow-medium: 0 8px 24px -6px hsl(0 0% 0% / 0.4);
     --shadow-large: 0 16px 48px -12px hsl(0 0% 0% / 0.5);
 
     /* Chart colors for Financial page */
-    --chart-1: 186 100% 18%; /* primary */
-    --chart-2: 90 60% 51%;  /* accent */
-    --chart-3: 142 76% 36%; /* success */
-    --chart-4: 0 84% 60%;   /* destructive */
+    --chart-1: 186 100% 18%;
+    /* primary */
+    --chart-2: 90 60% 51%;
+    /* accent */
+    --chart-3: 142 76% 36%;
+    /* success */
+    --chart-4: 0 84% 60%;
+    /* destructive */
   }
 }
 
@@ -136,7 +160,19 @@ All colors MUST be HSL.
   .rdp-day_booked {
     @apply bg-primary text-primary-foreground rounded-md;
   }
+
   .rdp-day_booked:hover {
     @apply bg-primary/90;
+  }
+}
+
+@layer utilities {
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
   }
 }

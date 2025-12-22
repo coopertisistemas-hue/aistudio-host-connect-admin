@@ -91,45 +91,49 @@ const HousekeepingList: React.FC = () => {
     };
 
     return (
-        <MobileShell>
-            <MobilePageHeader
-                title="Governança"
-                subtitle="Minhas tarefas do turno"
-                rightAction={
-                    <Button variant="ghost" size="icon" className="bg-white shadow-sm border border-neutral-100 rounded-xl">
-                        <Filter className="h-4 w-4 text-neutral-500" />
-                    </Button>
-                }
-            />
+        <MobileShell
+            header={
+                <>
+                    <MobilePageHeader
+                        title="Governança"
+                        subtitle="Minhas tarefas do turno"
+                        rightAction={
+                            <Button variant="ghost" size="icon" className="bg-white shadow-sm border border-neutral-100 rounded-xl">
+                                <Filter className="h-4 w-4 text-neutral-500" />
+                            </Button>
+                        }
+                    />
 
-            {/* Horizontal Filter Chips */}
-            <div className="flex gap-2 px-5 overflow-x-auto pb-4 no-scrollbar">
-                <FilterChip
-                    label="Todos"
-                    active={activeFilter === "all"}
-                    onClick={() => setActiveFilter("all")}
-                    count={tasks.length}
-                />
-                <FilterChip
-                    label="Pendentes"
-                    active={activeFilter === "pending"}
-                    onClick={() => setActiveFilter("pending")}
-                    count={tasks.filter(t => t.status === 'pending').length}
-                />
-                <FilterChip
-                    label="Em Limpeza"
-                    active={activeFilter === "cleaning"}
-                    onClick={() => setActiveFilter("cleaning")}
-                    count={tasks.filter(t => t.status === 'cleaning').length}
-                />
-                <FilterChip
-                    label="Liberados"
-                    active={activeFilter === "completed"}
-                    onClick={() => setActiveFilter("completed")}
-                />
-            </div>
-
-            <ScrollArea className="h-[calc(100vh-220px)] px-5 pb-10">
+                    {/* Horizontal Filter Chips */}
+                    <div className="flex gap-2 px-[var(--ui-spacing-page,20px)] overflow-x-auto pb-4 hide-scrollbar">
+                        <FilterChip
+                            label="Todos"
+                            active={activeFilter === "all"}
+                            onClick={() => setActiveFilter("all")}
+                            count={tasks.length}
+                        />
+                        <FilterChip
+                            label="Pendentes"
+                            active={activeFilter === "pending"}
+                            onClick={() => setActiveFilter("pending")}
+                            count={tasks.filter(t => t.status === 'pending').length}
+                        />
+                        <FilterChip
+                            label="Em Limpeza"
+                            active={activeFilter === "cleaning"}
+                            onClick={() => setActiveFilter("cleaning")}
+                            count={tasks.filter(t => t.status === 'cleaning').length}
+                        />
+                        <FilterChip
+                            label="Liberados"
+                            active={activeFilter === "completed"}
+                            onClick={() => setActiveFilter("completed")}
+                        />
+                    </div>
+                </>
+            }
+        >
+            <div className="px-[var(--ui-spacing-page,20px)] pb-10">
                 <div className="space-y-3">
                     {isLoading ? (
                         Array(4).fill(0).map((_, i) => (
@@ -191,7 +195,7 @@ const HousekeepingList: React.FC = () => {
                         </div>
                     )}
                 </div>
-            </ScrollArea>
+            </div>
         </MobileShell>
     );
 };
