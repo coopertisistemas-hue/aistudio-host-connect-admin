@@ -21,12 +21,20 @@ export const useOperationalIdentity = (propertyId: string | null) => {
     const selectedProperty = properties.find(p => p.id === propertyId);
     const userFullName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Colaborador";
 
-    // Rule: "Urubici Park Hotel" -> "Urubici Park" (Taking first two words or first word)
-    // Simple heuristic: Take first two words for property if available
-    const propertyWords = (selectedProperty?.name || "Host Connect").split(' ');
-    const fallbackClientName = propertyWords.length > 1 && propertyWords[1].length > 2
-        ? `${propertyWords[0]} ${propertyWords[1]}`
-        : propertyWords[0];
+    // Rule: "Urubici Park Hotel" -> "Urubici Park", "Casa do Vinho" -> "Casa do Vinho"
+    const propertyWords = (selectedProperty?.name || "Operações").split(' ');
+    let fallbackClientName = propertyWords[0];
+
+    if (propertyWords.length > 1) {
+        const p2 = propertyWords[1].toLowerCase();
+        const prepositions = ['de', 'do', 'da', 'di', 'dos', 'das'];
+
+        if (prepositions.includes(p2) && propertyWords.length > 2) {
+            fallbackClientName = `${propertyWords[0]} ${propertyWords[1]} ${propertyWords[2]}`;
+        } else if (propertyWords[1].length > 2) {
+            fallbackClientName = `${propertyWords[0]} ${propertyWords[1]}`;
+        }
+    }
 
     // Rule: "Alexandre S.", "Maria L."
     const nameParts = userFullName.split(' ');

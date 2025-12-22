@@ -26,34 +26,99 @@ export const SessionLockManager: React.FC<SessionLockManagerProps> = ({ children
 
     const handleUnlock = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!password || !user?.email) return;
+        console.log("[SessionLock] Unlocking sequence started");
+
+        // Safety check: if user session is lost in background, force re-login
+        if (!user || !user.email) {
+            console.warn("[SessionLock] No user/email found, forcing signout");
+            toast.error("Sessão expirada. Faça login novamente.");
+            handleSignOut(); // Use the robust sign out
+            return;
+        }
+
+        if (!password) {
+            console.log("[SessionLock] Password empty");
+            return;
+        }
 
         setIsAuthenticating(true);
         setError(null);
 
         try {
-            const { error: authError } = await supabase.auth.signInWithPassword({
-                email: user.email,
-                password: password,
+            console.log("[SessionLock] Attempting auth for:", user.email);
+
+            // Create a timeout promise
+            const timeoutPromise = new Promise<{ timeout: true }>((resolve) => {
+                setTimeout(() => resolve({ timeout: true }), 20000); // 20s timeout
             });
 
+            // Race between auth and timeout
+            const result = await Promise.race([
+                supabase.auth.signInWithPassword({
+                    email: user.email,
+                    password: password,
+                }),
+                timeoutPromise
+            ]);
+
+            console.log("[SessionLock] Auth result:", result);
+
+            // Handle Timeout
+            if ('timeout' in result) {
+                throw new Error("TIMEOUT");
+            }
+
+            const { error: authError } = result;
+
             if (authError) {
-                setError("Senha incorreta");
-                toast.error("Senha incorreta. Tente novamente.");
+                console.error("[SessionLock] Auth error:", authError);
+                if (authError.message.includes("Invalid login")) {
+                    setError("Senha incorreta");
+                    toast.error("Senha incorreta.");
+                } else if (authError.message.includes("network")) {
+                    setError("Erro de conexão");
+                    toast.error("Sem conexão com a internet.");
+                } else {
+                    setError("Erro ao validar: " + authError.message);
+                    toast.error("Não foi possível validar sua senha.");
+                }
             } else {
+                console.log("[SessionLock] Success! Unlocking...");
                 setPassword("");
                 unlock();
-                toast.success("Bem-vindo de volta!");
+                toast.success("Sessão retomada");
             }
-        } catch (err) {
-            setError("Erro ao autenticar");
+        } catch (err: any) {
+            console.error("[SessionLock] Exception:", err);
+            if (err.message === "TIMEOUT") {
+                setError("Tempo limite excedido");
+                toast.error("A validação demorou muito. Verifique sua conexão.");
+            } else {
+                setError("Erro inesperado: " + (err.message || "Desconhecido"));
+                toast.error("Ocorreu um erro ao tentar desbloquear.");
+            }
         } finally {
             setIsAuthenticating(false);
         }
     };
 
     const handleSignOut = () => {
-        signOut();
+        console.log("[SessionLock] Force signing out...");
+
+        // CRITICAL: Unlock locally first to prevent "Auto-Lock" upon re-login
+        unlock();
+
+        // Non-blocking sign out sequence
+        try {
+            signOut(); // Fire and forget supabase signout
+        } catch (e) {
+            console.warn("Supabase signout failed", e);
+        }
+
+        // Force navigation immediately. Do not wait.
+        setTimeout(() => {
+            window.location.href = '/auth';
+        }, 100);
     };
 
     return (
@@ -119,6 +184,8 @@ export const SessionLockManager: React.FC<SessionLockManagerProps> = ({ children
                             <div className="space-y-2">
                                 <Input
                                     type="password"
+                                    name="password"
+                                    id="password"
                                     placeholder="Senha de acesso"
                                     className="h-14 rounded-2xl text-center text-lg bg-neutral-50 border-neutral-100 focus:bg-white focus:ring-emerald-500/20 transition-all font-medium"
                                     value={password}
@@ -142,6 +209,7 @@ export const SessionLockManager: React.FC<SessionLockManagerProps> = ({ children
                         <div className="pt-4 flex flex-col items-center gap-6">
                             <button
                                 onClick={handleSignOut}
+                                type="button"
                                 className="flex items-center gap-2 text-sm font-bold text-neutral-400 hover:text-neutral-600 transition-colors"
                             >
                                 <LogOut className="h-4 w-4" />

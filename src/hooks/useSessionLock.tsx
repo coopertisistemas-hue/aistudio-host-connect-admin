@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Configuration (initial pilot values)
+// FEATURE FLAG: Temporarily disabled due to pilot user feedback (2025-12-22)
+const IS_FEATURE_ENABLED = false;
+
 const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const BACKGROUND_TIMEOUT = 10 * 60 * 1000; // 10 minutes
 const WARNING_BUFFER = 2 * 60 * 1000; // 2 minutes warning before idle lock
@@ -9,7 +12,8 @@ const STORAGE_KEY_LAST_ACTIVE = 'hc_last_active';
 const STORAGE_KEY_LOCKED = 'hc_session_locked';
 
 export const useSessionLock = () => {
-    const [isLocked, setIsLocked] = useState(() => localStorage.getItem(STORAGE_KEY_LOCKED) === 'true');
+    // If feature is disabled, always return false
+    const [isLocked, setIsLocked] = useState(() => IS_FEATURE_ENABLED && localStorage.getItem(STORAGE_KEY_LOCKED) === 'true');
     const [isWarning, setIsWarning] = useState(false);
     const lastActivityRef = useRef<number>(Date.now());
     const backgroundStartRef = useRef<number | null>(null);
@@ -36,6 +40,8 @@ export const useSessionLock = () => {
     }, [isLocked, isWarning]);
 
     useEffect(() => {
+        if (!IS_FEATURE_ENABLED) return;
+
         // Event listeners for activity
         const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
         const throttledReset = () => {

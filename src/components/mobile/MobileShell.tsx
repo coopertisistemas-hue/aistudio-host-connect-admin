@@ -64,31 +64,25 @@ export const MobileTopHeader: React.FC = () => {
     return (
         <header className="px-[var(--ui-spacing-page,20px)] pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-4 flex items-center justify-between border-b border-[var(--ui-color-border)] bg-white">
             <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 rounded-2xl border border-neutral-100 shadow-sm overflow-hidden bg-neutral-50 shrink-0">
-                    {identity?.client_logo_url ? (
+                <Avatar className="h-12 w-12 rounded-2xl border border-neutral-100 shadow-sm overflow-hidden bg-neutral-100/50 shrink-0">
+                    {identity?.client_logo_url && (
                         <AvatarImage src={identity.client_logo_url} className="object-cover" />
-                    ) : (
-                        <div className="h-full w-full flex items-center justify-center">
-                            <MapPin className="h-5 w-5 text-emerald-600" />
-                        </div>
                     )}
-                    <AvatarFallback className="rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-xs uppercase">
-                        {identity?.client_short_name?.charAt(0) || "H"}
+                    <AvatarFallback className="rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-[15px] uppercase tracking-tighter">
+                        {identity?.client_short_name
+                            ? identity.client_short_name.split(' ').map(n => n[0]).join('').slice(0, 2)
+                            : "HC"}
                     </AvatarFallback>
                 </Avatar>
 
                 <div className="flex flex-col min-w-0">
-                    <h1 className="text-[16px] font-bold text-[var(--ui-color-text-main)] leading-tight truncate max-w-[180px]">
-                        {identity?.client_short_name || "Host Connect"}
+                    <h1 className="text-[16px] font-bold text-[var(--ui-color-text-main)] leading-tight truncate max-w-[200px]">
+                        {identity?.client_short_name || "Operações"}
                     </h1>
                     <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[12px] font-medium text-[var(--ui-color-text-muted)] truncate max-w-[120px]">
-                            {identity?.staff_short_name}
+                        <span className="text-[12px] font-medium text-[var(--ui-color-text-muted)] truncate max-w-[150px]">
+                            {identity?.staff_short_name || "Membro da Equipe"}
                         </span>
-                        <div className="flex items-center gap-1 bg-emerald-50/80 px-1.5 py-0.5 rounded-full border border-emerald-100/50">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-[9px] font-bold text-emerald-600 uppercase tracking-tight">Aberto</span>
-                        </div>
                     </div>
                 </div>
             </div>
