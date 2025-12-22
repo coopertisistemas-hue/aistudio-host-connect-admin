@@ -24,33 +24,31 @@ export const CardContainer: React.FC<{
  * HeroSection: Date and Shift block below header
  */
 export const HeroSection: React.FC = () => {
-    // Basic date formatting for "Sexta-Feira, 5 De Dezembro"
     const now = new Date();
-    const formattedDate = now.toLocaleDateString('pt-BR', {
-        weekday: 'long',
-        day: 'numeric',
-        month: 'long'
-    }).split(',').map(s => s.trim().charAt(0).toUpperCase() + s.trim().slice(1)).join(', ');
+    // Compact date formatting: "22 Dez"
+    const day = now.getDate();
+    const month = now.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+    const formattedDate = `${day} ${month.charAt(0).toUpperCase() + month.slice(1)}`;
 
     // Hardcoded shift for parity
     const shiftName = "Turno Noite";
 
     return (
-        <div className="bg-white rounded-[12px] border border-[var(--ui-color-border)] shadow-[var(--ui-shadow-soft)] p-3.5 mb-6 flex items-center justify-between mt-4">
-            <div className="flex items-center gap-2.5 flex-1 pl-1">
-                <Calendar className="h-4 w-4 text-[var(--ui-color-text-muted)]" />
-                <span className="text-[12px] font-medium text-[var(--ui-color-text-main)] truncate">
-                    {formattedDate}
-                </span>
-            </div>
+        <div className="flex items-center gap-2 mb-6 mt-2">
+            <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-neutral-50/50 border border-[var(--ui-color-border)]/60">
+                <div className="flex items-center gap-1.5 text-neutral-400">
+                    <Calendar className="h-3.5 w-3.5" />
+                    <span className="text-[11px] font-bold uppercase tracking-tight">Hoje, {formattedDate}</span>
+                </div>
 
-            <div className="h-4 w-px bg-neutral-100 mx-2" />
+                <div className="h-3 w-px bg-neutral-200" />
 
-            <div className="flex items-center gap-2.5 flex-1 pl-2">
-                <Clock className="h-4 w-4 text-[var(--ui-color-text-muted)]" />
-                <span className="text-[12px] font-medium text-[var(--ui-color-text-main)]">
-                    {shiftName}
-                </span>
+                <div className="flex items-center gap-1.5">
+                    <Clock className="h-3.5 w-3.5 text-neutral-400" />
+                    <span className="text-[11px] font-bold text-[var(--ui-color-text-main)] uppercase tracking-tight">
+                        {shiftName}
+                    </span>
+                </div>
             </div>
         </div>
     );

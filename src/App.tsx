@@ -64,6 +64,7 @@ import LaundryList from "./pages/mobile/LaundryList";
 import PantryList from "./pages/mobile/PantryList";
 import MobileFinancial from "./pages/mobile/MobileFinancial";
 import { MobileRouteGuard } from "./components/mobile/MobileRouteGuard";
+import { SessionLockManager } from "./components/SessionLockManager";
 
 const queryClient = new QueryClient();
 
@@ -90,15 +91,15 @@ const App = () => (
                 <Route path="/marketing/inbox" element={<ProtectedRoute><SocialInbox /></ProtectedRoute>} />
                 <Route path="/marketing/inbox/:id" element={<ProtectedRoute><SocialInbox /></ProtectedRoute>} />
 
-                {/* Mobile Routes protected by Guard & Frame */}
-                <Route path="/m" element={<ProtectedRoute><MobileRouteGuard><MobileHome /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/profile" element={<ProtectedRoute><MobileRouteGuard><MobileProfile /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/housekeeping" element={<ProtectedRoute><MobileRouteGuard><HousekeepingList /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/housekeeping/task/:id" element={<ProtectedRoute><MobileRouteGuard><HousekeepingDetail /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/notifications" element={<ProtectedRoute><MobileRouteGuard><MobileNotifications /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/laundry" element={<ProtectedRoute><MobileRouteGuard><LaundryList /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/pantry" element={<ProtectedRoute><MobileRouteGuard><PantryList /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/financial" element={<ProtectedRoute><MobileRouteGuard><MobileFinancial /></MobileRouteGuard></ProtectedRoute>} />
+                {/* Mobile Routes protected by Guard & Frame & Session Lock */}
+                <Route path="/m" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileHome /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/profile" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileProfile /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/housekeeping" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><HousekeepingList /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/housekeeping/task/:id" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><HousekeepingDetail /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/notifications" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileNotifications /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/laundry" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><LaundryList /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/pantry" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><PantryList /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/financial" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileFinancial /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route
                   path="/dashboard"
                   element={
