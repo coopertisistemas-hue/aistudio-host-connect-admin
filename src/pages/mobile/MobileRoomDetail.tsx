@@ -1,13 +1,14 @@
 import React from 'react';
 import { MobileShell, MobileTopHeader } from '@/components/mobile/MobileShell';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useRooms, Room } from '@/hooks/useRooms';
+import { useRooms } from '@/hooks/useRooms';
 import { useRoomOperation, RoomOperationalStatus } from '@/hooks/useRoomOperation';
 import { useSelectedProperty } from '@/hooks/useSelectedProperty';
+import { useBookings } from '@/hooks/useBookings';
+import { useFolio } from '@/hooks/useFolio';
 import {
     ErrorState,
     PremiumSkeleton,
-    CardContainer
 } from '@/components/mobile/MobileUI';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,29 +16,51 @@ import {
     BedDouble,
     Sparkles,
     CheckCircle2,
-    Play,
-    History,
     AlertTriangle,
-    Ban
+    Ban,
+    User,
+    Calendar,
+    Wallet,
+    Wrench,
+    UtensilsCrossed
 } from 'lucide-react';
 import { RoomStatusBadge } from '@/components/RoomStatusBadge';
+import { CreateConsumptionSheet } from '@/components/mobile/CreateConsumptionSheet';
+import { format, differenceInDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
 
 const MobileRoomDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const { selectedPropertyId } = useSelectedProperty();
-    const { rooms, isLoading } = useRooms(selectedPropertyId);
+    const { rooms, isLoading: loadingRooms } = useRooms(selectedPropertyId);
     const { updateStatus } = useRoomOperation(selectedPropertyId);
 
+    // 1. Fetch Room Data
     const room = rooms.find(r => r.id === id);
+
+    // 2. Fetch Active Booking
+    // We filter client-side for now, or could use an RPC "get_active_booking_by_room"
+    const { bookings, isLoading: loadingBookings } = useBookings();
+
+    const activeBooking = bookings.find(b =>
+        b.current_room_id === id &&
+        (b.status === 'confirmed' || b.status === 'checked_in')
+        // Optional: Date check, but status usually implies occupancy
+    );
+
+    // 3. Fetch Folio Calculation (if occupied)
+    const { totals, isLoading: loadingFolio } = useFolio(activeBooking?.id);
+
+    const isLoading = loadingRooms || loadingBookings || (!!activeBooking && loadingFolio);
 
     if (isLoading) {
         return (
-            <MobileShell header={<MobileTopHeader title="Detalhe do Quarto" />}>
+            <MobileShell header={<MobileTopHeader />}>
                 <div className="p-5 space-y-4">
                     <PremiumSkeleton className="h-40 w-full" />
-                    <PremiumSkeleton className="h-20 w-full" />
+                    <PremiumSkeleton className="h-24 w-full" />
                     <PremiumSkeleton className="h-20 w-full" />
                 </div>
             </MobileShell>
@@ -46,7 +69,7 @@ const MobileRoomDetail: React.FC = () => {
 
     if (!room) {
         return (
-            <MobileShell header={<MobileTopHeader title="Não encontrado" />}>
+            <MobileShell header={<MobileTopHeader />}>
                 <ErrorState message="Quarto não encontrado." onRetry={() => navigate(-1)} />
             </MobileShell>
         );
@@ -58,14 +81,18 @@ const MobileRoomDetail: React.FC = () => {
                 roomId: room.id,
                 newStatus: newStatus as RoomOperationalStatus,
                 oldStatus: room.status,
-                reason: "Alterado via Mobile"
+                reason: "Alterado via Mobile Cockpit"
             });
-            // Toast is handled in the hook, but we can do haptic feedback here if native
-            // Optional: navigate back automatically or stay? Staying is better on detail.
         } catch (error) {
             console.error(error);
         }
     };
+
+    // Calculate Long Stay
+    const stayDuration = activeBooking
+        ? differenceInDays(new Date(), new Date(activeBooking.check_in))
+        : 0;
+    const isLongStay = stayDuration > 15;
 
     // Helper for Big Action Buttons
     const ActionButton: React.FC<{
@@ -80,23 +107,23 @@ const MobileRoomDetail: React.FC = () => {
             onClick={onClick}
             disabled={isActive}
             className={`
-                w-full flex items-center justify-between p-5 rounded-2xl border transition-all active:scale-[0.98]
+                w-full flex items-center justify-between p-4 rounded-xl border transition-all active:scale-[0.98]
                 ${isActive
                     ? 'bg-neutral-100 border-neutral-200 cursor-default opacity-50'
-                    : 'bg-white border-neutral-100 shadow-[0_4px_12px_rgba(0,0,0,0.03)] hover:border-neutral-200'
+                    : 'bg-white border-neutral-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)] hover:border-neutral-200'
                 }
             `}
         >
-            <div className="flex items-center gap-4">
-                <div className={`h-12 w-12 rounded-xl flex items-center justify-center ${colorClass} bg-opacity-10`}>
-                    <Icon className={`h-6 w-6 ${colorClass.replace('bg-', 'text-')}`} />
+            <div className="flex items-center gap-3">
+                <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${colorClass} bg-opacity-10`}>
+                    <Icon className={`h-5 w-5 ${colorClass.replace('bg-', 'text-')}`} />
                 </div>
                 <div className="text-left">
-                    <h3 className="font-bold text-lg text-neutral-800">{label}</h3>
-                    {subLabel && <p className="text-sm font-medium text-neutral-400">{subLabel}</p>}
+                    <h3 className="font-bold text-sm text-neutral-800">{label}</h3>
+                    {subLabel && <p className="text-xs font-medium text-neutral-400">{subLabel}</p>}
                 </div>
             </div>
-            {isActive && <span className="text-xs font-bold text-neutral-400 uppercase tracking-wider">Atual</span>}
+            {isActive && <div className="h-2 w-2 rounded-full bg-emerald-500" />}
         </button>
     );
 
@@ -118,90 +145,130 @@ const MobileRoomDetail: React.FC = () => {
                 </div>
             }
         >
-            <div className="p-5 space-y-6 pb-12">
+            <div className="p-5 space-y-6 pb-24">
 
-                {/* Hero Status Indicator */}
-                <div className="text-center py-6 bg-white rounded-3xl border border-neutral-100 shadow-sm relative overflow-hidden">
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-neutral-200 to-transparent opacity-50"></div>
-                    <BedDouble className="h-12 w-12 text-neutral-300 mx-auto mb-3" />
-                    <p className="text-sm font-bold text-neutral-400 uppercase tracking-widest mb-1">Status Atual</p>
-                    <h2 className="text-3xl font-black text-neutral-900 tracking-tight flex items-center justify-center gap-2">
-                        {room.status === 'dirty' && "Sujo"}
-                        {room.status === 'clean' && "Limpo"}
-                        {room.status === 'inspected' && "Vistoriado"}
-                        {room.status === 'occupied' && "Ocupado"}
-                        {room.status === 'maintenance' && "Manutenção"}
-                        {room.status === 'ooo' && "Fora de Ordem"}
-                        {room.status === 'available' && "Disponível"}
-                    </h2>
-                </div>
+                {/* 1. Guest Context Card (Cockpit Header) */}
+                {activeBooking ? (
+                    <div className="bg-white rounded-2xl p-5 border border-neutral-200 shadow-sm relative overflow-hidden">
+                        {isLongStay && (
+                            <div className="absolute top-0 right-0 bg-purple-100 text-purple-700 text-[10px] font-bold px-3 py-1 rounded-bl-xl uppercase tracking-wider">
+                                Mensalista ({stayDuration} dias)
+                            </div>
+                        )}
 
-                {/* Operations Section */}
-                <div className="space-y-4">
-                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Ações Operacionais</p>
+                        <div className="flex items-start gap-3 mb-4">
+                            <div className="h-10 w-10 rounded-full bg-neutral-100 flex items-center justify-center">
+                                <User className="h-5 w-5 text-neutral-500" />
+                            </div>
+                            <div>
+                                <h2 className="text-lg font-bold text-neutral-900 truncate max-w-[200px]">{activeBooking.guest_name}</h2>
+                                <div className="flex items-center gap-2 text-xs text-neutral-500 mt-0.5">
+                                    <Calendar className="h-3 w-3" />
+                                    {format(new Date(activeBooking.check_in), 'dd/MM', { locale: ptBR })} - {format(new Date(activeBooking.check_out), 'dd/MM', { locale: ptBR })}
+                                </div>
+                            </div>
+                        </div>
 
-                    {/* State Transitions */}
-                    <ActionButton
-                        label="Sujo"
-                        subLabel="Marcar para limpeza"
-                        icon={Sparkles}
-                        colorClass="bg-amber-500 text-amber-600"
-                        isActive={room.status === 'dirty'}
-                        onClick={() => handleStatusChange('dirty')}
-                    />
+                        <div className="p-3 bg-neutral-50 rounded-xl flex items-center justify-between border border-neutral-100">
+                            <div className="flex items-center gap-2">
+                                <Wallet className="h-4 w-4 text-emerald-600" />
+                                <span className="text-xs font-bold text-neutral-600 uppercase tracking-wider">Parcial Conta</span>
+                            </div>
+                            <span className="text-lg font-bold text-neutral-900">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(totals?.balance || 0)}
+                            </span>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="bg-neutral-50 rounded-2xl p-6 border border-neutral-100 text-center flex flex-col items-center">
+                        <div className="h-12 w-12 rounded-full bg-white border border-neutral-100 flex items-center justify-center mb-3">
+                            <BedDouble className="h-6 w-6 text-neutral-300" />
+                        </div>
+                        <h3 className="font-bold text-neutral-900">Quarto Vago</h3>
+                        <p className="text-xs text-neutral-400 mt-1">Nenhum hóspede vinculado no momento.</p>
+                    </div>
+                )}
 
-                    <ActionButton
-                        label="Limpo"
-                        subLabel="Limpeza finalizada"
-                        icon={CheckCircle2}
-                        colorClass="bg-blue-500 text-blue-600"
-                        isActive={room.status === 'clean'}
-                        onClick={() => handleStatusChange('clean')}
-                    />
-
-                    <ActionButton
-                        label="Vistoriado"
-                        subLabel="Pronto para check-in"
-                        icon={CheckCircle2}
-                        colorClass="bg-emerald-500 text-emerald-600"
-                        isActive={room.status === 'inspected'}
-                        onClick={() => handleStatusChange('inspected')}
-                    />
-                </div>
-
-                {/* Issues Section */}
-                <div className="space-y-4 pt-4">
-                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1">Problemas & Bloqueios</p>
-
+                {/* 2. Cockpit Actions: Consumption & Reporting */}
+                {activeBooking && (
                     <div className="grid grid-cols-2 gap-3">
+                        <CreateConsumptionSheet
+                            bookingId={activeBooking.id}
+                            roomNumber={room.room_number}
+                            guestName={activeBooking.guest_name}
+                            trigger={
+                                <button className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-neutral-100 shadow-sm active:scale-[0.98] transition-all hover:border-emerald-200 group">
+                                    <div className="h-10 w-10 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                        <UtensilsCrossed className="h-5 w-5" />
+                                    </div>
+                                    <span className="font-bold text-sm text-neutral-800">Lançar Consumo</span>
+                                </button>
+                            }
+                        />
+
                         <button
-                            onClick={() => handleStatusChange('maintenance')}
-                            className={`flex flex-col items-center justify-center p-4 rounded-2xl border bg-white shadow-sm active:scale-[0.98] transition-all
-                                ${room.status === 'maintenance' ? 'border-rose-500 bg-rose-50' : 'border-neutral-100 hover:border-neutral-200'}
-                            `}
+                            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-neutral-100 shadow-sm active:scale-[0.98] transition-all hover:border-amber-200 group"
+                            onClick={() => toast.info("Funcionalidade de Ocorrência em breve")}
                         >
-                            <AlertTriangle className={`h-6 w-6 mb-2 ${room.status === 'maintenance' ? 'text-rose-600' : 'text-rose-500'}`} />
+                            <div className="h-10 w-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+                                <Wrench className="h-5 w-5" />
+                            </div>
                             <span className="font-bold text-sm text-neutral-800">Manutenção</span>
                         </button>
+                    </div>
+                )}
 
-                        <button
-                            onClick={() => handleStatusChange('ooo')}
-                            className={`flex flex-col items-center justify-center p-4 rounded-2xl border bg-white shadow-sm active:scale-[0.98] transition-all
-                                ${room.status === 'ooo' ? 'border-neutral-800 bg-neutral-100' : 'border-neutral-100 hover:border-neutral-200'}
-                             `}
-                        >
-                            <Ban className="h-6 w-6 mb-2 text-neutral-600" />
-                            <span className="font-bold text-sm text-neutral-800">Bloquear (OOO)</span>
-                        </button>
+                {/* 3. Housekeeping Status Control */}
+                <div>
+                    <p className="text-xs font-bold text-neutral-400 uppercase tracking-wider ml-1 mb-3">Governança</p>
+                    <div className="space-y-3">
+                        <ActionButton
+                            label="Limpo"
+                            subLabel="Quarto pronto"
+                            icon={CheckCircle2}
+                            colorClass="bg-blue-500 text-blue-600"
+                            isActive={room.status === 'clean'}
+                            onClick={() => handleStatusChange('clean')}
+                        />
+                        <ActionButton
+                            label="Sujo"
+                            subLabel="Precisa de limpeza"
+                            icon={Sparkles}
+                            colorClass="bg-amber-500 text-amber-600"
+                            isActive={room.status === 'dirty'}
+                            onClick={() => handleStatusChange('dirty')}
+                        />
+                        <ActionButton
+                            label="Vistoriado"
+                            subLabel="Inspecionado"
+                            icon={CheckCircle2}
+                            colorClass="bg-emerald-500 text-emerald-600"
+                            isActive={room.status === 'inspected'}
+                            onClick={() => handleStatusChange('inspected')}
+                        />
                     </div>
                 </div>
 
-                {/* Log Button */}
-                <div className="pt-4">
-                    <Button variant="outline" className="w-full h-12 rounded-xl text-neutral-500 font-bold border-dashed border-2">
-                        <History className="h-4 w-4 mr-2" />
-                        Ver Histórico do Quarto
-                    </Button>
+                {/* 4. Other Issues */}
+                <div className="grid grid-cols-2 gap-3 pt-2">
+                    <button
+                        onClick={() => handleStatusChange('maintenance')}
+                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all
+                            ${room.status === 'maintenance' ? 'bg-rose-50 border-rose-200 text-rose-600' : 'bg-white border-neutral-100 text-neutral-500'}
+                        `}
+                    >
+                        <AlertTriangle className="h-4 w-4" />
+                        Manutenção (Status)
+                    </button>
+                    <button
+                        onClick={() => handleStatusChange('ooo')}
+                        className={`flex items-center justify-center gap-2 p-3 rounded-xl border text-xs font-bold transition-all
+                            ${room.status === 'ooo' ? 'bg-neutral-100 border-neutral-300 text-neutral-800' : 'bg-white border-neutral-100 text-neutral-500'}
+                        `}
+                    >
+                        <Ban className="h-4 w-4" />
+                        Bloquear (OOO)
+                    </button>
                 </div>
 
             </div>

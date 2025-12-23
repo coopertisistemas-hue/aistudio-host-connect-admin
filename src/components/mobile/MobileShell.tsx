@@ -69,19 +69,18 @@ export const MobileTopHeader: React.FC = () => {
                         <AvatarImage src={identity.client_logo_url} className="object-cover" />
                     )}
                     <AvatarFallback className="rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-[15px] uppercase tracking-tighter">
-                        {identity?.client_short_name
-                            ? identity.client_short_name.split(' ').map(n => n[0]).join('').slice(0, 2)
-                            : "HC"}
+                        {(identity?.client_short_name || selectedProperty?.name || "HC")
+                            .split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
 
                 <div className="flex flex-col min-w-0">
-                    <h1 className="text-[16px] font-bold text-[var(--ui-color-text-main)] leading-tight truncate max-w-[200px]">
-                        {identity?.client_short_name || "Operações"}
+                    <h1 className="text-[17px] font-black text-[var(--ui-color-text-main)] leading-tight truncate max-w-[200px]">
+                        {identity?.client_short_name || selectedProperty?.name || "Host Connect"}
                     </h1>
                     <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[12px] font-medium text-[var(--ui-color-text-muted)] truncate max-w-[150px]">
-                            {identity?.staff_short_name || "Membro da Equipe"}
+                        <span className="text-[11px] font-bold text-[var(--ui-color-text-muted)] truncate max-w-[150px] uppercase tracking-wide opacity-80">
+                            Operações • {identity?.staff_short_name || user?.user_metadata?.full_name?.split(' ')[0] || "Equipe"}
                         </span>
                     </div>
                 </div>

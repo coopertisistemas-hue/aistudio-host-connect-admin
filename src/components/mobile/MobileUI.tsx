@@ -24,27 +24,28 @@ export const CardContainer: React.FC<React.HTMLAttributes<HTMLDivElement> & {
 );
 
 /**
- * HeroSection: Date and Shift display
+ * HeroSection: Date and Shift display (Compact/Premium)
  */
 export const HeroSection: React.FC = () => {
     const today = new Date();
-    const dateStr = today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    // Format: "SEG, 23 DEZ"
+    const dateStr = today.toLocaleDateString('pt-BR', { weekday: 'short', day: 'numeric', month: 'short' }).toUpperCase().replace('.', '');
     const hour = today.getHours();
 
     let shift = '';
-    if (hour >= 6 && hour < 14) shift = 'Manhã';
-    else if (hour >= 14 && hour < 22) shift = 'Tarde';
-    else shift = 'Noite';
+    if (hour >= 6 && hour < 14) shift = 'MANHÃ';
+    else if (hour >= 14 && hour < 22) shift = 'TARDE';
+    else shift = 'NOITE';
 
     return (
-        <div className="mb-6">
-            <h2 className="text-2xl font-bold text-[var(--ui-color-text-main)] capitalize">
-                {dateStr}
-            </h2>
-            <div className="flex items-center gap-2 mt-1">
-                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-sm font-medium text-[var(--ui-color-text-muted)]">
-                    Turno da {shift} • Operação Ativa
+        <div className="mb-2 px-1 flex items-center gap-2">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-neutral-400/90 tracking-wide uppercase">
+                <Calendar className="h-3 w-3 opacity-70" />
+                <span>{dateStr}</span>
+                <span className="opacity-30">•</span>
+                <span className="text-emerald-600/90 flex items-center gap-1.5">
+                    {shift}
+                    <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-sm" />
                 </span>
             </div>
         </div>
@@ -138,6 +139,9 @@ export const ListRow: React.FC<{
 /**
  * QuickAccessCard: Large individual card for main modules (Delivery Connect Pattern)
  */
+/**
+ * QuickAccessCard: Large individual card for main modules (Delivery Connect Pattern)
+ */
 export const QuickAccessCard: React.FC<{
     title: string;
     subtitle: string;
@@ -171,10 +175,97 @@ export const QuickAccessCard: React.FC<{
 );
 
 /**
+ * CompactAccessCard: Optimized for 2-column grid layout
+ */
+export const CompactAccessCard: React.FC<{
+    title: string;
+    subtitle: string;
+    icon: LucideIcon;
+    iconColor?: string;
+    onClick: () => void;
+    badge?: string | number;
+}> = ({ title, subtitle, icon: Icon, iconColor = "text-primary", onClick, badge }) => (
+    <CardContainer
+        className="shadow-sm active:scale-[0.98] transition-all cursor-pointer border-[var(--ui-color-border)] hover:border-primary/20 bg-white group relative h-full"
+        noPadding
+    >
+        <div onClick={onClick} className="p-4 flex flex-col h-full">
+            <div className="flex justify-between items-start mb-3">
+                <div className={cn("h-10 w-10 rounded-xl flex items-center justify-center shrink-0 bg-neutral-50 group-hover:bg-primary/5 transition-colors")}>
+                    <Icon className={cn("h-5 w-5", iconColor)} />
+                </div>
+                {badge !== undefined && (
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-bold text-[9px] border border-emerald-100">
+                        {badge}
+                    </span>
+                )}
+            </div>
+
+            <div className="mt-auto">
+                <h3 className="text-[13px] font-bold text-[var(--ui-color-text-main)] leading-tight mb-1 group-hover:text-primary transition-colors">
+                    {title}
+                </h3>
+                <p className="text-[11px] text-[var(--ui-color-text-muted)] line-clamp-1 leading-normal opacity-80">
+                    {subtitle}
+                </p>
+            </div>
+        </div>
+    </CardContainer>
+);
+
+/**
+ * GlassAccessCard: Premium Glassmorphism card for Quick Access Grid
+ */
+export const GlassAccessCard: React.FC<{
+    title: string;
+    subtitle: string;
+    icon: LucideIcon;
+    iconColor?: string;
+    onClick: () => void;
+    badge?: string | number;
+}> = ({ title, subtitle, icon: Icon, iconColor = "text-primary", onClick, badge }) => (
+    <div
+        onClick={onClick}
+        className="group relative overflow-hidden rounded-2xl border border-white/40 bg-white/60 dark:bg-black/40 backdrop-blur-md shadow-lg transition-all active:scale-[0.98] cursor-pointer hover:bg-white/70 h-full p-4 flex flex-col justify-between"
+    >
+        {/* Glow effect on hover */}
+        <div className="absolute -inset-[100%] top-0 block h-[200%] w-[100%] -skew-x-12 bg-gradient-to-r from-transparent to-white opacity-0 transition-opacity group-hover:opacity-20 translate-x-32 duration-700" />
+
+        <div className="flex justify-between items-start mb-3 relative z-10">
+            <div className={cn(
+                "h-10 w-10 rounded-full flex items-center justify-center shrink-0 bg-white/50 dark:bg-white/10 shadow-sm backdrop-blur-sm border border-white/50",
+                "group-hover:scale-110 transition-transform duration-300"
+            )}>
+                <Icon className={cn("h-5 w-5", iconColor)} />
+            </div>
+            {badge !== undefined && (
+                <span className={cn(
+                    "px-2 py-0.5 rounded-full text-[9px] font-bold border shadow-sm backdrop-blur-md",
+                    typeof badge === 'number' || (typeof badge === 'string' && /^\d+$/.test(badge))
+                        ? "bg-rose-500/90 text-white border-rose-400"
+                        : "bg-emerald-500/90 text-white border-emerald-400"
+                )}>
+                    {badge}
+                </span>
+            )}
+        </div>
+
+        <div className="relative z-10">
+            <h3 className="text-[14px] font-bold text-slate-800 dark:text-slate-100 leading-tight mb-1">
+                {title}
+            </h3>
+            <p className="text-[11px] text-slate-600 dark:text-slate-300 line-clamp-1 leading-normal font-medium">
+                {subtitle}
+            </p>
+        </div>
+    </div>
+);
+
+/**
  * PremiumSkeleton: Pulser for loading states
  */
 export const PremiumSkeleton: React.FC<{ className?: string }> = ({ className }) => (
-    <div className={cn("bg-neutral-200 animate-pulse rounded-xl", className)} />
+    <div className={cn("bg-neutral-200/50 animate-pulse rounded-xl backdrop-blur-sm", className)} />
 );
 
 /**

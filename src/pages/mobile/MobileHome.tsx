@@ -27,6 +27,8 @@ import {
     CardContainer,
     HeroSection,
     QuickAccessCard,
+    CompactAccessCard,
+    GlassAccessCard,
     SectionTitleRow
 } from "@/components/mobile/MobileUI";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
@@ -152,7 +154,14 @@ const MobileHome: React.FC = () => {
 
     return (
         <MobileShell header={<MobileTopHeader />}>
-            <div className="px-[var(--ui-spacing-page,20px)] pb-8">
+            {/* Premium Background Layer */}
+            <div className="fixed inset-0 z-0 bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 dark:from-slate-900 dark:via-slate-900 dark:to-slate-800 pointer-events-none" />
+
+            {/* Mesh Gradient blobs for "Portal" feel */}
+            <div className="fixed top-[-20%] left-[-20%] w-[80%] h-[80%] rounded-full bg-blue-400/10 blur-[100px] pointer-events-none z-0" />
+            <div className="fixed bottom-[-20%] right-[-20%] w-[80%] h-[80%] rounded-full bg-purple-400/10 blur-[100px] pointer-events-none z-0" />
+
+            <div className="relative z-10 px-[var(--ui-spacing-page,20px)] pb-8">
                 <HeroSection />
 
                 <KpiGrid>
@@ -164,9 +173,9 @@ const MobileHome: React.FC = () => {
 
                 <SectionTitleRow title="Acesso Rápido" />
 
-                <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-3.5">
                     {menuItems.map((item, idx) => (
-                        <QuickAccessCard
+                        <GlassAccessCard
                             key={idx}
                             title={item.title}
                             subtitle={item.subtitle}
