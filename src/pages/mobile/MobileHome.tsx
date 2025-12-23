@@ -91,7 +91,7 @@ const MobileHome: React.FC = () => {
             subtitle: "Mapa de ocupação e status",
             icon: Bed,
             iconColor: "text-indigo-500",
-            path: "/operation/rooms"
+            path: "/m/rooms"
         },
         {
             title: "Governança",

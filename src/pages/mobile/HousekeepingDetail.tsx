@@ -30,6 +30,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 const HousekeepingDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -82,6 +83,9 @@ const HousekeepingDetail: React.FC = () => {
 
             updateTaskStatus.mutate({ taskId: task.id, roomId: task.room_id, status: 'completed', notes });
             navigate('/m/housekeeping');
+        } else if (task.status === 'completed') {
+            updateTaskStatus.mutate({ taskId: task.id, roomId: task.room_id, status: 'inspected', notes });
+            navigate('/m/housekeeping');
         }
     };
 
@@ -95,6 +99,23 @@ const HousekeepingDetail: React.FC = () => {
         updateTaskStatus.mutate({ taskId: task.id, roomId: task.room_id, status: 'maintenance_required' });
         navigate('/m/housekeeping');
     };
+
+    const handlePhotoClick = () => {
+        toast.info("Funcionalidade de foto em desenvolvimento", {
+            description: "Em breve você poderá fazer upload de evidências diretamente."
+        });
+    }
+
+    const getWorkflowButtonLabel = () => {
+        switch (task.status) {
+            case 'pending': return "INICIAR LIMPEZA";
+            case 'cleaning': return "FINALIZAR LIMPEZA";
+            case 'completed': return "APROVAR VISTORIA";
+            default: return null;
+        }
+    }
+
+    const workflowLabel = getWorkflowButtonLabel();
 
     return (
         <MobileShell
@@ -126,7 +147,7 @@ const HousekeepingDetail: React.FC = () => {
                     )}
                 </CardContainer>
 
-                {/* Minibar Consumption */}
+                {/* Minibar Consumption - Only during cleaning */}
                 {task.status === 'cleaning' && (
                     <>
                         <SectionTitleRow title="Consumo do Frigobar" />
@@ -173,7 +194,11 @@ const HousekeepingDetail: React.FC = () => {
                         onChange={(e) => setNotes(e.target.value)}
                     />
                     <div className="flex gap-2 mt-4">
-                        <Button variant="outline" className="flex-1 h-12 rounded-xl text-xs font-bold gap-2">
+                        <Button
+                            variant="outline"
+                            className="flex-1 h-12 rounded-xl text-xs font-bold gap-2"
+                            onClick={handlePhotoClick}
+                        >
                             <Camera className="h-4 w-4" /> FOTO EVIDÊNCIA
                         </Button>
                     </div>
@@ -192,11 +217,13 @@ const HousekeepingDetail: React.FC = () => {
             </div>
 
             {/* Primary Workflow CTA */}
-            <PrimaryBottomCTA
-                label={task.status === 'pending' ? "INICIAR LIMPEZA" : "LIBERAR QUARTO"}
-                onClick={handleWorkflowAction}
-                loading={updateTaskStatus.isPending}
-            />
+            {workflowLabel && (
+                <PrimaryBottomCTA
+                    label={workflowLabel}
+                    onClick={handleWorkflowAction}
+                    loading={updateTaskStatus.isPending}
+                />
+            )}
 
             {/* Maintenance Dialog */}
             <Dialog open={maintenanceOpen} onOpenChange={setMaintenanceOpen}>

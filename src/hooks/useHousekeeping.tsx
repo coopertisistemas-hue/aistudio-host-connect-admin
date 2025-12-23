@@ -6,7 +6,7 @@ export interface HousekeepingTask {
     id: string;
     room_id: string;
     reservation_id: string | null;
-    status: 'pending' | 'cleaning' | 'completed' | 'maintenance_required';
+    status: 'pending' | 'cleaning' | 'completed' | 'inspected' | 'maintenance_required';
     priority: 'low' | 'medium' | 'high';
     notes: string | null;
     assigned_to: string | null;
@@ -24,7 +24,7 @@ export interface HousekeepingTask {
     };
 }
 
-export const useHousekeeping = (propertyId?: string, userId?: string) => {
+export const useHousekeeping = (propertyId?: string, userId?: string | null) => {
     const queryClient = useQueryClient();
 
     // Fetch housekeeping tasks
@@ -43,6 +43,7 @@ export const useHousekeeping = (propertyId?: string, userId?: string) => {
                 .eq('type', 'housekeeping')
                 .order('created_at', { ascending: false });
 
+            // Only filter by user if userId is provided AND not null
             if (userId) {
                 query = query.eq('assigned_to', userId);
             }
@@ -71,9 +72,17 @@ export const useHousekeeping = (propertyId?: string, userId?: string) => {
             if (taskError) throw taskError;
 
             // 2. Map task status to room status
-            let roomStatus = 'maintenance';
-            if (status === 'completed') roomStatus = 'available';
-            if (status === 'cleaning') roomStatus = 'maintenance'; // or 'cleaning' if your schema supports it
+            let roomStatus = 'maintenance'; // default fallback
+
+            if (status === 'completed') roomStatus = 'clean'; // Finished cleaning -> Clean (but may need inspection)
+            if (status === 'inspected') roomStatus = 'available'; // Inspected -> Ready/Available
+            if (status === 'cleaning') roomStatus = 'dirty'; // Still dirty/cleaning
+            if (status === 'maintenance_required') roomStatus = 'maintenance';
+            if (status === 'pending') roomStatus = 'dirty';
+
+            // If system requires inspection, 'completed' might keep it 'dirty' implies waiting inspection?
+            // For now, let's assume 'clean' means physically clean, 'available' means inspected.
+            // Adjust based on typical hotel flows: Dirty -> Cleaning -> Clean (Vacant Dirty) -> Inspected (Vacant Clean/Ready)
 
             const { error: roomError } = await supabase
                 .from('rooms')
@@ -103,8 +112,10 @@ export const useHousekeeping = (propertyId?: string, userId?: string) => {
                 created_at: new Date().toISOString()
             }));
 
+            // Use 'booking_charges' table created via migration
+            // @ts-ignore - Ignore type error until types are regenerated
             const { error } = await supabase
-                .from('folia_charges') // Adjusting to the common naming in this project if it exists, or reservation_charges
+                .from('booking_charges')
                 .insert(charges);
 
             if (error) throw error;
