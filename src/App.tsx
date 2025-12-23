@@ -68,6 +68,9 @@ import MobileNotifications from "./pages/mobile/MobileNotifications";
 import LaundryList from "./pages/mobile/LaundryList";
 import PantryList from "./pages/mobile/PantryList";
 import MobileFinancial from "./pages/mobile/MobileFinancial";
+import MobileReservations from "./pages/mobile/MobileReservations";
+import MobileTaskDetail from "./pages/mobile/MobileTaskDetail";
+import MobileExecutive from "./pages/mobile/MobileExecutive";
 import { MobileRouteGuard } from "./components/mobile/MobileRouteGuard";
 import { SessionLockManager } from "./components/SessionLockManager";
 
@@ -104,12 +107,15 @@ const App = () => (
                 <Route path="/m/maintenance" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MaintenanceList /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/maintenance/:id" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MaintenanceDetail /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/ops-now" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><OpsNowPage /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/task/:id" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileTaskDetail /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/rooms" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileRoomsMap /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/rooms/:id" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileRoomDetail /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/notifications" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileNotifications /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/laundry" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><LaundryList /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/pantry" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><PantryList /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/financial" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileFinancial /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/reservations" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileReservations /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/executive" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileExecutive /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route
                   path="/dashboard"
                   element={

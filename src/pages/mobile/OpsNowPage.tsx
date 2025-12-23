@@ -55,7 +55,11 @@ const OpsNowPage: React.FC = () => {
                                 <CardContainer
                                     key={task.id}
                                     className="p-4 border-l-4 border-l-rose-500 flex gap-3 items-start active:scale-[0.98] transition-all"
-                                    onClick={() => navigate(task.type === 'maintenance' ? `/m/maintenance/${task.id}` : `/m/housekeeping/task/${task.id}`)}
+                                    onClick={() => {
+                                        if (task.type === 'maintenance') navigate(`/m/maintenance/${task.id}`);
+                                        else if (task.type === 'housekeeping') navigate(`/m/housekeeping/task/${task.id}`);
+                                        else navigate(`/m/task/${task.id}`);
+                                    }}
                                 >
                                     <div className="bg-rose-50 p-2 rounded-full shrink-0">
                                         <AlertTriangle className="h-5 w-5 text-rose-500" />
@@ -130,6 +134,7 @@ const OpsNowPage: React.FC = () => {
                                 <CardContainer
                                     key={occ.id}
                                     className="p-4 border-none shadow-sm active:scale-[0.98] transition-all"
+                                    onClick={() => navigate(`/m/task/${occ.id}`)}
                                 >
                                     <div className="flex justify-between items-start mb-1">
                                         <h3 className="font-bold text-[#1A1C1E] text-sm">{occ.title}</h3>

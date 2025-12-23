@@ -130,7 +130,7 @@ const MobileHome: React.FC = () => {
             subtitle: "Vendas e disponibilidade",
             icon: Calendar,
             iconColor: "text-emerald-500",
-            path: "/reservations/pipeline",
+            path: "/m/reservations",
             badge: "Novo"
         },
         {
@@ -146,7 +146,7 @@ const MobileHome: React.FC = () => {
             subtitle: "Métricas e performance",
             icon: BarChart3,
             iconColor: "text-slate-500",
-            path: "/m/summary"
+            path: "/m/executive"
         }
     ];
 

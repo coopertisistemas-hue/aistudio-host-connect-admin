@@ -16,7 +16,12 @@ export const invoiceSchema = z.object({
   payment_intent_id: z.string().optional().nullable(),
 });
 
-export type Invoice = Tables<'invoices'>;
+export type Invoice = Tables<'invoices'> & {
+  bookings?: {
+    guest_name: string | null;
+    guest_email: string | null;
+  } | null;
+};
 export type InvoiceInput = z.infer<typeof invoiceSchema>;
 
 export const useInvoices = (propertyId?: string) => {
@@ -79,7 +84,7 @@ export const useInvoices = (propertyId?: string) => {
   const updateInvoice = useMutation({
     mutationFn: async ({ id, invoice }: { id: string; invoice: Partial<InvoiceInput> }) => {
       const updateData: any = { ...invoice };
-      
+
       if (invoice.issue_date) {
         updateData.issue_date = invoice.issue_date.toISOString();
       }

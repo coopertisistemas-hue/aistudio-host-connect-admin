@@ -6,49 +6,46 @@ import { Button } from "@/components/ui/button";
 /**
  * CardContainer: Base wrapper for standard mobile cards
  */
-export const CardContainer: React.FC<{
+/**
+ * CardContainer: Base wrapper for standard mobile cards
+ */
+export const CardContainer: React.FC<React.HTMLAttributes<HTMLDivElement> & {
     children: React.ReactNode;
     className?: string;
     noPadding?: boolean;
-}> = ({ children, className, noPadding }) => (
+}> = ({ children, className, noPadding, ...props }) => (
     <div className={cn(
         "bg-[var(--ui-surface-card)] rounded-[var(--ui-radius-card)] border border-[var(--ui-color-border)] shadow-[var(--ui-shadow-soft)] overflow-hidden",
         !noPadding && "p-5",
         className
-    )}>
+    )} {...props}>
         {children}
     </div>
 );
 
 /**
- * HeroSection: Date and Shift block below header
+ * HeroSection: Date and Shift display
  */
 export const HeroSection: React.FC = () => {
-    const now = new Date();
-    // Compact date formatting: "22 Dez"
-    const day = now.getDate();
-    const month = now.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
-    const formattedDate = `${day} ${month.charAt(0).toUpperCase() + month.slice(1)}`;
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    const hour = today.getHours();
 
-    // Hardcoded shift for parity
-    const shiftName = "Turno Noite";
+    let shift = '';
+    if (hour >= 6 && hour < 14) shift = 'Manhã';
+    else if (hour >= 14 && hour < 22) shift = 'Tarde';
+    else shift = 'Noite';
 
     return (
-        <div className="flex items-center gap-2 mb-6 mt-2">
-            <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-full bg-neutral-50/50 border border-[var(--ui-color-border)]/60">
-                <div className="flex items-center gap-1.5 text-neutral-400">
-                    <Calendar className="h-3.5 w-3.5" />
-                    <span className="text-[11px] font-bold uppercase tracking-tight">Hoje, {formattedDate}</span>
-                </div>
-
-                <div className="h-3 w-px bg-neutral-200" />
-
-                <div className="flex items-center gap-1.5">
-                    <Clock className="h-3.5 w-3.5 text-neutral-400" />
-                    <span className="text-[11px] font-bold text-[var(--ui-color-text-main)] uppercase tracking-tight">
-                        {shiftName}
-                    </span>
-                </div>
+        <div className="mb-6">
+            <h2 className="text-2xl font-bold text-[var(--ui-color-text-main)] capitalize">
+                {dateStr}
+            </h2>
+            <div className="flex items-center gap-2 mt-1">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="text-sm font-medium text-[var(--ui-color-text-muted)]">
+                    Turno da {shift} • Operação Ativa
+                </span>
             </div>
         </div>
     );
@@ -61,9 +58,11 @@ export const SectionTitleRow: React.FC<{
     title: string;
     actionLabel?: string;
     onAction?: () => void;
-}> = ({ title, actionLabel, onAction }) => (
+    rightElement?: React.ReactNode;
+}> = ({ title, actionLabel, onAction, rightElement }) => (
     <div className="flex items-center justify-between mb-4 mt-[var(--ui-spacing-section,20px)] first:mt-2">
         <h2 className="text-[14px] font-bold text-[var(--ui-color-text-muted)] uppercase tracking-[0.1em]">{title}</h2>
+        {rightElement}
         {actionLabel && (
             <button onClick={onAction} className="text-xs font-bold text-primary">
                 {actionLabel}
