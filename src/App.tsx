@@ -59,6 +59,8 @@ import MobileHome from "./pages/mobile/MobileHome";
 import MobileProfile from "./pages/mobile/MobileProfile";
 import HousekeepingList from "./pages/mobile/HousekeepingList";
 import HousekeepingDetail from "./pages/mobile/HousekeepingDetail";
+import MaintenanceList from "./pages/mobile/MaintenanceList";
+import MaintenanceDetail from "./pages/mobile/MaintenanceDetail";
 import MobileRoomsMap from "./pages/mobile/MobileRoomsMap";
 import MobileRoomDetail from "./pages/mobile/MobileRoomDetail";
 import MobileNotifications from "./pages/mobile/MobileNotifications";
@@ -98,6 +100,8 @@ const App = () => (
                 <Route path="/m/profile" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileProfile /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/housekeeping" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><HousekeepingList /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/housekeeping/task/:id" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><HousekeepingDetail /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/maintenance" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MaintenanceList /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/maintenance/:id" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MaintenanceDetail /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/rooms" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileRoomsMap /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/rooms/:id" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileRoomDetail /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/notifications" element={<ProtectedRoute><MobileRouteGuard><SessionLockManager><MobileNotifications /></SessionLockManager></MobileRouteGuard></ProtectedRoute>} />

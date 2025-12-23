@@ -106,7 +106,7 @@ const MobileHome: React.FC = () => {
             subtitle: "Reparos e preventivas",
             icon: Construction,
             iconColor: "text-rose-500",
-            path: "/operation/demands",
+            path: "/m/maintenance",
             badge: pendingMaintenance > 0 ? pendingMaintenance : undefined
         },
         {
