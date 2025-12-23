@@ -11,61 +11,75 @@ export interface DashboardStats {
     departuresToday: number;
 }
 
+export interface BookingSummary {
+    id: string;
+    guest_name: string;
+    total_guests: number;
+    check_in: string;
+    check_out: string;
+    status: string;
+    total_amount: number;
+    room: {
+        room_number: string;
+    } | null;
+}
+
 export const useMobileReservations = (propertyId?: string) => {
     const { leads, isLoading: leadsLoading, createLead, updateLeadStatus, convertLeadToBooking } = useLeads(propertyId || "");
     const { rooms } = useRooms(propertyId);
 
-    const { data: stats, isLoading: statsLoading } = useQuery({
-        queryKey: ['mobile-reservation-stats', propertyId],
+    const { data: bookingData, isLoading: statsLoading } = useQuery({
+        queryKey: ['mobile-reservation-data', propertyId],
         queryFn: async () => {
             if (!propertyId) return null;
 
             const today = new Date().toISOString().split('T')[0];
 
-            // 1. Get Occupied Rooms Count for Today
-            // A room is occupied if a booking starts before or on today AND ends after today
-            const { count: occupiedCount, error: occError } = await supabase
-                .from('bookings')
-                .select('id', { count: 'exact', head: true })
-                .eq('property_id', propertyId)
-                .lte('check_in', today)
-                .gt('check_out', today)
-                .neq('status', 'cancelled');
+            // Helper to fetch bookings with room data
+            const fetchBookings = async (filter: (query: any) => any) => {
+                let query = supabase
+                    .from('bookings')
+                    .select(`
+                        id,
+                        guest_name,
+                        total_guests,
+                        check_in,
+                        check_out,
+                        status,
+                        total_amount,
+                        room:rooms(room_number)
+                    `)
+                    .eq('property_id', propertyId)
+                    .neq('status', 'cancelled');
 
-            if (occError) throw occError;
+                query = filter(query);
 
-            // 2. Arrivals Today
-            const { count: arrivalsCount, error: arrError } = await supabase
-                .from('bookings')
-                .select('id', { count: 'exact', head: true })
-                .eq('property_id', propertyId)
-                .eq('check_in', today)
-                .neq('status', 'cancelled');
+                const { data, error } = await query;
+                if (error) throw error;
+                return data as BookingSummary[];
+            };
 
-            if (arrError) throw arrError;
+            // 1. Occupied (In-House) - Starts <= Today AND Ends > Today
+            const inHouse = await fetchBookings(q => q.lte('check_in', today).gt('check_out', today));
 
-            // 3. Departures Today
-            const { count: depCount, error: depError } = await supabase
-                .from('bookings')
-                .select('id', { count: 'exact', head: true })
-                .eq('property_id', propertyId)
-                .eq('check_out', today)
-                .neq('status', 'cancelled');
+            // 2. Arrivals Today - Starts == Today
+            const arrivals = await fetchBookings(q => q.eq('check_in', today));
 
-            if (depError) throw depError;
+            // 3. Departures Today - Ends == Today
+            const departures = await fetchBookings(q => q.eq('check_out', today));
 
             return {
-                occupiedRooms: occupiedCount || 0,
-                arrivalsToday: arrivalsCount || 0,
-                departuresToday: depCount || 0
+                inHouse,
+                arrivals,
+                departures
             };
         },
         enabled: !!propertyId
     });
 
-    // Calculate Occupancy Rate
+    // Calculate Stats
     const totalRooms = rooms.length;
-    const occupiedRooms = stats?.occupiedRooms || 0;
+    const occupiedRooms = bookingData?.inHouse.length || 0;
     const occupancyRate = totalRooms > 0 ? (occupiedRooms / totalRooms) * 100 : 0;
 
     // Separate Leads by Status
@@ -81,8 +95,13 @@ export const useMobileReservations = (propertyId?: string) => {
             occupancyRate,
             totalRooms,
             occupiedRooms,
-            arrivalsToday: stats?.arrivalsToday || 0,
-            departuresToday: stats?.departuresToday || 0
+            arrivalsToday: bookingData?.arrivals.length || 0,
+            departuresToday: bookingData?.departures.length || 0
+        },
+        lists: {
+            inHouse: bookingData?.inHouse || [],
+            arrivals: bookingData?.arrivals || [],
+            departures: bookingData?.departures || []
         },
         pipeline,
         leads,

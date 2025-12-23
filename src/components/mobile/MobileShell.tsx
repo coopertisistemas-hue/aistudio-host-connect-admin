@@ -44,7 +44,11 @@ export const MobileShell: React.FC<{ children: React.ReactNode; header?: React.R
 /**
  * MobileTopHeader: Main branding and status header for the Home screen
  */
-export const MobileTopHeader: React.FC = () => {
+export const MobileTopHeader: React.FC<{
+    showBack?: boolean;
+    title?: string;
+    subtitle?: string;
+}> = ({ showBack, title, subtitle }) => {
     const { user, signOut } = useAuth();
     const { selectedPropertyId } = useSelectedProperty();
     const { properties } = useProperties();
@@ -75,23 +79,34 @@ export const MobileTopHeader: React.FC = () => {
     return (
         <header className="sticky top-0 z-50 w-full px-[var(--ui-spacing-page,20px)] pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-2 flex items-center justify-between bg-white/85 backdrop-blur-xl border-b border-white/40 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.03)] transition-all duration-200">
             <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10 rounded-full border border-white/60 shadow-sm overflow-hidden bg-neutral-100/50 shrink-0 ring-1 ring-white/50">
-                    {identity?.client_logo_url && (
-                        <AvatarImage src={identity.client_logo_url} className="object-cover" />
-                    )}
-                    <AvatarFallback className="bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 font-bold text-[12px] uppercase tracking-tighter">
-                        {(identity?.client_short_name || selectedProperty?.name || "HC")
-                            .split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                </Avatar>
+                {showBack ? (
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-10 w-10 -ml-2 rounded-full hover:bg-neutral-100 text-neutral-600 shrink-0"
+                        onClick={() => navigate(-1)}
+                    >
+                        <ChevronLeft className="h-6 w-6" />
+                    </Button>
+                ) : (
+                    <Avatar className="h-10 w-10 rounded-full border border-white/60 shadow-sm overflow-hidden bg-neutral-100/50 shrink-0 ring-1 ring-white/50">
+                        {identity?.client_logo_url && (
+                            <AvatarImage src={identity.client_logo_url} className="object-cover" />
+                        )}
+                        <AvatarFallback className="bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 font-bold text-[12px] uppercase tracking-tighter">
+                            {(identity?.client_short_name || selectedProperty?.name || "HC")
+                                .split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                    </Avatar>
+                )}
 
                 <div className="flex flex-col min-w-0">
                     <h1 className="text-[15px] font-black text-neutral-800 leading-none truncate max-w-[200px] tracking-tight mb-0.5">
-                        {identity?.client_short_name || selectedProperty?.name || "Host Connect"}
+                        {title || identity?.client_short_name || selectedProperty?.name || "Host Connect"}
                     </h1>
                     <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold text-neutral-400 truncate max-w-[150px] uppercase tracking-widest opacity-90">
-                            Operações • {identity?.staff_short_name || user?.user_metadata?.full_name?.split(' ')[0] || "Equipe"}
+                        <span className="text-[10px] font-bold text-neutral-400 truncate max-w-[200px] uppercase tracking-widest opacity-90">
+                            {subtitle || `Operações • ${identity?.staff_short_name || user?.user_metadata?.full_name?.split(' ')[0] || "Equipe"}`}
                         </span>
                     </div>
                 </div>

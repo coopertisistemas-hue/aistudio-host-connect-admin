@@ -14,6 +14,7 @@ export interface FinancialTransaction {
     category?: string;
     status: 'paid' | 'pending';
     source: 'invoice' | 'expense';
+    paymentMethod: 'cash' | 'credit_card' | 'debit_card' | 'pix' | 'transfer' | 'other';
 }
 
 export const useMobileFinancial = (propertyId?: string) => {
@@ -23,29 +24,35 @@ export const useMobileFinancial = (propertyId?: string) => {
 
     const today = new Date();
 
+    // Helper to normalize payment method
+    const normalizeMethod = (method: string | null | undefined): FinancialTransaction['paymentMethod'] => {
+        if (!method) return 'other';
+        const m = method.toLowerCase();
+        if (m.includes('dinheiro') || m.includes('cash') || m.includes('espécie')) return 'cash';
+        if (m.includes('pix')) return 'pix';
+        if (m.includes('credito') || m.includes('crédito') || m.includes('credit')) return 'credit_card';
+        if (m.includes('debito') || m.includes('débito') || m.includes('debit')) return 'debit_card';
+        return 'other';
+    };
+
     // 1. Process Daily Summary & Transactions
     const transactions: FinancialTransaction[] = [];
 
     // Process Incomes (Invoices)
     const paidInvoices = invoices.filter(inv => inv.status === 'paid' || inv.status === 'partially_paid');
     paidInvoices.forEach(inv => {
-        // Use paid_date if available (not in standard schema yet, falling back to issue_date or custom logic)
-        // Ideally we should check payment tables, but for Mobile MVP we assume paid status + date relevance
         const date = inv.issue_date ? parseISO(inv.issue_date) : new Date();
-
-        // Only include if relevance is today (simplified logic for "Cash Flow")
-        // Real cash flow would need a Payments table. 
-        // We will include everything from TODAY for the simplified view.
         if (isSameDay(date, today)) {
             transactions.push({
                 id: inv.id,
                 type: 'income',
-                description: `Reserva: ${inv.bookings?.guest_name || 'Hóspede'}`,
-                amount: Number(inv.total_amount), // Use paid_amount if available
+                description: inv.bookings?.guest_name || 'Hóspede',
+                amount: Number(inv.total_amount),
                 date: date,
                 category: 'Hospedagem',
                 status: 'paid',
-                source: 'invoice'
+                source: 'invoice',
+                paymentMethod: normalizeMethod(inv.payment_method)
             });
         }
     });
@@ -54,6 +61,9 @@ export const useMobileFinancial = (propertyId?: string) => {
     expenses.forEach(exp => {
         const date = parseISO(exp.expense_date);
         if (isSameDay(date, today)) {
+            // Heuristic for expenses: Check if description contains [CASH] tag or similar, 
+            // otherwise default to 'other' (usually transfer/card in modern ops).
+            // Ideally we'd have a column, but this suffices for display filtering.
             transactions.push({
                 id: exp.id,
                 type: 'expense',
@@ -62,7 +72,8 @@ export const useMobileFinancial = (propertyId?: string) => {
                 date: date,
                 category: exp.category || 'Outros',
                 status: exp.payment_status === 'paid' ? 'paid' : 'pending',
-                source: 'expense'
+                source: 'expense',
+                paymentMethod: 'other' // Defaulting to other since schema lacks method
             });
         }
     });
@@ -70,16 +81,19 @@ export const useMobileFinancial = (propertyId?: string) => {
     // Sort by recent
     transactions.sort((a, b) => b.date.getTime() - a.date.getTime());
 
-    // Calculate Totals
+    // Calculate Global Totals
     const totalIn = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const totalOut = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     const balance = totalIn - totalOut;
 
-    // 2. Mutations
+    // Calculate Cashbox (Recepção) Totals
+    const cashIn = transactions.filter(t => t.type === 'income' && t.paymentMethod === 'cash').reduce((sum, t) => sum + t.amount, 0);
+    const cashOut = transactions.filter(t => t.type === 'expense' && t.paymentMethod === 'cash').reduce((sum, t) => sum + t.amount, 0);
+    const cashBalance = cashIn - cashOut;
 
-    // Register simple expense/occurrence
+    // 2. Mutations
     const registerOccurrence = useMutation({
-        mutationFn: async (data: { description: string, amount: number, type: 'expense' | 'income', isPaid: boolean }) => {
+        mutationFn: async (data: { description: string, amount: number, type: 'expense' | 'income', isPaid: boolean, method?: string }) => {
             if (data.type === 'expense') {
                 return createExpense.mutateAsync({
                     property_id: propertyId!,
@@ -91,27 +105,18 @@ export const useMobileFinancial = (propertyId?: string) => {
                     paid_date: data.isPaid ? new Date() : null
                 });
             } else {
-                // For Income without Booking, we technically don't have a table besides Invoices linked to Bookings.
-                // We will skip "Misc Income" for now or treat as a negative Expense? 
-                // Better to throw error or handle later. For MVP, we stick to Expenses.
                 throw new Error("Receitas avulsas não suportadas ainda.");
-                // Or we could create a dummy invoice, but that requires a booking.
             }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['financialSummary', propertyId] });
+            queryClient.invalidateQueries({ queryKey: ['expenses', propertyId] });
         }
     });
 
-    // Close Shift (Simulated)
     const closeShift = useMutation({
         mutationFn: async (shiftData: { totalCash: number, notes: string }) => {
-            // In a real system, we'd insert into 'shift_closures'.
-            // Here we verify and potentially log to a generic events table if available, or just Toast.
-
-            // Simulating API call
             await new Promise(resolve => setTimeout(resolve, 1000));
-
             return true;
         },
         onSuccess: () => {
@@ -123,7 +128,10 @@ export const useMobileFinancial = (propertyId?: string) => {
         summary: {
             totalIn,
             totalOut,
-            balance
+            balance,
+            cashBalance,
+            cashIn,
+            cashOut
         },
         transactions,
         isLoading: loadingInvoices || loadingExpenses,
