@@ -38,11 +38,11 @@ export const HeroSection: React.FC = () => {
     else shift = 'NOITE';
 
     return (
-        <div className="mb-2 px-1 flex items-center gap-2">
-            <div className="flex items-center gap-2 text-[11px] font-semibold text-neutral-400/90 tracking-wide uppercase">
-                <Calendar className="h-3 w-3 opacity-70" />
+        <div className="mb-3 pt-3 flex items-center gap-2">
+            <div className="flex items-center gap-2 text-[10px] font-bold text-neutral-400/80 tracking-widest uppercase">
+                <Calendar className="h-3 w-3 opacity-60" />
                 <span>{dateStr}</span>
-                <span className="opacity-30">•</span>
+                <span className="opacity-20">•</span>
                 <span className="text-emerald-600/90 flex items-center gap-1.5">
                     {shift}
                     <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse shadow-sm" />

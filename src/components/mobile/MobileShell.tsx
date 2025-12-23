@@ -11,6 +11,17 @@ import { useSelectedProperty } from "@/hooks/useSelectedProperty";
 import { useProperties } from "@/hooks/useProperties";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useOperationalIdentity } from "@/hooks/useOperationalIdentity";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+    AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 /**
  * MobileShell: The root layout for all mobile-only pages (/m/*)
@@ -62,24 +73,24 @@ export const MobileTopHeader: React.FC = () => {
     };
 
     return (
-        <header className="px-[var(--ui-spacing-page,20px)] pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-4 flex items-center justify-between border-b border-[var(--ui-color-border)] bg-white">
+        <header className="sticky top-0 z-50 w-full px-[var(--ui-spacing-page,20px)] pt-[calc(env(safe-area-inset-top,0px)+8px)] pb-2 flex items-center justify-between bg-white/85 backdrop-blur-xl border-b border-white/40 shadow-[0_2px_15px_-3px_rgba(0,0,0,0.03)] transition-all duration-200">
             <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12 rounded-2xl border border-neutral-100 shadow-sm overflow-hidden bg-neutral-100/50 shrink-0">
+                <Avatar className="h-10 w-10 rounded-full border border-white/60 shadow-sm overflow-hidden bg-neutral-100/50 shrink-0 ring-1 ring-white/50">
                     {identity?.client_logo_url && (
                         <AvatarImage src={identity.client_logo_url} className="object-cover" />
                     )}
-                    <AvatarFallback className="rounded-2xl bg-emerald-50 text-emerald-600 font-bold text-[15px] uppercase tracking-tighter">
+                    <AvatarFallback className="bg-gradient-to-br from-emerald-50 to-emerald-100 text-emerald-700 font-bold text-[12px] uppercase tracking-tighter">
                         {(identity?.client_short_name || selectedProperty?.name || "HC")
                             .split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                     </AvatarFallback>
                 </Avatar>
 
                 <div className="flex flex-col min-w-0">
-                    <h1 className="text-[17px] font-black text-[var(--ui-color-text-main)] leading-tight truncate max-w-[200px]">
+                    <h1 className="text-[15px] font-black text-neutral-800 leading-none truncate max-w-[200px] tracking-tight mb-0.5">
                         {identity?.client_short_name || selectedProperty?.name || "Host Connect"}
                     </h1>
-                    <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[11px] font-bold text-[var(--ui-color-text-muted)] truncate max-w-[150px] uppercase tracking-wide opacity-80">
+                    <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold text-neutral-400 truncate max-w-[150px] uppercase tracking-widest opacity-90">
                             Operações • {identity?.staff_short_name || user?.user_metadata?.full_name?.split(' ')[0] || "Equipe"}
                         </span>
                     </div>
@@ -89,29 +100,51 @@ export const MobileTopHeader: React.FC = () => {
             <div className="flex items-center gap-1">
                 <button
                     onClick={() => navigate("/m/notifications")}
-                    className="h-10 w-10 rounded-full flex items-center justify-center active:scale-95 transition-all text-neutral-400 relative"
+                    className="h-9 w-9 rounded-full flex items-center justify-center active:bg-neutral-100 transition-all text-neutral-400 hover:text-neutral-600 relative"
                 >
-                    <Bell className="h-5 w-5" />
+                    <Bell className="h-4.5 w-4.5" />
                     {unreadCount > 0 && (
-                        <span className="absolute top-2 right-2 h-2.5 w-2.5 bg-rose-500 rounded-full border-2 border-white shadow-sm" />
+                        <span className="absolute top-2.5 right-2.5 h-1.5 w-1.5 bg-rose-500 rounded-full ring-2 ring-white" />
                     )}
                 </button>
                 <button
                     onClick={handleRefresh}
                     disabled={isRefreshing}
                     className={cn(
-                        "h-10 w-10 rounded-full flex items-center justify-center active:scale-95 transition-all text-neutral-400",
+                        "h-9 w-9 rounded-full flex items-center justify-center active:bg-neutral-100 transition-all text-neutral-400 hover:text-neutral-600",
                         isRefreshing && "opacity-50"
                     )}
                 >
-                    <RotateCw className={cn("h-5 w-5", isRefreshing && "animate-spin")} />
+                    <RotateCw className={cn("h-4.5 w-4.5", isRefreshing && "animate-spin")} />
                 </button>
-                <button
-                    onClick={signOut}
-                    className="h-10 w-10 rounded-full flex items-center justify-center active:scale-95 transition-all text-neutral-400"
-                >
-                    <LogOut className="h-5 w-5" />
-                </button>
+
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <button
+                            className="h-9 w-9 rounded-full flex items-center justify-center active:bg-neutral-100 transition-all text-neutral-400 hover:text-rose-500"
+                            title="Sair"
+                        >
+                            <LogOut className="h-4.5 w-4.5" />
+                        </button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent className="max-w-[85vw] w-full rounded-2xl border-neutral-100 shadow-xl bg-white/95 backdrop-blur-md">
+                        <AlertDialogHeader>
+                            <AlertDialogTitle className="text-lg font-bold text-neutral-800">Sair da conta?</AlertDialogTitle>
+                            <AlertDialogDescription className="text-neutral-500">
+                                Você precisará autenticar novamente para voltar ao Operações.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="flex-row gap-2 justify-end">
+                            <AlertDialogCancel className="mt-0 flex-1 rounded-xl border-neutral-200 text-neutral-600 font-semibold h-11">Cancelar</AlertDialogCancel>
+                            <AlertDialogAction
+                                onClick={signOut}
+                                className="flex-1 rounded-xl bg-rose-500 hover:bg-rose-600 text-white font-bold h-11"
+                            >
+                                Sair
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </header>
     );
