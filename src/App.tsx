@@ -74,6 +74,13 @@ import MobileExecutive from "./pages/mobile/MobileExecutive";
 import { MobileRouteGuard } from "./components/mobile/MobileRouteGuard";
 import { SessionLockManager } from "./components/SessionLockManager";
 
+import { usePageTracking } from "./hooks/usePageTracking"; // GA4 Tracking
+
+const PageTracker = () => {
+  usePageTracking();
+  return null;
+};
+
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -83,6 +90,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <PageTracker />
           <AuthProvider>
             <SelectedPropertyProvider> {/* WRAP WITH PROPERTY PROVIDER */}
               {/* DebugOverlay removed */}

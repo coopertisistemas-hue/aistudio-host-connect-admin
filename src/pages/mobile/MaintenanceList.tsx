@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { trackOperation } from "@/lib/analytics"; // Analytics
 import {
     MobileShell,
     MobileTopHeader
@@ -135,7 +136,10 @@ const MaintenanceList: React.FC = () => {
                             { label: "Todos", value: "all" }
                         ]}
                         value={activeFilter}
-                        onChange={setActiveFilter}
+                        onChange={(val) => {
+                            setActiveFilter(val);
+                            trackOperation('filter_change', 'maintenance', val);
+                        }}
                     />
                 </section>
 
@@ -153,7 +157,10 @@ const MaintenanceList: React.FC = () => {
                             return (
                                 <div
                                     key={task.id}
-                                    onClick={() => navigate(`/m/maintenance/${task.id}`)}
+                                    onClick={() => {
+                                        trackOperation('view_detail', 'maintenance', task.id);
+                                        navigate(`/m/maintenance/${task.id}`);
+                                    }}
                                     className="group rounded-2xl p-4 shadow-sm border border-white/60 bg-white hover:bg-neutral-50 active:scale-[0.99] transition-all cursor-pointer relative"
                                 >
                                     <div className="flex justify-between items-start mb-2">
@@ -184,7 +191,7 @@ const MaintenanceList: React.FC = () => {
                                         {task.room && (
                                             <div className="flex items-center gap-2 text-xs text-neutral-600 font-medium">
                                                 <MapPin className="h-3.5 w-3.5 text-neutral-400" />
-                                                <span>{task.room.room_number} <span className="text-neutral-300 mx-1">|</span> {task.room.name}</span>
+                                                <span>{task.room.room_number}</span>
                                             </div>
                                         )}
 

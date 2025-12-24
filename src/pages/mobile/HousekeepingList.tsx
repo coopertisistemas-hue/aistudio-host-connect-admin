@@ -44,6 +44,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { trackOperation } from "@/lib/analytics"; // Analytics
 
 const HousekeepingList: React.FC = () => {
     const navigate = useNavigate();
@@ -108,6 +109,8 @@ const HousekeepingList: React.FC = () => {
                 status: newStatus,
                 notes: finalNotes
             });
+
+            trackOperation('update_status', 'housekeeping', newStatus); // Analytics
             setSelectedTask(null);
         };
 
@@ -230,19 +233,19 @@ const HousekeepingList: React.FC = () => {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-3xl -mr-10 -mt-10" />
 
                     <div className="relative z-10 grid grid-cols-4 gap-2 text-center">
-                        <div className="flex flex-col items-center" onClick={() => setActiveFilter("dirty")}>
+                        <div className="flex flex-col items-center" onClick={() => { setActiveFilter("dirty"); trackOperation('filter_kpi', 'housekeeping', 'dirty'); }}>
                             <span className="text-2xl font-bold">{kpis.dirty}</span>
                             <span className="text-[9px] uppercase font-bold opacity-80">Sujos</span>
                         </div>
-                        <div className="flex flex-col items-center" onClick={() => setActiveFilter("cleaning")}>
+                        <div className="flex flex-col items-center" onClick={() => { setActiveFilter("cleaning"); trackOperation('filter_kpi', 'housekeeping', 'cleaning'); }}>
                             <span className="text-2xl font-bold">{kpis.cleaning}</span>
                             <span className="text-[9px] uppercase font-bold opacity-80">Limpando</span>
                         </div>
-                        <div className="flex flex-col items-center" onClick={() => setActiveFilter("inspection")}>
+                        <div className="flex flex-col items-center" onClick={() => { setActiveFilter("inspection"); trackOperation('filter_kpi', 'housekeeping', 'inspection'); }}>
                             <span className="text-2xl font-bold">{kpis.inspect}</span>
                             <span className="text-[9px] uppercase font-bold opacity-80">Vistoria</span>
                         </div>
-                        <div className="flex flex-col items-center" onClick={() => setActiveFilter("clean")}>
+                        <div className="flex flex-col items-center" onClick={() => { setActiveFilter("clean"); trackOperation('filter_kpi', 'housekeeping', 'clean'); }}>
                             <span className="text-2xl font-bold">{kpis.clean}</span>
                             <span className="text-[9px] uppercase font-bold opacity-80">Limpos</span>
                         </div>

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { Tables } from '@/integrations/supabase/types'; // Import Tables type
+import { trackLogin } from '@/lib/analytics'; // Analytics
 
 type Profile = Tables<'profiles'>; // Define Profile type
 
@@ -131,6 +132,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         await fetchUserProfile(loggedInUser.id);
       }
 
+      trackLogin('email'); // Track login
       navigate('/dashboard');
     } catch (error) {
       console.error('Sign in error:', error);
@@ -175,6 +177,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         await fetchUserProfile(data.user.id);
       }
 
+      trackLogin('signup_email'); // Track signup
+
       toast({
         title: "Cadastro realizado!",
         description: "Sua conta foi criada com sucesso. Redirecionando...",
@@ -217,6 +221,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
           redirectTo: `${window.location.origin}/auth`, // Redirect back to auth page to handle session
         },
       });
+      trackLogin('google_attempt');
 
       if (error) {
         toast({
@@ -241,6 +246,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
           redirectTo: `${window.location.origin}/auth`,
         },
       });
+      trackLogin('facebook_attempt');
 
       if (error) {
         toast({
