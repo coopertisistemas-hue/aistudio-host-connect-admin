@@ -85,7 +85,7 @@ const App = () => (
         <BrowserRouter>
           <AuthProvider>
             <SelectedPropertyProvider> {/* WRAP WITH PROPERTY PROVIDER */}
-              <DebugOverlay />
+              {/* DebugOverlay removed */}
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
