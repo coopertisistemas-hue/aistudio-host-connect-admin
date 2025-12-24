@@ -28,10 +28,22 @@ import {
  * Implements a flex-col structure with dvh support and safe-area resilience.
  */
 export const MobileShell: React.FC<{ children: React.ReactNode; header?: React.ReactNode }> = ({ children, header }) => {
+    const { pathname } = useLocation();
+    const scrollRef = React.useRef<HTMLDivElement>(null);
+
+    React.useLayoutEffect(() => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollTo({ top: 0, behavior: "instant" });
+        }
+    }, [pathname]);
+
     return (
         <div className="min-h-[100dvh] flex flex-col bg-[var(--ui-surface-bg)] overflow-hidden">
             {header}
-            <main className="flex-1 flex flex-col hide-scrollbar overflow-y-auto">
+            <main
+                ref={scrollRef}
+                className="flex-1 flex flex-col hide-scrollbar overflow-y-auto"
+            >
                 <div className="flex-1">
                     {children}
                 </div>

@@ -6,9 +6,6 @@ import { Button } from "@/components/ui/button";
 /**
  * CardContainer: Base wrapper for standard mobile cards
  */
-/**
- * CardContainer: Base wrapper for standard mobile cards
- */
 export const CardContainer: React.FC<React.HTMLAttributes<HTMLDivElement> & {
     children: React.ReactNode;
     className?: string;
@@ -136,9 +133,6 @@ export const ListRow: React.FC<{
     </div>
 );
 
-/**
- * QuickAccessCard: Large individual card for main modules (Delivery Connect Pattern)
- */
 /**
  * QuickAccessCard: Large individual card for main modules (Delivery Connect Pattern)
  */
@@ -309,3 +303,6 @@ export const PrimaryBottomCTA: React.FC<{
         </Button>
     </div>
 );
+
+// Export StatusBadge from its own file to avoid circular deps/build issues
+export { StatusBadge } from "./StatusBadge";
