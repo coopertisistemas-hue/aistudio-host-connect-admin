@@ -7,25 +7,19 @@ import {
   Sparkles,
   HelpCircle,
 } from "lucide-react";
-import { useIntegrations } from "@/hooks/useIntegrations";
-import DataTableSkeleton from "@/components/DataTableSkeleton";
 
+
+// Static integrations for public LP to avoid auth hooks
 const IntegrationsSection = () => {
-  const { integrations, isLoading } = useIntegrations();
+  const integrations = [
+    { id: '1', name: 'Airbnb', icon: 'Home', description: 'Sincronização de calendários e reservas' },
+    { id: '2', name: 'Booking.com', icon: 'Building2', description: 'Gerenciamento centralizado de disponibilidade' },
+    { id: '3', name: 'Stripe', icon: 'CreditCard', description: 'Processamento de pagamentos seguro' },
+    { id: '4', name: 'WhatsApp', icon: 'Smartphone', description: 'Comunicação automatizada com hóspedes' },
+    { id: '5', name: 'Google Calendar', icon: 'Calendar', description: 'Organização de tarefas e eventos' },
+    { id: '6', name: 'Expedia', icon: 'Globe', description: 'Alcance global para sua propriedade' },
+  ];
 
-  if (isLoading) {
-    return (
-      <section className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">Integrações</Badge>
-            <h2 className="text-4xl font-bold mb-4">Carregando integrações...</h2>
-          </div>
-          <DataTableSkeleton rows={1} columns={6} />
-        </div>
-      </section>
-    );
-  }
 
   return (
     <section className="py-20 bg-muted/30">
@@ -43,7 +37,7 @@ const IntegrationsSection = () => {
             Integre facilmente com as principais plataformas do mercado
           </p>
         </div>
-        
+
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 max-w-5xl mx-auto mb-12">
           {integrations.map((integration, index) => {
             const IconComponent = integration.icon ? (LucideIcons as any)[integration.icon] : HelpCircle;

@@ -1,25 +1,41 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
-import { useTestimonials } from "@/hooks/useTestimonials";
-import DataTableSkeleton from "@/components/DataTableSkeleton";
+
 
 const TestimonialsSection = () => {
-  const { testimonials, isLoading } = useTestimonials();
+  // Static testimonials for public LP
+  const testimonials = [
+    {
+      id: '1',
+      name: 'Ana Silva',
+      role: 'Superhost Airbnb',
+      location: 'Florianópolis, SC',
+      content: 'O HostConnect revolucionou a forma como gerencio meus imóveis. Ganhei horas livres na minha semana e aumentei minha taxa de ocupação em 20%.',
+      rating: 5
+    },
+    {
+      id: '2',
+      name: 'Carlos Oliveira',
+      role: 'Gerente da Pousada do Sol',
+      location: 'Ubatuba, SP',
+      content: 'A centralização das reservas de diferentes canais em um único calendário eliminou completamente nossos problemas de overbooking.',
+      rating: 5
+    },
+    {
+      id: '3',
+      name: 'Mariana Santos',
+      role: 'Proprietária de Apartamentos',
+      location: 'Rio de Janeiro, RJ',
+      content: 'O suporte financeiro e os relatórios automáticos facilitaram muito minha contabilidade mensal. Recomendo para todos os anfitriões.',
+      rating: 5
+    }
+  ];
 
-  if (isLoading) {
-    return (
-      <section className="py-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">Depoimentos</Badge>
-            <h2 className="text-4xl font-bold mb-4">Carregando depoimentos...</h2>
-          </div>
-          <DataTableSkeleton rows={1} columns={3} />
-        </div>
-      </section>
-    );
-  }
+  /*
+   * Removing Auth/Loading Dependency:
+   * Replaced dynamic loading check with direct rendering of static content.
+   */
 
   return (
     <section className="py-20">

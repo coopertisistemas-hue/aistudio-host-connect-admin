@@ -43,18 +43,14 @@ import FAQSection from "@/components/landing/FAQSection";
 import CtaSection from "@/components/landing/CtaSection";
 import { Helmet } from 'react-helmet-async';
 import PublicSupportForm from "@/components/landing/PublicSupportForm";
-import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
-import { useProperties } from "@/hooks/useProperties";
+import FounderBanner from "@/components/landing/FounderBanner";
 
 const Landing = () => {
-  const { properties } = useProperties();
-  const defaultPropertyId = properties.length > 0 ? properties[0].id : undefined;
-  const { data: websiteSettings, isLoading: settingsLoading } = usePublicWebsiteSettings(defaultPropertyId || '');
-
-  const siteName = websiteSettings?.site_name || "HostConnect";
-  const siteDescription = websiteSettings?.site_description || "Plataforma completa de gestão hoteleira para propriedades de todos os tamanhos. Dashboard avançado, motor de reservas, pagamentos online e muito mais.";
-  const siteFaviconUrl = websiteSettings?.site_favicon_url || "/favicon.png";
-  const siteLogoUrl = websiteSettings?.site_logo_url || "https://lovable.dev/opengraph-image-p98pqg.png"; // Fallback for OG image
+  // Static defaults for public LP - no auth hooks
+  const siteName = "HostConnect";
+  const siteDescription = "Plataforma completa de gestão hoteleira para propriedades de todos os tamanhos. Dashboard avançado, motor de reservas, pagamentos online e muito mais.";
+  const siteFaviconUrl = "/favicon.png";
+  const siteLogoUrl = "https://lovable.dev/opengraph-image-p98pqg.png"; // Fallback for OG image
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,14 +62,15 @@ const Landing = () => {
         <meta property="og:title" content={`${siteName} - Sistema de Gestão Hoteleira`} />
         <meta property="og:description" content={siteDescription} />
         <meta property="og:type" content="website" />
-        {websiteSettings?.site_logo_url && <meta property="og:image" content={siteLogoUrl} />}
+        {siteLogoUrl && <meta property="og:image" content={siteLogoUrl} />}
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${siteName} - Sistema de Gestão Hoteleira`} />
         <meta name="twitter:description" content={siteDescription} />
-        {websiteSettings?.site_logo_url && <meta name="twitter:image" content={siteLogoUrl} />}
+        {siteLogoUrl && <meta name="twitter:image" content={siteLogoUrl} />}
       </Helmet>
 
+      <FounderBanner />
       <Header />
 
       <HeroSection />

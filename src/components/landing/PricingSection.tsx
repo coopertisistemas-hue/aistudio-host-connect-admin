@@ -3,25 +3,47 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2 } from "lucide-react";
-import { usePricingPlans } from "@/hooks/usePricingPlans";
-import DataTableSkeleton from "@/components/DataTableSkeleton";
+
 
 const PricingSection = () => {
-  const { plans, isLoading } = usePricingPlans();
+  // Static pricing plans for public LP
+  const plans = [
+    {
+      id: '1',
+      name: 'Starter',
+      description: 'Ideal para proprietários individuais e anfitriões.',
+      price: 0,
+      period: '/mês', // Fixed logic below will expect this or we adapt
+      commission: 0,
+      features: ['Até 2 propriedades', 'Gestão de reservas básica', 'Calendário unificado', 'Suporte por email'],
+      is_popular: false
+    },
+    {
+      id: '2',
+      name: 'Profissional',
+      description: 'Para gerentes de propriedades em crescimento.',
+      price: 150,
+      period: '/mês',
+      commission: 0,
+      features: ['Até 10 propriedades', 'Motor de reservas avançado', 'Relatórios financeiros', 'Suporte prioritário', 'Múltiplos usuários'],
+      is_popular: true
+    },
+    {
+      id: '3',
+      name: 'Enterprise',
+      description: 'Solução completa para grandes operações.',
+      price: 450,
+      period: '/mês',
+      commission: 0,
+      features: ['Propriedades ilimitadas', 'API dedicada', 'Gerente de conta exclusivo', 'Personalização White-label', 'Treinamento da equipe'],
+      is_popular: false
+    }
+  ];
 
-  if (isLoading) {
-    return (
-      <section id="pricing" className="py-20">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">Planos</Badge>
-            <h2 className="text-4xl font-bold mb-4">Carregando planos...</h2>
-          </div>
-          <DataTableSkeleton rows={1} columns={3} />
-        </div>
-      </section>
-    );
-  }
+  /* 
+   * Removing Auth/Loading Dependency:
+   * Replaced dynamic loading check with direct rendering of static content.
+   */
 
   return (
     <section id="pricing" className="py-20">
@@ -42,11 +64,10 @@ const PricingSection = () => {
           {plans.map((plan, index) => (
             <Card
               key={plan.id}
-              className={`relative border-2 transition-all duration-300 hover:scale-105 ${
-                plan.is_popular 
-                  ? "border-primary shadow-large bg-gradient-to-b from-primary/5 to-transparent" 
-                  : "border-border hover:border-primary/30 hover:shadow-medium"
-              }`}
+              className={`relative border-2 transition-all duration-300 hover:scale-105 ${plan.is_popular
+                ? "border-primary shadow-large bg-gradient-to-b from-primary/5 to-transparent"
+                : "border-border hover:border-primary/30 hover:shadow-medium"
+                }`}
             >
               {plan.is_popular && (
                 <div className="absolute -top-4 left-1/2 -translate-x-1/2">

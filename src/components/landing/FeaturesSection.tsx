@@ -1,25 +1,65 @@
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import * as LucideIcons from "lucide-react";
-import { useFeatures, Feature } from "@/hooks/useFeatures";
-import DataTableSkeleton from "@/components/DataTableSkeleton";
+
 
 const FeaturesSection = () => {
-  const { features, isLoading } = useFeatures();
+  // Static features for public LP
+  const features = [
+    {
+      id: '1',
+      title: 'Motor de Reservas',
+      description: 'Aceite reservas diretas no seu site sem comissões.',
+      icon: 'Calendar',
+      active: true,
+      display_order: 1
+    },
+    {
+      id: '2',
+      title: 'Gestão de Canais',
+      description: 'Sincronize Airbnb, Booking.com e outros em tempo real.',
+      icon: 'Globe',
+      active: true,
+      display_order: 2
+    },
+    {
+      id: '3',
+      title: 'Controle Financeiro',
+      description: 'Acompanhe receitas, despesas e relatórios automáticos.',
+      icon: 'BarChart3',
+      active: true,
+      display_order: 3
+    },
+    {
+      id: '4',
+      title: 'Gestão de Hóspedes',
+      description: 'CRM completo com histórico e preferências dos clientes.',
+      icon: 'Users',
+      active: true,
+      display_order: 4
+    },
+    {
+      id: '5',
+      title: 'Automação de Tarefas',
+      description: 'Automatize emails, limpeza e manutenção.',
+      icon: 'Zap',
+      active: true,
+      display_order: 5
+    },
+    {
+      id: '6',
+      title: 'Website Builder',
+      description: 'Crie um site profissional para sua propriedade em minutos.',
+      icon: 'Smartphone',
+      active: true,
+      display_order: 6
+    }
+  ];
 
-  if (isLoading) {
-    return (
-      <section id="features" className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">Funcionalidades</Badge>
-            <h2 className="text-4xl font-bold mb-4">Carregando funcionalidades...</h2>
-          </div>
-          <DataTableSkeleton rows={6} columns={3} />
-        </div>
-      </section>
-    );
-  }
+  /* 
+   * Removing Auth/Loading Dependency:
+   * Replaced dynamic loading check with direct rendering of static content.
+   */
 
   return (
     <section id="features" className="py-20 bg-muted/30">

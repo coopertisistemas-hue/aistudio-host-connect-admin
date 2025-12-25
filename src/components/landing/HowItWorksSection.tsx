@@ -3,26 +3,36 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Shield, Zap, TrendingUp } from "lucide-react";
-import { useHowItWorksSteps } from "@/hooks/useHowItWorksSteps";
-import DataTableSkeleton from "@/components/DataTableSkeleton";
+
 import { cn } from "@/lib/utils";
 
 const HowItWorksSection = () => {
-  const { steps, isLoading } = useHowItWorksSteps();
+  // Static steps for public LP
+  const steps = [
+    {
+      id: '1',
+      title: 'Crie sua conta',
+      description: 'Cadastre-se em menos de 2 minutos e configure o perfil da sua propriedade.',
+      step_number: 1
+    },
+    {
+      id: '2',
+      title: 'Conecte seus canais',
+      description: 'Importe seus anúncios do Airbnb, Booking.com e outros automaticamente.',
+      step_number: 2
+    },
+    {
+      id: '3',
+      title: 'Automatize tudo',
+      description: 'Ative o motor de reservas e deixe o sistema gerenciar sua operação 24/7.',
+      step_number: 3
+    }
+  ];
 
-  if (isLoading) {
-    return (
-      <section id="how-it-works" className="py-20 bg-muted/30">
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <Badge variant="secondary" className="mb-4">Como Funciona</Badge>
-            <h2 className="text-4xl font-bold mb-4">Carregando passos...</h2>
-          </div>
-          <DataTableSkeleton rows={1} columns={3} />
-        </div>
-      </section>
-    );
-  }
+  /* 
+   * Removing Auth/Loading Dependency: 
+   * Replaced dynamic loading check with direct rendering of static content.
+   */
 
   return (
     <section id="how-it-works" className="py-20 bg-muted/30">
@@ -39,7 +49,7 @@ const HowItWorksSection = () => {
             Configure sua conta e comece a gerenciar suas reservas em minutos
           </p>
         </div>
-        
+
         <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           {steps.map((step, index) => (
             <div key={step.id} className="relative group">

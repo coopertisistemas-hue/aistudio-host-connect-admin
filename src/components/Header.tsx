@@ -4,21 +4,16 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useToast } from "@/hooks/use-toast";
-import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
-import { useProperties } from "@/hooks/useProperties";
+
 
 const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
-  const { properties } = useProperties();
-
-  // Use the first property's ID for public settings, or a default if none
-  const defaultPropertyId = properties.length > 0 ? properties[0].id : undefined;
-  const { data: websiteSettings, isLoading: settingsLoading } = usePublicWebsiteSettings(defaultPropertyId || '');
-
-  const siteName = websiteSettings?.site_name || "HostConnect";
-  const siteLogoUrl = websiteSettings?.site_logo_url || "https://oravqykjpgqoiidqnfja.supabase.co/storage/v1/object/public/website-assets/HostConnect%20Logotipo.png";
-  const demoUrl = websiteSettings?.demo_url || "";
+  // Static defaults for public header to avoid auth hooks
+  const siteName = "HostConnect";
+  const siteLogoUrl = "https://oravqykjpgqoiidqnfja.supabase.co/storage/v1/object/public/website-assets/HostConnect%20Logotipo.png";
+  const demoUrl = "";
+  const settingsLoading = false;
 
   const scrollToSection = (sectionId: string) => {
     setIsOpen(false);
@@ -27,7 +22,7 @@ const Header = () => {
       const offset = 80;
       const elementPosition = element.getBoundingClientRect().top;
       const offsetPosition = elementPosition + window.pageYOffset - offset;
-      
+
       window.scrollTo({
         top: offsetPosition,
         behavior: "smooth"
@@ -68,13 +63,13 @@ const Header = () => {
 
           <nav className="hidden md:flex items-center gap-8">
             {navItems.map((item) => (
-              <a 
+              <a
                 key={item.id}
                 href={`#${item.id}`}
                 onClick={(e) => {
                   e.preventDefault();
                   scrollToSection(item.id);
-                }} 
+                }}
                 className="text-sm font-medium text-foreground/80 hover:text-foreground transition-colors cursor-pointer"
               >
                 {item.label}
@@ -99,7 +94,7 @@ const Header = () => {
                 Adquirir Plano
               </Button>
             </Link>
-            
+
             <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild className="md:hidden">
                 <Button variant="ghost" size="icon">
