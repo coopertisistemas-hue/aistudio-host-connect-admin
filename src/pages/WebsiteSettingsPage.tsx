@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProperties } from '@/hooks/useProperties';
 import { useWebsiteSettings, WebsiteSettingInput } from '@/hooks/useWebsiteSettings';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Home, Settings, Globe, CreditCard, MessageSquare } from 'lucide-react'; // Import MessageSquare
+import { Loader2, Home, Settings, Globe, CreditCard, MessageSquare, Zap } from 'lucide-react'; // Import MessageSquare
 import { useForm, Controller, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,6 +18,7 @@ import CtaSettingsForm from "@/components/website-settings/CtaSettingsForm";
 import PaymentOtaSettingsForm from "@/components/website-settings/PaymentOtaSettingsForm";
 import SocialMediaSettingsForm from "@/components/website-settings/SocialMediaSettingsForm";
 import GoogleReviewResponder from "@/components/website-settings/GoogleReviewResponder"; // NEW IMPORT
+import { AiConfigWarning } from "@/components/AiConfigWarning";
 
 // Helper para tratar strings vazias como null
 const optionalStringOrNull = z.string().optional().nullable().transform(e => (e === "" ? null : e));
@@ -25,7 +26,7 @@ const optionalUrlOrNull = z.string().url("URL inválida.").optional().nullable()
 
 export const websiteSettingsSchema = z.object({
   property_id: z.string().min(1, "Selecione uma propriedade."),
-  
+
   // General Website Settings
   site_headline: optionalStringOrNull,
   site_name: optionalStringOrNull,
@@ -37,11 +38,11 @@ export const websiteSettingsSchema = z.object({
   contact_email: z.string().email("Email de contato inválido.").optional().nullable().or(z.literal('')).transform(e => (e === "" ? null : e)),
   contact_phone: optionalStringOrNull,
   demo_url: optionalUrlOrNull,
-  
+
   // CTA Section Settings
   cta_title: optionalStringOrNull,
   cta_description: optionalStringOrNull,
-  
+
   // Payment & OTA Settings
   stripe_publishable_key: optionalStringOrNull,
   stripe_secret_key: optionalStringOrNull,
@@ -49,11 +50,11 @@ export const websiteSettingsSchema = z.object({
   booking_com_api_key: optionalStringOrNull,
   airbnb_api_key: optionalStringOrNull,
   expedia_api_key: optionalStringOrNull,
-  
+
   // Social Media & Marketing API Keys
   google_business_api_key: optionalStringOrNull,
   facebook_app_secret: optionalStringOrNull,
-  
+
   // Social Media Links & Integration Visibility Settings
   social_instagram: optionalUrlOrNull,
   social_facebook: optionalUrlOrNull,
@@ -205,7 +206,7 @@ const WebsiteSettingsPage = () => {
     for (const key of settingsKeys) {
       const value = data[key];
       const existingSetting = propertySettings.find(s => s.setting_key === key);
-      
+
       // Determine the value to save (null if empty string or null, otherwise the value)
       const valueToSave = (typeof value === 'string' && value.trim() === '') ? null : value;
 
@@ -280,7 +281,7 @@ const WebsiteSettingsPage = () => {
         {selectedPropertyId ? (
           <FormProvider {...formMethods}>
             <form onSubmit={handleSubmit(handleSaveSettings)} className="space-y-6">
-              
+
               <Tabs defaultValue="general" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                   <TabsTrigger value="general">
@@ -299,6 +300,10 @@ const WebsiteSettingsPage = () => {
                     <MessageSquare className="h-4 w-4 mr-2" />
                     Marketing & Social
                   </TabsTrigger>
+                  <TabsTrigger value="ai">
+                    <Zap className="h-4 w-4 mr-2" />
+                    Concierge IA
+                  </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="general" className="space-y-6 mt-4">
@@ -316,6 +321,18 @@ const WebsiteSettingsPage = () => {
                 <TabsContent value="social" className="space-y-6 mt-4">
                   <SocialMediaSettingsForm isSaving={isSaving} />
                   <GoogleReviewResponder propertyId={selectedPropertyId} />
+                </TabsContent>
+
+                <TabsContent value="ai" className="space-y-6 mt-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Configuração do Concierge IA</CardTitle>
+                      <CardDescription>Gerencie o assistente virtual do seu site.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <AiConfigWarning featureName="Concierge IA (OpenAI/Gemini)" />
+                    </CardContent>
+                  </Card>
                 </TabsContent>
               </Tabs>
 

@@ -57,6 +57,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import logoIcon from "@/assets/logo-icon.png";
 
 const AppSidebar = () => {
@@ -69,6 +70,9 @@ const AppSidebar = () => {
   const isCollapsed = state === "collapsed";
 
   if (authLoading || isAdminLoading) return null;
+
+  // Entitlement Gates
+  const { canAccess } = useEntitlements();
 
   const menuGroups = [
     {
@@ -100,8 +104,8 @@ const AppSidebar = () => {
       items: [
         { title: "Inbox Unificada", url: "/marketing/inbox", icon: Hash },
         { title: "Overview", url: "/marketing/overview", icon: BarChart3 },
-        { title: "Conectores", url: "/marketing/connectors", icon: Globe },
-        { title: "Google Performance", url: "/marketing/google", icon: Monitor },
+        { title: "Conectores", url: "/marketing/connectors", icon: Globe, gated: !canAccess('otas') },
+        { title: "Google Performance", url: "/marketing/google", icon: Monitor, gated: !canAccess('gmb') },
       ]
     },
     {
@@ -113,7 +117,7 @@ const AppSidebar = () => {
         { title: "Quartos", url: "/rooms", icon: Bed },
         { title: "Comodidades", url: "/amenities", icon: ListChecks },
         { title: "Serviços", url: "/services", icon: ConciergeBell },
-        { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe },
+        { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe, gated: !canAccess('otas') },
       ]
     },
     {
@@ -134,7 +138,7 @@ const AppSidebar = () => {
         { title: "Meus Plantões", url: "/me/shifts", icon: Calendar },
         { title: "Colaboradores", url: "/ops/staff", icon: Users },
         { title: "Configurações", url: "/settings", icon: User },
-        { title: "Website", url: "/website-settings", icon: Globe },
+        { title: "Website", url: "/website-settings", icon: Globe, gated: !canAccess('site_bonus') },
         { title: "Painel Admin", url: "/admin-panel", icon: ShieldCheck, roles: ['admin'] },
         { title: "Planos", url: "/admin/pricing-plans", icon: CreditCard, roles: ['admin'] },
         { title: "Funcionalidades", url: "/admin/features", icon: Zap, roles: ['admin'] },
@@ -163,7 +167,8 @@ const AppSidebar = () => {
       <SidebarContent>
         {menuGroups.map((group, gIndex) => {
           const filteredItems = group.items.filter(item =>
-            !item.roles || (userRole && item.roles.includes(userRole))
+            (!item.roles || (userRole && item.roles.includes(userRole))) &&
+            !item.gated
           );
 
           if (filteredItems.length === 0) return null;

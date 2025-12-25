@@ -41,7 +41,19 @@ const AdminPanel = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [searchQuery, setSearchQuery] = useState("");
+  const [pendingChanges, setPendingChanges] = useState<Record<string, Partial<Profile>>>({});
+
+  const handleFieldChange = (id: string, field: keyof Profile, value: string) => {
+    setPendingChanges(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: value
+      }
+    }));
+  };
+
+  // ... inside render: profile.role becomes (pendingChanges[profile.id]?.role || profile.role)
 
   // Redirect if not admin
   useEffect(() => {
@@ -66,10 +78,10 @@ const AdminPanel = () => {
   });
 
   const updateUserRoleAndPlan = useMutation({
-    mutationFn: async ({ id, role, plan }: { id: string; role?: string; plan?: string }) => {
+    mutationFn: async ({ id, role, plan, accommodation_limit, founder_started_at, founder_expires_at }: { id: string; role?: string; plan?: string, accommodation_limit?: number, founder_started_at?: string | null, founder_expires_at?: string | null }) => {
       const { error } = await supabase
         .from("profiles")
-        .update({ role, plan })
+        .update({ role, plan, accommodation_limit, founder_started_at, founder_expires_at })
         .eq("id", id);
       if (error) throw error;
     },
@@ -185,8 +197,10 @@ const AdminPanel = () => {
                             </SelectTrigger>
                             <SelectContent>
                               <SelectItem value="free">Grátis</SelectItem>
-                              <SelectItem value="basic">Básico</SelectItem>
+                              <SelectItem value="basic">Start (Básico)</SelectItem>
+                              <SelectItem value="pro">Pro</SelectItem>
                               <SelectItem value="premium">Premium</SelectItem>
+                              <SelectItem value="founder">Founder Program</SelectItem>
                             </SelectContent>
                           </Select>
                         </TableCell>
@@ -195,6 +209,41 @@ const AdminPanel = () => {
                             variant="outline"
                             size="sm"
                             disabled={updateUserRoleAndPlan.isPending || profile.id === user?.id}
+                            onClick={() => {
+                              // Save Logic specific for Plans
+                              let updateData: any = {
+                                role: profile.role,
+                                plan: profile.plan
+                              };
+
+                              if (profile.plan === 'founder') {
+                                const now = new Date();
+                                const nextYear = new Date();
+                                nextYear.setFullYear(now.getFullYear() + 1);
+
+                                updateData.accommodation_limit = 100;
+                                updateData.founder_started_at = now.toISOString();
+                                updateData.founder_expires_at = nextYear.toISOString();
+                              } else if (profile.plan === 'premium') {
+                                updateData.accommodation_limit = 100;
+                                updateData.founder_started_at = null;
+                                updateData.founder_expires_at = null;
+                              } else if (profile.plan === 'pro') {
+                                updateData.accommodation_limit = 10;
+                                updateData.founder_started_at = null;
+                                updateData.founder_expires_at = null;
+                              } else if (profile.plan === 'basic') { // Start
+                                updateData.accommodation_limit = 2;
+                                updateData.founder_started_at = null;
+                                updateData.founder_expires_at = null;
+                              } else { // Free
+                                updateData.accommodation_limit = 1;
+                                updateData.founder_started_at = null;
+                                updateData.founder_expires_at = null;
+                              }
+
+                              updateUserRoleAndPlan.mutate({ id: profile.id, ...updateData });
+                            }}
                           >
                             Salvar
                           </Button>

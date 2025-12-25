@@ -30,6 +30,9 @@ export type Database = {
           id?: string
           name: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           created_at?: string
@@ -38,6 +41,9 @@ export type Database = {
           id?: string
           name?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: []
       }
@@ -203,6 +209,9 @@ export type Database = {
           id?: string
           question: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           answer?: string
@@ -211,6 +220,9 @@ export type Database = {
           id?: string
           question?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: []
       }
@@ -232,6 +244,9 @@ export type Database = {
           id?: string
           title: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           created_at?: string
@@ -241,6 +256,9 @@ export type Database = {
           id?: string
           title?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: []
       }
@@ -262,6 +280,9 @@ export type Database = {
           step_number: number
           title: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           created_at?: string
@@ -271,6 +292,9 @@ export type Database = {
           step_number?: number
           title?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: []
       }
@@ -294,6 +318,9 @@ export type Database = {
           is_visible?: boolean
           name: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           created_at?: string
@@ -304,6 +331,9 @@ export type Database = {
           is_visible?: boolean
           name?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: []
       }
@@ -335,6 +365,9 @@ export type Database = {
           status?: string
           total_amount: number
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           booking_id?: string
@@ -349,6 +382,9 @@ export type Database = {
           status?: string
           total_amount?: number
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: [
           {
@@ -428,6 +464,9 @@ export type Database = {
           period: string
           price: number
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           commission?: number
@@ -441,6 +480,9 @@ export type Database = {
           period?: string
           price?: number
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: []
       }
@@ -474,6 +516,9 @@ export type Database = {
           start_date: string
           status?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           base_price_override?: number | null
@@ -489,6 +534,9 @@ export type Database = {
           start_date?: string
           status?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: [
           {
@@ -517,6 +565,9 @@ export type Database = {
           phone: string | null
           role: string
           updated_at: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Insert: {
           created_at?: string
@@ -527,6 +578,9 @@ export type Database = {
           phone?: string | null
           role?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           created_at?: string
@@ -537,6 +591,9 @@ export type Database = {
           phone?: string | null
           role?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: []
       }
@@ -620,6 +677,9 @@ export type Database = {
           room_type_id: string
           status?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           created_at?: string
@@ -629,6 +689,9 @@ export type Database = {
           room_type_id?: string
           status?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: [
           {
@@ -671,6 +734,9 @@ export type Database = {
           property_id: string
           status?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           amenities_json?: string[] | null
@@ -683,6 +749,9 @@ export type Database = {
           property_id?: string
           status?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: [
           {
@@ -718,6 +787,9 @@ export type Database = {
           property_id: string
           status?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Update: {
           created_at?: string
@@ -730,6 +802,9 @@ export type Database = {
           property_id?: string
           status?: string
           updated_at?: string
+          onboarding_completed?: boolean
+          onboarding_step?: number
+          onboarding_type?: string | null
         }
         Relationships: [
           {

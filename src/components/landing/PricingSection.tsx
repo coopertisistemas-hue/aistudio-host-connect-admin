@@ -6,37 +6,73 @@ import { CheckCircle2 } from "lucide-react";
 
 
 const PricingSection = () => {
-  // Static pricing plans for public LP
+  // Planos atualizados conforme regras do Founder Program
   const plans = [
     {
-      id: '1',
-      name: 'Starter',
-      description: 'Ideal para proprietários individuais e anfitriões.',
-      price: 0,
-      period: '/mês', // Fixed logic below will expect this or we adapt
-      commission: 0,
-      features: ['Até 2 propriedades', 'Gestão de reservas básica', 'Calendário unificado', 'Suporte por email'],
-      is_popular: false
+      id: 'start',
+      name: 'Start',
+      description: 'Para quem está começando.',
+      price: 'Grátis',
+      period: '',
+      features: [
+        'Até 2 acomodações',
+        'Motor de Reservas Básico',
+        'Calendário Unificado',
+        'Taxa de 3% por reserva',
+        'Suporte por email'
+      ],
+      highlight: false,
+      cta: 'Começar Grátis'
     },
     {
-      id: '2',
-      name: 'Profissional',
-      description: 'Para gerentes de propriedades em crescimento.',
-      price: 150,
+      id: 'pro',
+      name: 'Pro',
+      description: 'Para anfitriões profissionais.',
+      price: 'R$ 49',
       period: '/mês',
-      commission: 0,
-      features: ['Até 10 propriedades', 'Motor de reservas avançado', 'Relatórios financeiros', 'Suporte prioritário', 'Múltiplos usuários'],
-      is_popular: true
+      features: [
+        'Até 10 acomodações',
+        'Channel Manager Completo',
+        'Gestão Financeira',
+        'Taxa de 1% por reserva',
+        'Suporte via Chat'
+      ],
+      highlight: false,
+      cta: 'Assinar Pro'
     },
     {
-      id: '3',
-      name: 'Enterprise',
-      description: 'Solução completa para grandes operações.',
-      price: 450,
+      id: 'premium',
+      name: 'Premium',
+      description: 'E-commerce e gestão completa.',
+      price: 'R$ 199',
       period: '/mês',
-      commission: 0,
-      features: ['Propriedades ilimitadas', 'API dedicada', 'Gerente de conta exclusivo', 'Personalização White-label', 'Treinamento da equipe'],
-      is_popular: false
+      features: [
+        'Até 100 acomodações',
+        'E-commerce Integrado',
+        'Integração Google Meu Negócio',
+        'Site Bônus Personalizado',
+        'Concierge IA (BYO Key)',
+        'Taxa Zero'
+      ],
+      highlight: false,
+      cta: 'Falar com Consultor'
+    },
+    {
+      id: 'founder',
+      name: 'Founder Program',
+      description: 'Oferta exclusiva de lançamento.',
+      price: 'R$ 100',
+      period: '/mês (12x)',
+      features: [
+        'Tudo do plano Premium',
+        'Desconto vitalício garantido',
+        'Onboarding Dedicado',
+        'Acesso antecipado a features',
+        'Grupo exclusivo de Founders',
+        'Vagas Limitadas: 50'
+      ],
+      highlight: true,
+      cta: 'Garantir Vaga Founder'
     }
   ];
 
@@ -57,55 +93,64 @@ const PricingSection = () => {
             <span className="bg-gradient-hero bg-clip-text text-transparent"> ideal para você</span>
           </h2>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Planos flexíveis que crescem com seu negócio. Todos incluem 30 dias de garantia de devolução do valor.
+            Comece grátis ou acelere com o Founder Program.
           </p>
         </div>
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, index) => (
+
+        {/* Grid de 4 Colunas para os Planos */}
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 max-w-7xl mx-auto mb-12">
+          {plans.map((plan) => (
             <Card
               key={plan.id}
-              className={`relative border-2 transition-all duration-300 hover:scale-105 ${plan.is_popular
-                ? "border-primary shadow-large bg-gradient-to-b from-primary/5 to-transparent"
-                : "border-border hover:border-primary/30 hover:shadow-medium"
+              className={`relative flex flex-col justify-between border-2 transition-all duration-300 hover:scale-105 ${plan.highlight
+                  ? "border-primary shadow-large bg-gradient-to-b from-primary/5 to-transparent"
+                  : "border-border hover:border-primary/30 hover:shadow-medium"
                 }`}
             >
-              {plan.is_popular && (
-                <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                  <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-medium px-4 py-1">
-                    ⭐ Mais Popular
+              {plan.highlight && (
+                <div className="absolute -top-4 left-1/2 -translate-x-1/2 w-max">
+                  <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground shadow-medium px-4 py-1 text-sm">
+                    ⭐ Founder 50
                   </Badge>
                 </div>
               )}
-              <CardHeader className="pb-8">
+              <CardHeader className="pb-4">
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                <CardDescription className="text-base">{plan.description}</CardDescription>
-                <div className="pt-6">
-                  <span className="text-5xl font-bold bg-gradient-hero bg-clip-text text-transparent">R$ {plan.price.toFixed(0)}</span>
-                  <span className="text-muted-foreground text-lg">{plan.period}</span>
-                  <p className="text-sm text-muted-foreground mt-1">Comissão sobre reservas: {plan.commission.toFixed(0)}%</p>
+                <CardDescription className="text-sm min-h-[40px]">{plan.description}</CardDescription>
+                <div className="pt-4">
+                  <span className="text-3xl font-bold bg-gradient-hero bg-clip-text text-transparent">{plan.price}</span>
+                  <span className="text-muted-foreground text-sm">{plan.period}</span>
                 </div>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-4 mb-8">
+                <ul className="space-y-3 mb-6">
                   {plan.features.map((feature, i) => (
-                    <li key={i} className="flex items-start gap-3">
-                      <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0 mt-0.5" />
-                      <span className="text-sm leading-relaxed">{feature}</span>
+                    <li key={i} className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0 mt-1" />
+                      <span className="text-xs font-medium leading-relaxed">{feature}</span>
                     </li>
                   ))}
                 </ul>
-                <Link to="/auth" className="block">
+                <Link to="/auth" className="block mt-auto">
                   <Button
-                    variant={plan.is_popular ? "hero" : "outline"}
+                    variant={plan.highlight ? "hero" : "outline"}
                     className="w-full"
-                    size="lg"
+                    size="sm"
                   >
-                    Adquirir Plano
+                    {plan.cta}
                   </Button>
                 </Link>
               </CardContent>
             </Card>
           ))}
+        </div>
+
+        {/* Notas de Rodapé */}
+        <div className="max-w-4xl mx-auto text-center space-y-2 text-xs text-muted-foreground border-t border-border/50 pt-8">
+          <p>• <strong>Premium:</strong> Limite de até 100 acomodações gerenciadas. Para volumes maiores, consulte o plano Enterprise.</p>
+          <p>• <strong>Inteligência Artificial:</strong> Funciona no modelo BYO Key (Bring Your Own Key). Você utiliza sua própria chave OpenAI ou Gemini. </p>
+          <p>• As chaves de API são armazenadas de forma segura e criptografada em nosso back-end e nunca são expostas no front-end.</p>
+          <p>• <strong>E-commerce:</strong> Funcionalidade de loja virtual integrada disponível exclusivamente no plano Premium e Founder.</p>
         </div>
       </div>
     </section>

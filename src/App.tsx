@@ -10,6 +10,7 @@ import ErrorBoundary from "@/components/ErrorBoundary";
 import DebugOverlay from "@/components/DebugOverlay";
 import Landing from "./pages/Landing";
 import Auth from "./pages/Auth";
+import Onboarding from "./pages/Onboarding";
 import Dashboard from "./pages/Dashboard";
 import Properties from "./pages/Properties";
 import Bookings from "./pages/Bookings";
@@ -20,6 +21,7 @@ import RoomTypesPage from "./pages/RoomTypes";
 import AmenitiesPage from "./pages/Amenities";
 import RoomsPage from "./pages/RoomsPage";
 import AdminPanel from "./pages/AdminPanel";
+import Plans from "./pages/Plans";
 import PricingRulesPage from "./pages/PricingRulesPage";
 import ServicesPage from "./pages/ServicesPage";
 import BookingEnginePage from "./pages/BookingEnginePage";
@@ -111,6 +113,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
+                <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
                 <Route path="/book/:propertyId?" element={<BookingEnginePage />} />
                 <Route path="/booking-success" element={<BookingSuccessPage />} />
                 <Route path="/booking-cancel" element={<BookingCancelPage />} />
@@ -367,6 +370,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <WebsiteSettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/plans"
+                  element={
+                    <ProtectedRoute>
+                      <Plans />
                     </ProtectedRoute>
                   }
                 />
