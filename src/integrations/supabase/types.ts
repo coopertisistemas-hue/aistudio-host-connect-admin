@@ -741,145 +741,341 @@ export type Database = {
           },
         ]
       }
-      tasks: {
-        Row: {
-          assigned_to: string | null
-          created_at: string
-          description: string | null
-          due_date: string | null
-          id: string
-          property_id: string
-          status: string
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          assigned_to?: string | null
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          property_id: string
-          status?: string
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          assigned_to?: string | null
-          created_at?: string
-          description?: string | null
-          due_date?: string | null
-          id?: string
-          property_id?: string
-          status?: string
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "tasks_assigned_to_fkey"
-            columns: ["assigned_to"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "tasks_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["id"]
-          },
-        ]
+    }
+    hostconnect_staff: {
+      Row: {
+        created_at: string | null
+        role: string | null
+        user_id: string
       }
-      testimonials: {
-        Row: {
-          content: string
-          created_at: string
-          display_order: number | null
-          id: string
-          is_visible: boolean | null
-          location: string | null
-          name: string
-          rating: number | null
-          role: string | null
-          updated_at: string
-        }
-        Insert: {
-          content: string
-          created_at?: string
-          display_order?: number
-          id?: string
-          is_visible?: boolean
-          location?: string | null
-          name: string
-          rating?: number
-          role?: string | null
-          updated_at?: string
-        }
-        Update: {
-          content?: string
-          created_at?: string
-          display_order?: number
-          id?: string
-          is_visible?: boolean
-          location?: string | null
-          name?: string
-          rating?: number
-          role?: string | null
-          updated_at?: string
-        }
-        Relationships: []
+      Insert: {
+        created_at?: string | null
+        role?: string | null
+        user_id: string
       }
-      website_settings: {
-        Row: {
-          created_at: string
-          id: string
-          property_id: string
-          setting_key: string
-          setting_value: Json | null
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          property_id: string
-          setting_key: string
-          setting_value?: Json | null
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          property_id?: string
-          setting_key?: string
-          setting_value?: Json | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "website_settings_property_id_fkey"
-            columns: ["property_id"]
-            isOneToOne: false
-            referencedRelation: "properties"
-            referencedColumns: ["id"]
-          },
-        ]
+      Update: {
+        created_at?: string | null
+        role?: string | null
+        user_id?: string
       }
+      Relationships: [
+        {
+          foreignKeyName: "hostconnect_staff_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: true
+          referencedRelation: "users"
+          referencedColumns: ["id"]
+        }
+      ]
     }
-    Views: {
-      [_ in never]: never
+    tickets: {
+      Row: {
+        category: string | null
+        created_at: string | null
+        description: string
+        id: string
+        severity: string
+        status: string
+        title: string
+        updated_at: string | null
+        user_id: string
+      }
+      Insert: {
+        category?: string | null
+        created_at?: string | null
+        description: string
+        id?: string
+        severity?: string
+        status?: string
+        title: string
+        updated_at?: string | null
+        user_id?: string
+      }
+      Update: {
+        category?: string | null
+        created_at?: string | null
+        description?: string
+        id?: string
+        severity?: string
+        status?: string
+        title?: string
+        updated_at?: string | null
+        user_id?: string
+      }
+      Relationships: [
+        {
+          foreignKeyName: "tickets_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: false
+          referencedRelation: "users"
+          referencedColumns: ["id"]
+        }
+      ]
     }
-    Functions: {
-      [_ in never]: never
+    ticket_comments: {
+      Row: {
+        content: string
+        created_at: string | null
+        id: string
+        is_staff_reply: boolean | null
+        ticket_id: string
+        user_id: string
+      }
+      Insert: {
+        content: string
+        created_at?: string | null
+        id?: string
+        is_staff_reply?: boolean | null
+        ticket_id: string
+        user_id?: string
+      }
+      Update: {
+        content?: string
+        created_at?: string | null
+        id?: string
+        is_staff_reply?: boolean | null
+        ticket_id?: string
+        user_id?: string
+      }
+      Relationships: [
+        {
+          foreignKeyName: "ticket_comments_ticket_id_fkey"
+          columns: ["ticket_id"]
+          isOneToOne: false
+          referencedRelation: "tickets"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "ticket_comments_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: false
+          referencedRelation: "users"
+          referencedColumns: ["id"]
+        }
+      ]
     }
-    Enums: {
-      [_ in never]: never
+    ideas: {
+      Row: {
+        created_at: string | null
+        description: string
+        id: string
+        status: string
+        title: string
+        updated_at: string | null
+        user_id: string
+        votes: number | null
+      }
+      Insert: {
+        created_at?: string | null
+        description: string
+        id?: string
+        status?: string
+        title: string
+        updated_at?: string | null
+        user_id?: string
+        votes?: number | null
+      }
+      Update: {
+        created_at?: string | null
+        description?: string
+        id?: string
+        status?: string
+        title?: string
+        updated_at?: string | null
+        user_id?: string
+        votes?: number | null
+      }
+      Relationships: [
+        {
+          foreignKeyName: "ideas_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: false
+          referencedRelation: "users"
+          referencedColumns: ["id"]
+        }
+      ]
     }
-    CompositeTypes: {
-      [_ in never]: never
+    idea_comments: {
+      Row: {
+        content: string
+        created_at: string | null
+        id: string
+        idea_id: string
+        is_staff_reply: boolean | null
+        user_id: string
+      }
+      Insert: {
+        content: string
+        created_at?: string | null
+        id?: string
+        idea_id: string
+        is_staff_reply?: boolean | null
+        user_id?: string
+      }
+      Update: {
+        content?: string
+        created_at?: string | null
+        id?: string
+        idea_id?: string
+        is_staff_reply?: boolean | null
+        user_id?: string
+      }
+      Relationships: [
+        {
+          foreignKeyName: "idea_comments_idea_id_fkey"
+          columns: ["idea_id"]
+          isOneToOne: false
+          referencedRelation: "ideas"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "idea_comments_user_id_fkey"
+          columns: ["user_id"]
+          isOneToOne: false
+          referencedRelation: "users"
+          referencedColumns: ["id"]
+        }
+      ]
+    }
+    tasks: {
+      Row: {
+        assigned_to: string | null
+        created_at: string
+        description: string | null
+        due_date: string | null
+        id: string
+        property_id: string
+        status: string
+        title: string
+        updated_at: string
+      }
+      Insert: {
+        assigned_to?: string | null
+        created_at?: string
+        description?: string | null
+        due_date?: string | null
+        id?: string
+        property_id: string
+        status?: string
+        title: string
+        updated_at?: string
+      }
+      Update: {
+        assigned_to?: string | null
+        created_at?: string
+        description?: string | null
+        due_date?: string | null
+        id?: string
+        property_id?: string
+        status?: string
+        title?: string
+        updated_at?: string
+      }
+      Relationships: [
+        {
+          foreignKeyName: "tasks_assigned_to_fkey"
+          columns: ["assigned_to"]
+          isOneToOne: false
+          referencedRelation: "profiles"
+          referencedColumns: ["id"]
+        },
+        {
+          foreignKeyName: "tasks_property_id_fkey"
+          columns: ["property_id"]
+          isOneToOne: false
+          referencedRelation: "properties"
+          referencedColumns: ["id"]
+        },
+      ]
+    }
+    testimonials: {
+      Row: {
+        content: string
+        created_at: string
+        display_order: number | null
+        id: string
+        is_visible: boolean | null
+        location: string | null
+        name: string
+        rating: number | null
+        role: string | null
+        updated_at: string
+      }
+      Insert: {
+        content: string
+        created_at?: string
+        display_order?: number
+        id?: string
+        is_visible?: boolean
+        location?: string | null
+        name: string
+        rating?: number
+        role?: string | null
+        updated_at?: string
+      }
+      Update: {
+        content?: string
+        created_at?: string
+        display_order?: number
+        id?: string
+        is_visible?: boolean
+        location?: string | null
+        name?: string
+        rating?: number
+        role?: string | null
+        updated_at?: string
+      }
+      Relationships: []
+    }
+    website_settings: {
+      Row: {
+        created_at: string
+        id: string
+        property_id: string
+        setting_key: string
+        setting_value: Json | null
+        updated_at: string
+      }
+      Insert: {
+        created_at?: string
+        id?: string
+        property_id: string
+        setting_key: string
+        setting_value?: Json | null
+        updated_at?: string
+      }
+      Update: {
+        created_at?: string
+        id?: string
+        property_id?: string
+        setting_key?: string
+        setting_value?: Json | null
+        updated_at?: string
+      }
+      Relationships: [
+        {
+          foreignKeyName: "website_settings_property_id_fkey"
+          columns: ["property_id"]
+          isOneToOne: false
+          referencedRelation: "properties"
+          referencedColumns: ["id"]
+        },
+      ]
     }
   }
+  Views: {
+    [_ in never]: never
+  }
+  Functions: {
+    [_ in never]: never
+  }
+  Enums: {
+    [_ in never]: never
+  }
+  CompositeTypes: {
+    [_ in never]: never
+  }
+}
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
@@ -888,116 +1084,116 @@ type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+  ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+    DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
-    ? R
-    : never
+  ? R
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])
-    ? (DefaultSchema["Tables"] &
-        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R
-      }
-      ? R
-      : never
-    : never
+    DefaultSchema["Views"])
+  ? (DefaultSchema["Tables"] &
+    DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+      Row: infer R
+    }
+  ? R
+  : never
+  : never
 
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Insert: infer I
-    }
-    ? I
-    : never
+    Insert: infer I
+  }
+  ? I
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I
-      }
-      ? I
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Insert: infer I
+  }
+  ? I
+  : never
+  : never
 
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Tables"]
+  | { schema: keyof DatabaseWithoutInternals },
   TableName extends DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+  : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
-      Update: infer U
-    }
-    ? U
-    : never
+    Update: infer U
+  }
+  ? U
+  : never
   : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
-    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U
-      }
-      ? U
-      : never
-    : never
+  ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+    Update: infer U
+  }
+  ? U
+  : never
+  : never
 
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["Enums"]
+  | { schema: keyof DatabaseWithoutInternals },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+  : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
-  }
-    ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
-    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
+  ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+  : never
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
+  | keyof DefaultSchema["CompositeTypes"]
+  | { schema: keyof DatabaseWithoutInternals },
   CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+  ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+  : never = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
   ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
   : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
-    : never
+  ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+  : never
 
 export const Constants = {
   public: {

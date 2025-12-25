@@ -42,6 +42,7 @@ import IntegrationsSection from "@/components/landing/IntegrationsSection";
 import FAQSection from "@/components/landing/FAQSection";
 import CtaSection from "@/components/landing/CtaSection";
 import { Helmet } from 'react-helmet-async';
+import PublicSupportForm from "@/components/landing/PublicSupportForm";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
 import { useProperties } from "@/hooks/useProperties";
 
@@ -91,7 +92,11 @@ const Landing = () => {
 
       <IntegrationsSection />
 
-      <FAQSection />
+      <section className="py-20 bg-slate-50" id="support">
+        <div className="container mx-auto px-4">
+          <PublicSupportForm />
+        </div>
+      </section>
 
       <CtaSection />
 

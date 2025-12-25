@@ -24,6 +24,20 @@ import PricingRulesPage from "./pages/PricingRulesPage";
 import ServicesPage from "./pages/ServicesPage";
 import BookingEnginePage from "./pages/BookingEnginePage";
 import WebsiteSettingsPage from "./pages/WebsiteSettingsPage";
+import SupportHub from "./pages/support/SupportHub";
+import TicketList from "./pages/support/TicketList";
+import CreateTicket from "./pages/support/CreateTicket";
+import TicketDetail from "./pages/support/TicketDetail";
+import IdeaList from "./pages/support/IdeaList";
+import CreateIdea from "./pages/support/CreateIdea";
+import IdeaDetail from "./pages/support/IdeaDetail";
+
+// Admin Support Imports
+import AdminRoute from "./components/AdminRoute";
+import AdminTicketList from "./pages/support/admin/AdminTicketList";
+import AdminTicketDetail from "./pages/support/admin/AdminTicketDetail";
+import AdminIdeaList from "./pages/support/admin/AdminIdeaList";
+import AdminIdeaDetail from "./pages/support/admin/AdminIdeaDetail";
 import TasksPage from "./pages/TasksPage";
 import ExpensesPage from "./pages/ExpensesPage";
 import NotFound from "./pages/NotFound";
@@ -413,6 +427,21 @@ const App = () => (
                   }
                 />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                {/* Support Module Routes */}
+                <Route path="/support" element={<SupportHub />} />
+                <Route path="/support/tickets" element={<TicketList />} />
+                <Route path="/support/tickets/new" element={<CreateTicket />} />
+                <Route path="/support/tickets/:id" element={<TicketDetail />} />
+                <Route path="/support/ideas" element={<IdeaList />} />
+                <Route path="/support/ideas/new" element={<CreateIdea />} />
+                <Route path="/support/ideas/:id" element={<IdeaDetail />} />
+
+                {/* Admin Support Routes - Protected */}
+                <Route path="/support/admin/tickets" element={<AdminRoute><AdminTicketList /></AdminRoute>} />
+                <Route path="/support/admin/tickets/:id" element={<AdminRoute><AdminTicketDetail /></AdminRoute>} />
+                <Route path="/support/admin/ideas" element={<AdminRoute><AdminIdeaList /></AdminRoute>} />
+                <Route path="/support/admin/ideas/:id" element={<AdminRoute><AdminIdeaDetail /></AdminRoute>} />
+
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </SelectedPropertyProvider>
