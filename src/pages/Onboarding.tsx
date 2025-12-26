@@ -142,26 +142,49 @@ export default function Onboarding() {
 
     const finishOnboarding = async () => {
         setLoading(true);
+
+        const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("A operação demorou muito. Verifique sua conexão.")), 15000)
+        );
+
         try {
             if (!user) {
                 throw new Error("Usuário não autenticado.");
             }
 
-            // 1. Update Profile Status
+            // 1. Update Profile Status (First critical step)
+            // We split this to ensure at least the status is saved.
             toast({ title: "Salvando perfil...", description: "Atualizando status da conta." });
 
-            const { error: profileError } = await supabase
+            const profileUpdatePromise = supabase
                 .from('profiles')
                 .update({
                     onboarding_completed: true,
                     onboarding_step: totalSteps,
-                    phone: formData.whatsapp || formData.contactPhone
+                    // We DO NOT update phone here to avoid unique constraint locks blocking the flow
                 })
                 .eq('id', user.id);
 
+            const { error: profileError } = await Promise.race([profileUpdatePromise, timeoutPromise]) as any;
+
             if (profileError) {
-                console.error("Profile Error", profileError);
-                throw new Error("Erro ao atualizar perfil: " + profileError.message);
+                console.error("Profile Status Error", profileError);
+                throw new Error("Erro ao atualizar status do perfil: " + profileError.message);
+            }
+
+            // 1.5 Try update extra profile data (Non-critical)
+            if (formData.whatsapp || formData.contactPhone) {
+                const { error: phoneError } = await supabase
+                    .from('profiles')
+                    .update({
+                        phone: formData.whatsapp || formData.contactPhone
+                    })
+                    .eq('id', user.id);
+
+                if (phoneError) {
+                    console.warn("Phone update failed (non-blocking):", phoneError);
+                    // We do not throw here, as the user can update this later.
+                }
             }
 
             // 2. Insert Properties
@@ -169,7 +192,7 @@ export default function Onboarding() {
                 toast({ title: "Criando acomodações...", description: `Registrando ${formData.accommodations.length} unidades.` });
 
                 for (const accName of formData.accommodations) {
-                    const { error: propError } = await supabase
+                    const insertPromise = supabase
                         .from('properties')
                         .insert({
                             user_id: user.id,
@@ -180,6 +203,8 @@ export default function Onboarding() {
                             status: 'active',
                             total_rooms: 1
                         });
+
+                    const { error: propError } = await Promise.race([insertPromise, timeoutPromise]) as any;
 
                     if (propError) {
                         // Check for our custom trigger error code P0001
@@ -192,7 +217,7 @@ export default function Onboarding() {
                 }
             }
 
-            // 3. Update Auth Metadata (Optional, but good for sync)
+            // 3. Update Auth Metadata (Sync)
             await supabase.auth.updateUser({
                 data: { onboarding_completed: true }
             });
@@ -202,21 +227,20 @@ export default function Onboarding() {
                 description: "Redirecionando para o painel...",
             });
 
-            // Force a slight delay to ensure toasts are seen and DB propagates
+            // Force redirect
             setTimeout(() => {
-                // Hard reload to ensure AuthContext re-fetches the fresh profile from DB
-                // This bypasses the stale state in useAuth
                 window.location.href = "/dashboard";
             }, 1000);
 
         } catch (error: any) {
             console.error("Onboarding Error:", error);
+
             toast({
                 title: "Erro ao salvar",
                 description: error.message || "Ocorreu um erro desconhecido.",
                 variant: "destructive"
             });
-            setLoading(false); // Only stop loading if error
+            setLoading(false);
         }
     };
 
