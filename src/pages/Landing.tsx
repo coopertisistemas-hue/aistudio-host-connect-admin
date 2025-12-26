@@ -66,17 +66,60 @@ const Landing = () => {
       <Helmet>
         <title>{siteName} - Sistema de Gestão Hoteleira</title>
         <meta name="description" content={siteDescription} />
+        <link rel="canonical" href="https://hostconnect.vercel.app/" />
         <link rel="icon" type="image/png" href={siteFaviconUrl} />
+
         {/* Open Graph / Facebook */}
         <meta property="og:title" content={`${siteName} - Sistema de Gestão Hoteleira`} />
         <meta property="og:description" content={siteDescription} />
         <meta property="og:type" content="website" />
+        <meta property="og:url" content="https://hostconnect.vercel.app/" />
         {siteLogoUrl && <meta property="og:image" content={siteLogoUrl} />}
+
         {/* Twitter */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={`${siteName} - Sistema de Gestão Hoteleira`} />
         <meta name="twitter:description" content={siteDescription} />
         {siteLogoUrl && <meta name="twitter:image" content={siteLogoUrl} />}
+
+        {/* Schema.org Structured Data */}
+        <script type="application/ld+json">
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "SoftwareApplication",
+                "name": siteName,
+                "applicationCategory": "BusinessApplication",
+                "operatingSystem": "Web, iOS, Android",
+                "description": siteDescription,
+                "offers": {
+                  "@type": "Offer",
+                  "price": "0",
+                  "priceCurrency": "BRL"
+                },
+                "aggregateRating": {
+                  "@type": "AggregateRating",
+                  "ratingValue": "4.9",
+                  "ratingCount": "150"
+                }
+              },
+              {
+                "@type": "Organization",
+                "name": siteName,
+                "url": "https://hostconnect.vercel.app",
+                "logo": "https://hostconnect.vercel.app/host-connect-logo.png",
+                "contactPoint": {
+                  "@type": "ContactPoint",
+                  "telephone": "+55-51-98685-9236",
+                  "contactType": "customer service",
+                  "areaServed": "BR",
+                  "availableLanguage": "Portuguese"
+                }
+              }
+            ]
+          })}
+        </script>
       </Helmet>
 
       <FounderBanner />

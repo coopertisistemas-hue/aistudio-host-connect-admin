@@ -1,0 +1,24 @@
+# Host Connect
+
+Host Connect é um sistema completo de gestão hoteleira (PMS) para pousadas, hotéis, hostels e aluguéis de temporada.
+Nossa missão é simplificar a gestão de propriedades com tecnologia de ponta, acessível e intuitiva.
+
+## Funcionalidades Principais
+
+*   **Dashboard Avançado**: Visão em tempo real de ocupação, receitas, check-ins e check-outs.
+*   **Motor de Reservas**: Aceite reservas diretas sem comissões via seu próprio site.
+*   **Gestão de Operações**: Aplicativo móvel para governança e manutenção em tempo real.
+*   **Gestão Financeira**: Controle completo de contas a pagar, receber e relatórios financeiros.
+*   **Multi-Plataforma**: Acessível via navegador e aplicativo móvel (PWA).
+
+## Planos
+
+*   **Gratuito**: Para quem está começando. Recursos essenciais sem custo.
+*   **Premium**: Para quem quer crescer. Gestão completa sem limites.
+*   **Enterprise**: Para grandes operações. Suporte dedicado e personalizações.
+
+## Contato e Suporte
+
+*   Email: hostconnect.uc@gmail.com
+*   Localização: Urubici, SC
+*   Website: https://hostconnect.vercel.app
