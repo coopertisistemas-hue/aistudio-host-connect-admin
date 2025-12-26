@@ -25,16 +25,19 @@ export default function Onboarding() {
     // Default safe limit if loading. Allow user to add items freely, backend will validate.
     const safeMaxAccommodations = entitlementsLoading ? 100 : (maxAccommodations || 1);
 
+    // State to track if address was auto-filled (to lock/unlock inputs)
+    const [isAddressAutoFilled, setIsAddressAutoFilled] = useState(false);
+
     const [formData, setFormData] = useState({
         type: "",
         propertyName: "",
         contactPhone: "",
-        whatsapp: "", // New
-        zipCode: "", // New
-        address: "", // Street
-        number: "", // New
-        complement: "", // New
-        neighborhood: "", // New
+        whatsapp: "",
+        zipCode: "",
+        address: "",
+        number: "",
+        complement: "",
+        neighborhood: "",
         city: "",
         state: "",
         accommodations: [] as string[],
@@ -73,22 +76,26 @@ export default function Onboarding() {
                 if (!data.erro) {
                     setFormData(prev => ({
                         ...prev,
-                        address: data.logradouro,
-                        neighborhood: data.bairro,
-                        city: data.localidade,
-                        state: data.uf,
+                        address: data.logradouro || "",
+                        neighborhood: data.bairro || "",
+                        city: data.localidade || "",
+                        state: data.uf || "",
                     }));
+                    setIsAddressAutoFilled(true); // Lock fields
                     // Focus on Number field
                     document.getElementById("address-number")?.focus();
                 } else {
                     toast({
                         title: "CEP não encontrado",
-                        description: "Verifique o CEP digitado.",
+                        description: "Por favor, preencha o endereço manualmente.",
                         variant: "destructive"
                     });
+                    setIsAddressAutoFilled(false); // Unlock fields for manual entry
                 }
             } catch (error) {
                 console.error("CEP fetch error:", error);
+                // On error, unlock fields
+                setIsAddressAutoFilled(false);
             } finally {
                 setLoading(false);
             }
@@ -286,7 +293,7 @@ export default function Onboarding() {
                                             placeholder="Rua das Flores"
                                             value={formData.address}
                                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                            disabled={!!formData.address && formData.address.length > 3}
+                                            disabled={isAddressAutoFilled}
                                         />
                                     </div>
                                     <div className="col-span-1 space-y-2">
@@ -307,7 +314,7 @@ export default function Onboarding() {
                                             placeholder="Centro"
                                             value={formData.neighborhood}
                                             onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
-                                            disabled={!!formData.neighborhood && formData.neighborhood.length > 2}
+                                            disabled={isAddressAutoFilled}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -327,7 +334,7 @@ export default function Onboarding() {
                                             placeholder="Ex: Florianópolis"
                                             value={formData.city}
                                             onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                            disabled={!!formData.city}
+                                            disabled={isAddressAutoFilled}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -336,7 +343,7 @@ export default function Onboarding() {
                                             placeholder="Ex: SC"
                                             value={formData.state}
                                             onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                                            disabled={!!formData.state}
+                                            disabled={isAddressAutoFilled}
                                         />
                                     </div>
                                 </div>
