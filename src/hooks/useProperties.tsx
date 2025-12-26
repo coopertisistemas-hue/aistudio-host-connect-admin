@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
+import { useOrg } from '@/hooks/useOrg'; // Import useOrg
 
 export const propertySchema = z.object({
   name: z.string().min(1, "O nome da propriedade é obrigatório."),
@@ -18,9 +19,11 @@ export const propertySchema = z.object({
   status: z.enum(['active', 'inactive']).default('active'),
 });
 
+// Update Property Interface to include org_id
 export interface Property {
   id: string;
   user_id: string;
+  org_id?: string | null;
   name: string;
   description: string | null;
   address: string;
@@ -40,18 +43,35 @@ export type PropertyInput = z.infer<typeof propertySchema>;
 
 export const useProperties = () => {
   const queryClient = useQueryClient();
+  const { currentOrgId, isLoading: isOrgLoading } = useOrg(); // Use Org Hook
 
-  const { data: properties, isLoading, error } = useQuery({
-    queryKey: ['properties'],
+  const { data: properties, isLoading: isPropertiesLoading, error } = useQuery({
+    queryKey: ['properties', currentOrgId], // Add currentOrgId to key
     queryFn: async () => {
-      const { data, error } = await supabase
+      let query = supabase
         .from('properties')
         .select('*')
         .order('created_at', { ascending: false });
 
+      // If Org ID is available (Multi-tenant mode)
+      if (currentOrgId) {
+        query = query.eq('org_id', currentOrgId);
+      }
+      // Fallback: Legacy Single User Mode (or during migration)
+      // Note: RLS currently enforces auth.uid() = user_id, referencing user_id column.
+      // Until RLS is updated, we might rely on default filtering if we don't explicitly filter?
+      // Actually, if we filter by org_id and RLS says "auth.uid() = user_id", it intersects.
+      // Since we backfilled users, org_id rows ALSO have user_id, so it works.
+
+      // However, if we want to see shared properties (future), we need org_id RLS.
+      // For now, let's just prefer explicit org_id filtering if we know it.
+
+      const { data, error } = await query;
+
       if (error) throw error;
       return data as Property[];
     },
+    enabled: !isOrgLoading // Wait for org to load
   });
 
   const createProperty = useMutation({
@@ -59,9 +79,16 @@ export const useProperties = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('User not authenticated');
 
+      const payload: any = { ...property, user_id: user.id };
+
+      // Attach org_id if available
+      if (currentOrgId) {
+        payload.org_id = currentOrgId;
+      }
+
       const { data, error } = await supabase
         .from('properties')
-        .insert([{ ...property, user_id: user.id } as TablesInsert<'properties'>]) // Explicit cast
+        .insert([payload as TablesInsert<'properties'>])
         .select()
         .single();
 
@@ -100,7 +127,7 @@ export const useProperties = () => {
     mutationFn: async ({ id, property }: { id: string; property: Partial<PropertyInput> }) => {
       const { data, error } = await supabase
         .from('properties')
-        .update(property)
+        .update(property as any)
         .eq('id', id)
         .select()
         .single();
@@ -153,7 +180,7 @@ export const useProperties = () => {
 
   return {
     properties: properties || [],
-    isLoading,
+    isLoading: isPropertiesLoading || isOrgLoading,
     error,
     createProperty,
     updateProperty,

@@ -574,6 +574,9 @@ export type Database = {
           trial_extension_days?: number
           trial_extension_reason?: string | null
           plan_status?: string
+          accommodation_limit?: number | null
+          founder_started_at?: string | null
+          founder_expires_at?: string | null
         }
         Insert: {
           created_at?: string
@@ -593,6 +596,9 @@ export type Database = {
           trial_extension_days?: number
           trial_extension_reason?: string | null
           plan_status?: string
+          accommodation_limit?: number | null
+          founder_started_at?: string | null
+          founder_expires_at?: string | null
         }
         Update: {
           created_at?: string
@@ -612,8 +618,168 @@ export type Database = {
           trial_extension_days?: number
           trial_extension_reason?: string | null
           plan_status?: string
+          accommodation_limit?: number | null
+          founder_started_at?: string | null
+          founder_expires_at?: string | null
         }
         Relationships: []
+      }
+      organizations: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          owner_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          owner_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      member_permissions: {
+        Row: {
+          can_read: boolean | null
+          can_write: boolean | null
+          created_at: string | null
+          id: string
+          module_key: string
+          org_id: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          can_read?: boolean | null
+          can_write?: boolean | null
+          created_at?: string | null
+          id?: string
+          module_key: string
+          org_id: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          can_read?: boolean | null
+          can_write?: boolean | null
+          created_at?: string | null
+          id?: string
+          module_key?: string
+          org_id?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "member_permissions_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "member_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      org_invites: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          org_id: string
+          role: string
+          status: string
+          token: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          org_id: string
+          role?: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          org_id?: string
+          role?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_invites_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      org_members: {
+        Row: {
+          created_at: string
+          id: string
+          org_id: string
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          org_id: string
+          role: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          org_id?: string
+          role?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "org_members_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "org_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       properties: {
         Row: {
@@ -628,6 +794,7 @@ export type Database = {
           phone: string | null
           postal_code: string | null
           state: string
+          org_id: string | null
           status: string
           total_rooms: number
           updated_at: string
@@ -834,341 +1001,340 @@ export type Database = {
           },
         ]
       }
-    }
-    hostconnect_staff: {
-      Row: {
-        created_at: string | null
-        role: string | null
-        user_id: string
-      }
-      Insert: {
-        created_at?: string | null
-        role?: string | null
-        user_id: string
-      }
-      Update: {
-        created_at?: string | null
-        role?: string | null
-        user_id?: string
-      }
-      Relationships: [
-        {
-          foreignKeyName: "hostconnect_staff_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: true
-          referencedRelation: "users"
-          referencedColumns: ["id"]
+      hostconnect_staff: {
+        Row: {
+          created_at: string | null
+          role: string | null
+          user_id: string
         }
-      ]
-    }
-    tickets: {
-      Row: {
-        category: string | null
-        created_at: string | null
-        description: string
-        id: string
-        severity: string
-        status: string
-        title: string
-        updated_at: string | null
-        user_id: string
-      }
-      Insert: {
-        category?: string | null
-        created_at?: string | null
-        description: string
-        id?: string
-        severity?: string
-        status?: string
-        title: string
-        updated_at?: string | null
-        user_id?: string
-      }
-      Update: {
-        category?: string | null
-        created_at?: string | null
-        description?: string
-        id?: string
-        severity?: string
-        status?: string
-        title?: string
-        updated_at?: string | null
-        user_id?: string
-      }
-      Relationships: [
-        {
-          foreignKeyName: "tickets_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "users"
-          referencedColumns: ["id"]
+        Insert: {
+          created_at?: string | null
+          role?: string | null
+          user_id: string
         }
-      ]
-    }
-    ticket_comments: {
-      Row: {
-        content: string
-        created_at: string | null
-        id: string
-        is_staff_reply: boolean | null
-        ticket_id: string
-        user_id: string
-      }
-      Insert: {
-        content: string
-        created_at?: string | null
-        id?: string
-        is_staff_reply?: boolean | null
-        ticket_id: string
-        user_id?: string
-      }
-      Update: {
-        content?: string
-        created_at?: string | null
-        id?: string
-        is_staff_reply?: boolean | null
-        ticket_id?: string
-        user_id?: string
-      }
-      Relationships: [
-        {
-          foreignKeyName: "ticket_comments_ticket_id_fkey"
-          columns: ["ticket_id"]
-          isOneToOne: false
-          referencedRelation: "tickets"
-          referencedColumns: ["id"]
-        },
-        {
-          foreignKeyName: "ticket_comments_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "users"
-          referencedColumns: ["id"]
+        Update: {
+          created_at?: string | null
+          role?: string | null
+          user_id?: string
         }
-      ]
-    }
-    ideas: {
-      Row: {
-        created_at: string | null
-        description: string
-        id: string
-        status: string
-        title: string
-        updated_at: string | null
-        user_id: string
-        votes: number | null
+        Relationships: [
+          {
+            foreignKeyName: "hostconnect_staff_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
       }
-      Insert: {
-        created_at?: string | null
-        description: string
-        id?: string
-        status?: string
-        title: string
-        updated_at?: string | null
-        user_id?: string
-        votes?: number | null
-      }
-      Update: {
-        created_at?: string | null
-        description?: string
-        id?: string
-        status?: string
-        title?: string
-        updated_at?: string | null
-        user_id?: string
-        votes?: number | null
-      }
-      Relationships: [
-        {
-          foreignKeyName: "ideas_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "users"
-          referencedColumns: ["id"]
+      tickets: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string
+          id: string
+          severity: string
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string
         }
-      ]
-    }
-    idea_comments: {
-      Row: {
-        content: string
-        created_at: string | null
-        id: string
-        idea_id: string
-        is_staff_reply: boolean | null
-        user_id: string
-      }
-      Insert: {
-        content: string
-        created_at?: string | null
-        id?: string
-        idea_id: string
-        is_staff_reply?: boolean | null
-        user_id?: string
-      }
-      Update: {
-        content?: string
-        created_at?: string | null
-        id?: string
-        idea_id?: string
-        is_staff_reply?: boolean | null
-        user_id?: string
-      }
-      Relationships: [
-        {
-          foreignKeyName: "idea_comments_idea_id_fkey"
-          columns: ["idea_id"]
-          isOneToOne: false
-          referencedRelation: "ideas"
-          referencedColumns: ["id"]
-        },
-        {
-          foreignKeyName: "idea_comments_user_id_fkey"
-          columns: ["user_id"]
-          isOneToOne: false
-          referencedRelation: "users"
-          referencedColumns: ["id"]
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description: string
+          id?: string
+          severity?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+          user_id?: string
         }
-      ]
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string
+          id?: string
+          severity?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      ticket_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          is_staff_reply: boolean | null
+          ticket_id: string
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          is_staff_reply?: boolean | null
+          ticket_id: string
+          user_id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          is_staff_reply?: boolean | null
+          ticket_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_comments_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ticket_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      ideas: {
+        Row: {
+          created_at: string | null
+          description: string
+          id: string
+          status: string
+          title: string
+          updated_at: string | null
+          user_id: string
+          votes: number | null
+        }
+        Insert: {
+          created_at?: string | null
+          description: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string | null
+          user_id?: string
+          votes?: number | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+          votes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ideas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      idea_comments: {
+        Row: {
+          content: string
+          created_at: string | null
+          id: string
+          idea_id: string
+          is_staff_reply: boolean | null
+          user_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string | null
+          id?: string
+          idea_id: string
+          is_staff_reply?: boolean | null
+          user_id?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string | null
+          id?: string
+          idea_id?: string
+          is_staff_reply?: boolean | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_comments_idea_id_fkey"
+            columns: ["idea_id"]
+            isOneToOne: false
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "idea_comments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      tasks: {
+        Row: {
+          assigned_to: string | null
+          created_at: string
+          description: string | null
+          due_date: string | null
+          id: string
+          property_id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          property_id: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assigned_to?: string | null
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          property_id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      testimonials: {
+        Row: {
+          content: string
+          created_at: string
+          display_order: number | null
+          id: string
+          is_visible: boolean | null
+          location: string | null
+          name: string
+          rating: number | null
+          role: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          location?: string | null
+          name: string
+          rating?: number
+          role?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          display_order?: number
+          id?: string
+          is_visible?: boolean
+          location?: string | null
+          name?: string
+          rating?: number
+          role?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      website_settings: {
+        Row: {
+          created_at: string
+          id: string
+          property_id: string
+          setting_key: string
+          setting_value: Json | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          property_id: string
+          setting_key: string
+          setting_value?: Json | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          property_id?: string
+          setting_key?: string
+          setting_value?: Json | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "website_settings_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
-    tasks: {
-      Row: {
-        assigned_to: string | null
-        created_at: string
-        description: string | null
-        due_date: string | null
-        id: string
-        property_id: string
-        status: string
-        title: string
-        updated_at: string
-      }
-      Insert: {
-        assigned_to?: string | null
-        created_at?: string
-        description?: string | null
-        due_date?: string | null
-        id?: string
-        property_id: string
-        status?: string
-        title: string
-        updated_at?: string
-      }
-      Update: {
-        assigned_to?: string | null
-        created_at?: string
-        description?: string | null
-        due_date?: string | null
-        id?: string
-        property_id?: string
-        status?: string
-        title?: string
-        updated_at?: string
-      }
-      Relationships: [
-        {
-          foreignKeyName: "tasks_assigned_to_fkey"
-          columns: ["assigned_to"]
-          isOneToOne: false
-          referencedRelation: "profiles"
-          referencedColumns: ["id"]
-        },
-        {
-          foreignKeyName: "tasks_property_id_fkey"
-          columns: ["property_id"]
-          isOneToOne: false
-          referencedRelation: "properties"
-          referencedColumns: ["id"]
-        },
-      ]
+    Views: {
+      [_ in never]: never
     }
-    testimonials: {
-      Row: {
-        content: string
-        created_at: string
-        display_order: number | null
-        id: string
-        is_visible: boolean | null
-        location: string | null
-        name: string
-        rating: number | null
-        role: string | null
-        updated_at: string
-      }
-      Insert: {
-        content: string
-        created_at?: string
-        display_order?: number
-        id?: string
-        is_visible?: boolean
-        location?: string | null
-        name: string
-        rating?: number
-        role?: string | null
-        updated_at?: string
-      }
-      Update: {
-        content?: string
-        created_at?: string
-        display_order?: number
-        id?: string
-        is_visible?: boolean
-        location?: string | null
-        name?: string
-        rating?: number
-        role?: string | null
-        updated_at?: string
-      }
-      Relationships: []
+    Functions: {
+      [_ in never]: never
     }
-    website_settings: {
-      Row: {
-        created_at: string
-        id: string
-        property_id: string
-        setting_key: string
-        setting_value: Json | null
-        updated_at: string
-      }
-      Insert: {
-        created_at?: string
-        id?: string
-        property_id: string
-        setting_key: string
-        setting_value?: Json | null
-        updated_at?: string
-      }
-      Update: {
-        created_at?: string
-        id?: string
-        property_id?: string
-        setting_key?: string
-        setting_value?: Json | null
-        updated_at?: string
-      }
-      Relationships: [
-        {
-          foreignKeyName: "website_settings_property_id_fkey"
-          columns: ["property_id"]
-          isOneToOne: false
-          referencedRelation: "properties"
-          referencedColumns: ["id"]
-        },
-      ]
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
     }
   }
-  Views: {
-    [_ in never]: never
-  }
-  Functions: {
-    [_ in never]: never
-  }
-  Enums: {
-    [_ in never]: never
-  }
-  CompositeTypes: {
-    [_ in never]: never
-  }
-}
 }
 
 type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
