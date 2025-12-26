@@ -12,8 +12,9 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
-  userRole: string | null; // Adicionado o papel do usuário
-  userPlan: string | null; // Adicionado o plano do usuário
+  userRole: string | null;
+  userPlan: string | null;
+  onboardingCompleted: boolean; // Added field
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string, phone?: string | null) => Promise<void>; // Adicionado phone
   signOut: () => Promise<void>;
@@ -27,14 +28,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<string | null>(null); // Estado para o papel do usuário
-  const [userPlan, setUserPlan] = useState<string | null>(null); // Estado para o plano do usuário
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userPlan, setUserPlan] = useState<string | null>(null);
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(false); // New State
   const navigate = useNavigate();
 
   const fetchUserProfile = async (userId: string) => {
     const { data, error } = await supabase
       .from('profiles')
-      .select('role, plan')
+      .select('role, plan, onboarding_completed') // Fetch onboarding status
       .eq('id', userId)
       .single();
 
@@ -42,9 +44,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       console.error('Error fetching user profile:', error);
       setUserRole(null);
       setUserPlan(null);
+      setOnboardingCompleted(false);
     } else {
-      setUserRole(data?.role || 'user'); // Define 'user' como padrão se não houver papel
-      setUserPlan(data?.plan || 'free'); // Define 'free' como padrão se não houver plano
+      setUserRole(data?.role || 'user');
+      setUserPlan(data?.plan || 'free');
+      setOnboardingCompleted(!!data?.onboarding_completed); // Set state
     }
   };
 
@@ -263,7 +267,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, userRole, userPlan, signIn, signUp, signOut, signInWithGoogle, signInWithFacebook }}>
+    <AuthContext.Provider value={{ user, session, loading, userRole, userPlan, onboardingCompleted, signIn, signUp, signOut, signInWithGoogle, signInWithFacebook }}>
       {children}
     </AuthContext.Provider>
   );

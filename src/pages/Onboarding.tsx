@@ -22,6 +22,9 @@ export default function Onboarding() {
     const [loading, setLoading] = useState(false);
     const totalSteps = 4;
 
+    // Default safe limit if loading
+    const safeMaxAccommodations = entitlementsLoading ? 1 : (maxAccommodations || 1);
+
     const [formData, setFormData] = useState({
         type: "",
         propertyName: "",
@@ -125,7 +128,7 @@ export default function Onboarding() {
         }
     };
 
-    if (entitlementsLoading) return <div className="h-screen flex items-center justify-center">Carregando plano...</div>;
+    // if (entitlementsLoading) return <div className="h-screen flex items-center justify-center">Carregando plano...</div>;
 
     return (
         <div className="min-h-screen bg-muted/20 flex flex-col items-center justify-center p-4">
@@ -233,7 +236,9 @@ export default function Onboarding() {
                         <div className="space-y-6 max-w-lg mx-auto">
                             <div className="text-center mb-6">
                                 <h2 className="text-2xl font-bold">Quantas acomodações você tem?</h2>
-                                <p className="text-muted-foreground">Seu plano atual permite até <span className="font-bold text-primary">{maxAccommodations}</span> unidades.</p>
+                                <p className="text-muted-foreground">
+                                    {entitlementsLoading ? 'Carregando limite...' : <>Seu plano atual permite até <span className="font-bold text-primary">{safeMaxAccommodations}</span> unidades.</>}
+                                </p>
                             </div>
 
                             <div className="bg-secondary/20 p-6 rounded-lg border text-center space-y-4">
@@ -256,7 +261,7 @@ export default function Onboarding() {
                                     <Button
                                         variant="outline"
                                         onClick={() => {
-                                            if (formData.accommodations.length < maxAccommodations) {
+                                            if (formData.accommodations.length < safeMaxAccommodations) {
                                                 setFormData(p => ({
                                                     ...p,
                                                     accommodations: [...p.accommodations, `Unidade ${p.accommodations.length + 1}`]
@@ -269,13 +274,13 @@ export default function Onboarding() {
                                                 });
                                             }
                                         }}
-                                        disabled={formData.accommodations.length >= maxAccommodations}
+                                        disabled={formData.accommodations.length >= safeMaxAccommodations}
                                     >
                                         +
                                     </Button>
                                 </div>
                                 <p className="text-xs text-muted-foreground">
-                                    {formData.accommodations.length} de {maxAccommodations} slots usados
+                                    {formData.accommodations.length} de {entitlementsLoading ? '...' : safeMaxAccommodations} slots usados
                                 </p>
                             </div>
                         </div>

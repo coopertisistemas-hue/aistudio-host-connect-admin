@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 
 interface ProtectedRouteProps {
@@ -7,14 +7,21 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useAuth();
-  const navigate = useNavigate();
+  const { user, loading, userRole } = useAuth();
+  const navigate = useNavigate(); // Restore navigate
+  const location = useLocation();
 
   useEffect(() => {
-    if (!loading && !user) {
-      navigate('/auth');
+    if (!loading) {
+      if (!user) {
+        navigate('/auth');
+      } else if (!user.user_metadata?.onboarding_completed && !location.pathname.startsWith('/onboarding') && userRole !== 'admin') {
+        // Force redirect to onboarding if not completed and not already there
+        // Admin bypasses this check in case they get stuck, or we can remove the admin check later
+        navigate('/onboarding');
+      }
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, location.pathname, userRole]);
 
   if (loading) {
     return (
