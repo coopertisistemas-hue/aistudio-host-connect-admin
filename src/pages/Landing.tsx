@@ -59,7 +59,7 @@ const Landing = () => {
   const siteName = "HostConnect";
   const siteDescription = "Plataforma completa de gestão hoteleira para propriedades de todos os tamanhos. Dashboard avançado, motor de reservas, pagamentos online e muito mais.";
   const siteFaviconUrl = "/favicon.png";
-  const siteLogoUrl = "https://lovable.dev/opengraph-image-p98pqg.png"; // Fallback for OG image
+  const siteLogoUrl = "/og-image.png"; // Local OG image
 
   return (
     <div className="min-h-screen bg-background">
