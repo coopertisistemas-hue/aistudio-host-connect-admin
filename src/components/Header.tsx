@@ -10,8 +10,8 @@ const Header = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { toast } = useToast();
   // Static defaults for public header to avoid auth hooks
-  const siteName = "HostConnect";
-  const siteLogoUrl = "https://oravqykjpgqoiidqnfja.supabase.co/storage/v1/object/public/website-assets/HostConnect%20Logotipo.png";
+  const siteName = "Host Connect";
+  const siteLogoUrl = "/host-connect-logo.png";
   const demoUrl = "";
   const settingsLoading = false;
 

@@ -15,9 +15,9 @@ const Footer = () => {
   const defaultPropertyId = properties.length > 0 ? properties[0].id : undefined;
   const { data: websiteSettings, isLoading: settingsLoading } = usePublicWebsiteSettings(defaultPropertyId || '');
 
-  const siteName = websiteSettings?.site_name || "HostConnect";
-  const siteLogoUrl = websiteSettings?.site_logo_url || "https://oravqykjpgqoiidqnfja.supabase.co/storage/v1/object/public/website-assets/HostConnect%20Logotipo.png";
-  const siteDescription = websiteSettings?.site_description || "Sistema completo para gerenciar suas propriedades, reservas, pagamentos e muito mais. Tudo em uma única plataforma intuitiva e poderosa.";
+  const siteName = "Host Connect";
+  const siteLogoUrl = "/host-connect-logo.png";
+  const siteDescription = "Sistema completo para gerenciar suas propriedades, reservas, pagamentos e muito mais. Tudo em uma única plataforma intuitiva e poderosa.";
   const contactEmail = websiteSettings?.contact_email || "hostconnect.uc@gmail.com";
   const contactPhone = websiteSettings?.contact_phone || "(51) 98685-9236";
   const socialInstagram = websiteSettings?.social_instagram || "#";
