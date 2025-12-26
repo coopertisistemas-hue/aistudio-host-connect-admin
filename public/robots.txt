@@ -13,4 +13,4 @@ Allow: /
 User-agent: *
 Allow: /
 
-Sitemap: https://hostconnect.app/sitemap.xml
+Sitemap: https://hostconnect.vercel.app/sitemap.xml
