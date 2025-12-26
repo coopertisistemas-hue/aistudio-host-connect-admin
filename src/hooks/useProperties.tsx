@@ -75,13 +75,24 @@ export const useProperties = () => {
         description: "Propriedade criada com sucesso.",
       });
     },
-    onError: (error: Error) => {
+    onError: (error: any) => {
       console.error('Error creating property:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar propriedade: " + error.message,
-        variant: "destructive",
-      });
+
+      // Check for custom trigger error code P0001 (Accommodation Limit)
+      if (error?.code === 'P0001' || error?.message?.includes('Limite de acomodações atingido')) {
+        toast({
+          title: "Limite do Plano Atingido",
+          description: "Você atingiu o número máximo de acomodações do seu plano. Faça um upgrade para adicionar mais.",
+          variant: "destructive",
+          // converting 'action' to simple text description if action prop not fully supported or complex
+        });
+      } else {
+        toast({
+          title: "Erro",
+          description: "Erro ao criar propriedade: " + error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 

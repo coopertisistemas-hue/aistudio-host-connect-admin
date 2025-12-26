@@ -568,6 +568,12 @@ export type Database = {
           onboarding_completed?: boolean
           onboarding_step?: number
           onboarding_type?: string | null
+          trial_started_at?: string | null
+          trial_expires_at?: string | null
+          trial_extended_at?: string | null
+          trial_extension_days?: number
+          trial_extension_reason?: string | null
+          plan_status?: string
         }
         Insert: {
           created_at?: string
@@ -581,6 +587,12 @@ export type Database = {
           onboarding_completed?: boolean
           onboarding_step?: number
           onboarding_type?: string | null
+          trial_started_at?: string | null
+          trial_expires_at?: string | null
+          trial_extended_at?: string | null
+          trial_extension_days?: number
+          trial_extension_reason?: string | null
+          plan_status?: string
         }
         Update: {
           created_at?: string
@@ -594,6 +606,12 @@ export type Database = {
           onboarding_completed?: boolean
           onboarding_step?: number
           onboarding_type?: string | null
+          trial_started_at?: string | null
+          trial_expires_at?: string | null
+          trial_extended_at?: string | null
+          trial_extension_days?: number
+          trial_extension_reason?: string | null
+          plan_status?: string
         }
         Relationships: []
       }
