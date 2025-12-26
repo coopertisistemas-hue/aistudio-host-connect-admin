@@ -25,8 +25,8 @@ export default function Onboarding() {
     // Default safe limit if loading. Allow user to add items freely, backend will validate.
     const safeMaxAccommodations = entitlementsLoading ? 100 : (maxAccommodations || 1);
 
-    // State to track if address was auto-filled (to lock/unlock inputs)
-    const [isAddressAutoFilled, setIsAddressAutoFilled] = useState(false);
+    // State to track if address fields were auto-filled (to lock/unlock inputs individually)
+    const [lockedFields, setLockedFields] = useState<string[]>([]);
 
     const [formData, setFormData] = useState({
         type: "",
@@ -81,7 +81,16 @@ export default function Onboarding() {
                         city: data.localidade || "",
                         state: data.uf || "",
                     }));
-                    setIsAddressAutoFilled(true); // Lock fields
+
+                    // Determine which fields should be locked (only non-empty ones)
+                    const newLockedFields = [];
+                    if (data.logradouro) newLockedFields.push("address");
+                    if (data.bairro) newLockedFields.push("neighborhood");
+                    if (data.localidade) newLockedFields.push("city");
+                    if (data.uf) newLockedFields.push("state");
+
+                    setLockedFields(newLockedFields);
+
                     // Focus on Number field
                     document.getElementById("address-number")?.focus();
                 } else {
@@ -90,12 +99,12 @@ export default function Onboarding() {
                         description: "Por favor, preencha o endereço manualmente.",
                         variant: "destructive"
                     });
-                    setIsAddressAutoFilled(false); // Unlock fields for manual entry
+                    setLockedFields([]); // Unlock all for manual entry
                 }
             } catch (error) {
                 console.error("CEP fetch error:", error);
-                // On error, unlock fields
-                setIsAddressAutoFilled(false);
+                // On error, unlock all
+                setLockedFields([]);
             } finally {
                 setLoading(false);
             }
@@ -293,7 +302,7 @@ export default function Onboarding() {
                                             placeholder="Rua das Flores"
                                             value={formData.address}
                                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                            disabled={isAddressAutoFilled}
+                                            disabled={lockedFields.includes("address")}
                                         />
                                     </div>
                                     <div className="col-span-1 space-y-2">
@@ -314,7 +323,7 @@ export default function Onboarding() {
                                             placeholder="Centro"
                                             value={formData.neighborhood}
                                             onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
-                                            disabled={isAddressAutoFilled}
+                                            disabled={lockedFields.includes("neighborhood")}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -334,7 +343,7 @@ export default function Onboarding() {
                                             placeholder="Ex: Florianópolis"
                                             value={formData.city}
                                             onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                                            disabled={isAddressAutoFilled}
+                                            disabled={lockedFields.includes("city")}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -343,7 +352,7 @@ export default function Onboarding() {
                                             placeholder="Ex: SC"
                                             value={formData.state}
                                             onChange={(e) => setFormData({ ...formData, state: e.target.value })}
-                                            disabled={isAddressAutoFilled}
+                                            disabled={lockedFields.includes("state")}
                                         />
                                     </div>
                                 </div>
