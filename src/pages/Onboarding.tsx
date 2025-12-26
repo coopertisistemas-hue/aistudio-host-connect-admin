@@ -22,17 +22,22 @@ export default function Onboarding() {
     const [loading, setLoading] = useState(false);
     const totalSteps = 4;
 
-    // Default safe limit if loading
-    const safeMaxAccommodations = entitlementsLoading ? 1 : (maxAccommodations || 1);
+    // Default safe limit if loading. Allow user to add items freely, backend will validate.
+    const safeMaxAccommodations = entitlementsLoading ? 100 : (maxAccommodations || 1);
 
     const [formData, setFormData] = useState({
         type: "",
         propertyName: "",
         contactPhone: "",
-        address: "",
+        whatsapp: "", // New
+        zipCode: "", // New
+        address: "", // Street
+        number: "", // New
+        complement: "", // New
+        neighborhood: "", // New
         city: "",
         state: "",
-        accommodations: [] as string[], // Mock list for now
+        accommodations: [] as string[],
         integrations: {
             otas: false,
             gmb: false,
@@ -79,7 +84,8 @@ export default function Onboarding() {
                 .from('profiles')
                 .update({
                     onboarding_completed: true,
-                    onboarding_step: totalSteps
+                    onboarding_step: totalSteps,
+                    phone: formData.whatsapp || formData.contactPhone // Update profile phone
                 })
                 .eq('id', user.id);
 
@@ -94,7 +100,7 @@ export default function Onboarding() {
                         .insert({
                             user_id: user.id,
                             name: accName,
-                            address: formData.address || 'Endereço não informado',
+                            address: `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''} - ${formData.neighborhood}, ${formData.zipCode}`,
                             city: formData.city || 'Cidade não informada',
                             state: formData.state || 'UF',
                             status: 'active',
@@ -180,38 +186,89 @@ export default function Onboarding() {
 
                     {/* STEP 2: Basic Info */}
                     {step === 2 && (
-                        <div className="space-y-6 max-w-md mx-auto">
+                        <div className="space-y-6 max-w-lg mx-auto">
                             <div className="text-center mb-6">
                                 <h2 className="text-2xl font-bold">Dados da Propriedade</h2>
                             </div>
-                            <div className="space-y-4">
+                            <div className="grid gap-4">
                                 <div className="space-y-2">
-                                    <Label>Nome do Estabelecimento</Label>
+                                    <Label>Nome do Estabelecimento <span className="text-red-500">*</span></Label>
                                     <Input
                                         placeholder="Ex: Pousada Sol & Mar"
                                         value={formData.propertyName}
                                         onChange={(e) => setFormData({ ...formData, propertyName: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Telefone de Contato</Label>
-                                    <Input
-                                        placeholder="(00) 00000-0000"
-                                        value={formData.contactPhone}
-                                        onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label>Endereço Completo</Label>
-                                    <Input
-                                        placeholder="Rua, Número"
-                                        value={formData.address}
-                                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        required
                                     />
                                 </div>
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                        <Label>Cidade</Label>
+                                        <Label>Telefone</Label>
+                                        <Input
+                                            placeholder="(00) 0000-0000"
+                                            value={formData.contactPhone}
+                                            onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>WhatsApp <span className="text-red-500">*</span></Label>
+                                        <Input
+                                            placeholder="(00) 00000-0000"
+                                            value={formData.whatsapp}
+                                            onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label>CEP</Label>
+                                    <Input
+                                        placeholder="00000-000"
+                                        value={formData.zipCode}
+                                        onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-4 gap-4">
+                                    <div className="col-span-3 space-y-2">
+                                        <Label>Endereço / Rua <span className="text-red-500">*</span></Label>
+                                        <Input
+                                            placeholder="Rua das Flores"
+                                            value={formData.address}
+                                            onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="col-span-1 space-y-2">
+                                        <Label>Número <span className="text-red-500">*</span></Label>
+                                        <Input
+                                            placeholder="123"
+                                            value={formData.number}
+                                            onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Bairro</Label>
+                                        <Input
+                                            placeholder="Centro"
+                                            value={formData.neighborhood}
+                                            onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Complemento</Label>
+                                        <Input
+                                            placeholder="Ap 101, Bloco B"
+                                            value={formData.complement}
+                                            onChange={(e) => setFormData({ ...formData, complement: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <Label>Cidade <span className="text-red-500">*</span></Label>
                                         <Input
                                             placeholder="Ex: Florianópolis"
                                             value={formData.city}
@@ -219,7 +276,7 @@ export default function Onboarding() {
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label>Estado</Label>
+                                        <Label>Estado <span className="text-red-500">*</span></Label>
                                         <Input
                                             placeholder="Ex: SC"
                                             value={formData.state}
@@ -245,10 +302,11 @@ export default function Onboarding() {
                                 <h3 className="font-medium">Cadastrar unidades agora</h3>
                                 <p className="text-sm text-muted-foreground">Você pode adicionar mais detalhes depois no painel.</p>
 
-                                {/* Mock Counter UI */}
+                                {/* Mock Counter UI - Now Editable */}
                                 <div className="flex items-center justify-center gap-4">
                                     <Button
                                         variant="outline"
+                                        size="icon"
                                         onClick={() => setFormData(p => ({
                                             ...p,
                                             accommodations: p.accommodations.slice(0, -1)
@@ -257,9 +315,30 @@ export default function Onboarding() {
                                     >
                                         -
                                     </Button>
-                                    <span className="text-3xl font-bold min-w-[3ch]">{formData.accommodations.length}</span>
+
+                                    <div className="w-24 text-center">
+                                        <Input
+                                            type="number"
+                                            min="0"
+                                            max={safeMaxAccommodations}
+                                            className="text-center text-lg font-bold h-12"
+                                            value={formData.accommodations.length}
+                                            onChange={(e) => {
+                                                const val = parseInt(e.target.value) || 0;
+                                                if (val <= safeMaxAccommodations) {
+                                                    // Generate array of length val
+                                                    setFormData(p => ({
+                                                        ...p,
+                                                        accommodations: Array.from({ length: val }, (_, i) => p.accommodations[i] || `Unidade ${i + 1}`)
+                                                    }));
+                                                }
+                                            }}
+                                        />
+                                    </div>
+
                                     <Button
                                         variant="outline"
+                                        size="icon"
                                         onClick={() => {
                                             if (formData.accommodations.length < safeMaxAccommodations) {
                                                 setFormData(p => ({
@@ -279,7 +358,7 @@ export default function Onboarding() {
                                         +
                                     </Button>
                                 </div>
-                                <p className="text-xs text-muted-foreground">
+                                <p className="text-xs text-muted-foreground mt-2">
                                     {formData.accommodations.length} de {entitlementsLoading ? '...' : safeMaxAccommodations} slots usados
                                 </p>
                             </div>
