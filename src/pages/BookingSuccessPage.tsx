@@ -9,6 +9,7 @@ import { useBookingEngine } from '@/hooks/useBookingEngine';
 import { useToast } from '@/hooks/use-toast';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import * as analytics from "@/lib/analytics";
 import { Booking } from '@/hooks/useBookings';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -47,6 +48,15 @@ const BookingSuccessPage = () => {
             title: "Reserva Confirmada!",
             description: "Seu pagamento foi processado com sucesso e sua reserva está confirmada.",
             variant: "default", // Changed from "success" to "default"
+          });
+
+          // Track Purchase
+          analytics.event({
+            action: 'purchase',
+            category: 'ecommerce',
+            label: response.booking.id,
+            value: response.booking.total_amount,
+            currency: 'BRL'
           });
         } else {
           setVerificationStatus('failed');

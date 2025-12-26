@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Shield, TrendingUp } from "lucide-react";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
 import { useProperties } from "@/hooks/useProperties";
+import * as analytics from "@/lib/analytics";
 
 const CtaSection = () => {
   const { properties } = useProperties();
@@ -31,13 +31,13 @@ const CtaSection = () => {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/auth">
+            <Link to="/auth" onClick={() => analytics.event({ action: 'click_cta', category: 'engagement', label: 'adquirir_plano_footer' })}>
               <Button variant="hero" size="lg" className="group">
                 Adquirir Plano Agora
                 <TrendingUp className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
               </Button>
             </Link>
-            <Button variant="outline" size="lg">
+            <Button variant="outline" size="lg" onClick={() => analytics.event({ action: 'click_cta', category: 'engagement', label: 'falar_vendas' })}>
               Falar com Vendas
             </Button>
           </div>

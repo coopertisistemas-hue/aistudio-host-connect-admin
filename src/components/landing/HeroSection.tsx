@@ -1,10 +1,11 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, Shield, Zap, TrendingUp } from "lucide-react";
+import { CheckCircle2, Shield, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { usePublicWebsiteSettings } from "@/hooks/usePublicWebsiteSettings";
 import { useProperties } from "@/hooks/useProperties";
+import * as analytics from "@/lib/analytics";
 
 const HeroSection = () => {
   const { toast } = useToast();
@@ -23,6 +24,12 @@ const HeroSection = () => {
   const staticHeadline = headlineParts.join(' ');
 
   const handleDemoClick = () => {
+    analytics.event({
+      action: 'click_cta',
+      category: 'engagement',
+      label: 'ver_demonstracao_hero'
+    });
+
     if (demoUrl) {
       window.open(demoUrl, '_blank');
     } else {
@@ -53,7 +60,7 @@ const HeroSection = () => {
               {siteDescription}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link to="/auth">
+              <Link to="/auth" onClick={() => analytics.event({ action: 'click_cta', category: 'engagement', label: 'adquirir_plano_hero' })}>
                 <Button variant="hero" size="lg" className="w-full sm:w-auto group">
                   Adquirir Plano
                 </Button>

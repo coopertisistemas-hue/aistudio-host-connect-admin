@@ -25,6 +25,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2, Send } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import * as analytics from "@/lib/analytics";
 
 const formSchema = z.object({
     name: z.string().min(2, "Nome deve ter pelo menos 2 caracteres"),
@@ -64,6 +65,14 @@ export default function PublicSupportForm() {
                 title: "Mensagem enviada!",
                 description: "Recebemos seu contato e retornaremos em breve.",
             });
+
+            // Track successful submission
+            analytics.event({
+                action: 'submit_contact',
+                category: 'engagement',
+                label: values.type
+            });
+
             form.reset();
         } catch (error) {
             console.error("Error sending message:", error);

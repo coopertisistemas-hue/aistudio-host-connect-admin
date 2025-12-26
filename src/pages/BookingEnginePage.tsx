@@ -12,6 +12,7 @@ import { useServices } from "@/hooks/useServices";
 import { useBookingEngine } from "@/hooks/useBookingEngine";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import * as analytics from "@/lib/analytics";
 
 import BookingForm from "@/components/booking-engine/BookingForm";
 import BookingResults from "@/components/booking-engine/BookingResults";
@@ -79,6 +80,13 @@ const BookingEnginePage = () => {
       };
       const availabilityResponse = await checkAvailability.mutateAsync(availabilityData);
       setAvailabilityResult(availabilityResponse);
+
+      // Track search
+      analytics.event({
+        action: 'search_availability',
+        category: 'ecommerce',
+        label: `${data.check_in.toISOString()}_${data.check_out.toISOString()}`
+      });
 
       if (availabilityResponse.available) {
         setIsCalculating(true);
@@ -157,7 +165,15 @@ const BookingEnginePage = () => {
       };
 
       const session = await createCheckoutSession.mutateAsync(checkoutSessionData);
-      
+
+      // Track begin checkout
+      analytics.event({
+        action: 'begin_checkout',
+        category: 'ecommerce',
+        label: selectedProperty.name,
+        value: priceResult.total_amount
+      });
+
       if (session.url) {
         window.location.href = session.url;
       } else {
