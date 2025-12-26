@@ -17,9 +17,9 @@ const Footer = () => {
 
   const siteName = websiteSettings?.site_name || "HostConnect";
   const siteLogoUrl = websiteSettings?.site_logo_url || "https://oravqykjpgqoiidqnfja.supabase.co/storage/v1/object/public/website-assets/HostConnect%20Logotipo.png";
-  const siteDescription = websiteSettings?.site_description || "Plataforma completa para gestão hoteleira e reservas online.";
-  const contactEmail = websiteSettings?.contact_email || "contato@hostconnect.com.br";
-  const contactPhone = websiteSettings?.contact_phone || "(49) 99999-9999";
+  const siteDescription = websiteSettings?.site_description || "Sistema completo para gerenciar suas propriedades, reservas, pagamentos e muito mais. Tudo em uma única plataforma intuitiva e poderosa.";
+  const contactEmail = websiteSettings?.contact_email || "hostconnect.uc@gmail.com";
+  const contactPhone = websiteSettings?.contact_phone || "(51) 98685-9236";
   const socialInstagram = websiteSettings?.social_instagram || "#";
   const socialFacebook = websiteSettings?.social_facebook || "#";
   const socialGoogleBusiness = websiteSettings?.social_google_business || "#";
@@ -77,7 +77,7 @@ const Footer = () => {
                 <span className="text-lg font-bold bg-gradient-hero bg-clip-text text-transparent">
                   {siteName}
                 </span>
-            </div>
+              </div>
             </div>
             <p className="text-sm text-muted-foreground">
               {siteDescription}
@@ -163,7 +163,8 @@ const Footer = () => {
         </div>
 
         <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-          <p>© 2025 {siteName} - Urubici Connect. Todos os direitos reservados.</p>
+          <p>© 2025 {siteName} - Todos os direitos reservados.</p>
+          <p className="text-xs mt-1">Desenvolvido por Urubici Connect</p>
         </div>
       </div>
     </footer>

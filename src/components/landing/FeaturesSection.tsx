@@ -49,7 +49,7 @@ const FeaturesSection = () => {
     {
       id: '6',
       title: 'Website Builder',
-      description: 'Crie um site profissional para sua propriedade em minutos.',
+      description: 'Nós geramos seu site 100% funcional, moderno e otimizado para SEO e campanhas.',
       icon: 'Smartphone',
       active: true,
       display_order: 6

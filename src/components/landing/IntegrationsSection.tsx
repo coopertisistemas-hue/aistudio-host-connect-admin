@@ -18,6 +18,7 @@ const IntegrationsSection = () => {
     { id: '4', name: 'WhatsApp', icon: 'Smartphone', description: 'Comunicação automatizada com hóspedes' },
     { id: '5', name: 'Google Calendar', icon: 'Calendar', description: 'Organização de tarefas e eventos' },
     { id: '6', name: 'Expedia', icon: 'Globe', description: 'Alcance global para sua propriedade' },
+    { id: '7', name: 'Google Meu Negócio', icon: 'MapPin', description: 'Visibilidade local e gestão de avaliações' },
   ];
 
 

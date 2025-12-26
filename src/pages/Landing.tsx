@@ -44,6 +44,15 @@ import CtaSection from "@/components/landing/CtaSection";
 import { Helmet } from 'react-helmet-async';
 import PublicSupportForm from "@/components/landing/PublicSupportForm";
 import FounderBanner from "@/components/landing/FounderBanner";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { MessageSquarePlus } from "lucide-react";
 
 const Landing = () => {
   // Static defaults for public LP - no auth hooks
@@ -89,9 +98,33 @@ const Landing = () => {
 
       <IntegrationsSection />
 
+
+
       <section className="py-20 bg-slate-50" id="support">
-        <div className="container mx-auto px-4">
-          <PublicSupportForm />
+        <div className="container mx-auto px-4 text-center">
+          <Badge variant="secondary" className="mb-4">
+            Suporte
+          </Badge>
+          <h2 className="text-3xl font-bold mb-4">
+            Precisa de ajuda ou encontrou um erro?
+          </h2>
+          <p className="text-muted-foreground mb-8 max-w-2xl mx-auto">
+            Estamos sempre melhorando. Se você encontrou algum problema ou tem uma ideia incrível, nos avise!
+          </p>
+
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button size="lg" className="gap-2">
+                <MessageSquarePlus className="h-5 w-5" />
+                Fale Conosco / Relatar Erro
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+              <div className="py-4">
+                <PublicSupportForm />
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </section>
 
