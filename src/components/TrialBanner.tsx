@@ -18,8 +18,7 @@ const TrialBanner = () => {
                 <div className="flex items-center gap-2 mb-2 sm:mb-0">
                     <Clock className="h-4 w-4 text-indigo-200" />
                     <span>
-                        <strong>Modo de Teste:</strong> Você está testando o plano <strong>{plan === 'premium' ? 'Premium' : 'Pro'}</strong>.
-                        Restam <strong>{trialDaysLeft} dias</strong>.
+                        <strong>Trial Premium ativo</strong> — expira em {trialDaysLeft} dias ({new Date(new Date().setDate(new Date().getDate() + trialDaysLeft)).toLocaleDateString('pt-BR')}).
                     </span>
                 </div>
                 <Link to="/plans">
@@ -38,7 +37,7 @@ const TrialBanner = () => {
                 <div className="flex items-center gap-2 mb-2 sm:mb-0">
                     <AlertCircle className="h-5 w-5" />
                     <span className="font-medium">
-                        Seu período de teste expirou. Funcionalidades foram bloqueadas.
+                        Trial expirado. Faça o upgrade para continuar.
                     </span>
                 </div>
                 <Link to="/plans">
