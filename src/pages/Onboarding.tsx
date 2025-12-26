@@ -45,6 +45,56 @@ export default function Onboarding() {
         }
     });
 
+    // Helper: Phone Mask (XX) XXXXX-XXXX
+    const maskPhone = (value: string) => {
+        return value
+            .replace(/\D/g, "")
+            .replace(/^(\d{2})(\d)/g, "($1) $2")
+            .replace(/(\d)(\d{4})$/, "$1-$2")
+            .slice(0, 15);
+    };
+
+    // Helper: CEP Mask 00000-000
+    const maskCep = (value: string) => {
+        return value
+            .replace(/\D/g, "")
+            .replace(/^(\d{5})(\d)/, "$1-$2")
+            .slice(0, 9);
+    };
+
+    // Fetch Address from ViaCEP
+    const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
+        const cep = e.target.value.replace(/\D/g, "");
+        if (cep.length === 8) {
+            setLoading(true);
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const data = await response.json();
+                if (!data.erro) {
+                    setFormData(prev => ({
+                        ...prev,
+                        address: data.logradouro,
+                        neighborhood: data.bairro,
+                        city: data.localidade,
+                        state: data.uf,
+                    }));
+                    // Focus on Number field
+                    document.getElementById("address-number")?.focus();
+                } else {
+                    toast({
+                        title: "CEP não encontrado",
+                        description: "Verifique o CEP digitado.",
+                        variant: "destructive"
+                    });
+                }
+            } catch (error) {
+                console.error("CEP fetch error:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
     const propertyTypes = [
         { id: "hotel", label: "Hotel", icon: Hotel },
         { id: "pousada", label: "Pousada", icon: Building2 },
@@ -206,7 +256,7 @@ export default function Onboarding() {
                                         <Input
                                             placeholder="(00) 0000-0000"
                                             value={formData.contactPhone}
-                                            onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
+                                            onChange={(e) => setFormData({ ...formData, contactPhone: maskPhone(e.target.value) })}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -214,17 +264,18 @@ export default function Onboarding() {
                                         <Input
                                             placeholder="(00) 00000-0000"
                                             value={formData.whatsapp}
-                                            onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
+                                            onChange={(e) => setFormData({ ...formData, whatsapp: maskPhone(e.target.value) })}
                                         />
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <Label>CEP</Label>
+                                    <Label>CEP <span className="text-red-500">*</span></Label>
                                     <Input
                                         placeholder="00000-000"
                                         value={formData.zipCode}
-                                        onChange={(e) => setFormData({ ...formData, zipCode: e.target.value })}
+                                        onChange={(e) => setFormData({ ...formData, zipCode: maskCep(e.target.value) })}
+                                        onBlur={handleCepBlur}
                                     />
                                 </div>
 
@@ -235,11 +286,13 @@ export default function Onboarding() {
                                             placeholder="Rua das Flores"
                                             value={formData.address}
                                             onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                                            disabled={!!formData.address && formData.address.length > 3}
                                         />
                                     </div>
                                     <div className="col-span-1 space-y-2">
                                         <Label>Número <span className="text-red-500">*</span></Label>
                                         <Input
+                                            id="address-number"
                                             placeholder="123"
                                             value={formData.number}
                                             onChange={(e) => setFormData({ ...formData, number: e.target.value })}
@@ -254,6 +307,7 @@ export default function Onboarding() {
                                             placeholder="Centro"
                                             value={formData.neighborhood}
                                             onChange={(e) => setFormData({ ...formData, neighborhood: e.target.value })}
+                                            disabled={!!formData.neighborhood && formData.neighborhood.length > 2}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -273,6 +327,7 @@ export default function Onboarding() {
                                             placeholder="Ex: Florianópolis"
                                             value={formData.city}
                                             onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                                            disabled={!!formData.city}
                                         />
                                     </div>
                                     <div className="space-y-2">
@@ -281,6 +336,7 @@ export default function Onboarding() {
                                             placeholder="Ex: SC"
                                             value={formData.state}
                                             onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                                            disabled={!!formData.state}
                                         />
                                     </div>
                                 </div>
