@@ -143,23 +143,31 @@ export default function Onboarding() {
     const finishOnboarding = async () => {
         setLoading(true);
         try {
-            if (!user) return;
+            if (!user) {
+                throw new Error("Usuário não autenticado.");
+            }
 
             // 1. Update Profile Status
+            toast({ title: "Salvando perfil...", description: "Atualizando status da conta." });
+
             const { error: profileError } = await supabase
                 .from('profiles')
                 .update({
                     onboarding_completed: true,
                     onboarding_step: totalSteps,
-                    phone: formData.whatsapp || formData.contactPhone // Update profile phone
+                    phone: formData.whatsapp || formData.contactPhone
                 })
                 .eq('id', user.id);
 
-            if (profileError) throw profileError;
+            if (profileError) {
+                console.error("Profile Error", profileError);
+                throw new Error("Erro ao atualizar perfil: " + profileError.message);
+            }
 
-            // 2. Insert Properties (Real backend limit check will happen here)
+            // 2. Insert Properties
             if (formData.accommodations.length > 0) {
-                // We insert them one by one to catch the specific trigger error if it happens
+                toast({ title: "Criando acomodações...", description: `Registrando ${formData.accommodations.length} unidades.` });
+
                 for (const accName of formData.accommodations) {
                     const { error: propError } = await supabase
                         .from('properties')
@@ -178,25 +186,37 @@ export default function Onboarding() {
                         if (propError.code === 'P0001' || propError.message.includes('Limite de acomodações atingido')) {
                             throw new Error(propError.message);
                         }
-                        throw propError;
+                        console.error("Property Error", propError);
+                        throw new Error(`Erro ao criar unidade '${accName}': ${propError.message}`);
                     }
                 }
             }
 
+            // 3. Update Auth Metadata (Optional, but good for sync)
+            await supabase.auth.updateUser({
+                data: { onboarding_completed: true }
+            });
+
             toast({
                 title: "Configuração concluída!",
-                description: "Bem-vindo ao seu painel HostConnect.",
+                description: "Redirecionando para o painel...",
             });
-            navigate("/dashboard");
+
+            // Force a slight delay to ensure toasts are seen and DB propagates
+            setTimeout(() => {
+                // Hard reload to ensure AuthContext re-fetches the fresh profile from DB
+                // This bypasses the stale state in useAuth
+                window.location.href = "/dashboard";
+            }, 1000);
+
         } catch (error: any) {
             console.error("Onboarding Error:", error);
             toast({
                 title: "Erro ao salvar",
-                description: error.message || "Verifique se você atingiu o limite do seu plano.",
+                description: error.message || "Ocorreu um erro desconhecido.",
                 variant: "destructive"
             });
-        } finally {
-            setLoading(false);
+            setLoading(false); // Only stop loading if error
         }
     };
 
