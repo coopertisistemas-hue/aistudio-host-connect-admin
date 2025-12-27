@@ -35,10 +35,9 @@ export const useOrg = () => {
                 .single();
 
             if (error) {
-                // If no rows, returns null logic handled by maybeSingle() usually, but .single() throws.
-                // If the user has no org (shouldn't happen with bootstrap), handle gracefully.
-                if (error.code === 'PGRST116') return null; // No rows found
-                throw error;
+                console.error("useOrg Error:", error);
+                // Return null to avoid crashing/retries on 500s or permissions issues
+                return null;
             }
 
             if (!data || !data.organizations) return null;
@@ -58,6 +57,7 @@ export const useOrg = () => {
         },
         enabled: !!user?.id,
         staleTime: 1000 * 60 * 5, // Cache for 5 mins
+        retry: false, // Do not retry on failure (e.g. 500 recursion) to avoid console spam
     });
 
     return {
