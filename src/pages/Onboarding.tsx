@@ -291,7 +291,7 @@ export default function Onboarding() {
                             <RadioGroup
                                 value={formData.type}
                                 onValueChange={(val) => setFormData({ ...formData, type: val })}
-                                className="grid grid-cols-2 lg:grid-cols-3 gap-4"
+                                className="grid grid-cols-2 md:grid-cols-3 gap-4"
                             >
                                 {propertyTypes.map((type) => (
                                     <div key={type.id}>
