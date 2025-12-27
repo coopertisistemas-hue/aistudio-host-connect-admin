@@ -433,9 +433,23 @@ export default function Onboarding() {
                                             <Input
                                                 id="address-number"
                                                 placeholder="123"
-                                                value={formData.number}
+                                                value={formData.noNumber ? "S/N" : formData.number}
                                                 onChange={(e) => setFormData({ ...formData, number: e.target.value })}
+                                                disabled={formData.noNumber}
+                                                className={formData.noNumber ? "opacity-50" : ""}
                                             />
+                                            <div className="flex items-center space-x-2 pt-1">
+                                                <Checkbox
+                                                    id="no-number"
+                                                    checked={formData.noNumber}
+                                                    onCheckedChange={(checked) => setFormData(prev => ({
+                                                        ...prev,
+                                                        noNumber: checked as boolean,
+                                                        number: checked ? "" : prev.number
+                                                    }))}
+                                                />
+                                                <Label htmlFor="no-number" className="text-xs text-muted-foreground font-normal cursor-pointer whitespace-nowrap">Sem número</Label>
+                                            </div>
                                         </div>
                                     </div>
 
