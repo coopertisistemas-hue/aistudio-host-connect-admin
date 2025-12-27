@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
 
   useEffect(() => {
     // Timeout helper
-    const withTimeout = (promise: Promise<any>, ms: number = 10000) => {
+    const withTimeout = (promise: Promise<any>, ms: number = 3000) => {
       return Promise.race([
         promise,
         new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), ms))
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
           try {
             await withTimeout(fetchUserProfile(session.user.id));
           } catch (e) {
-            console.warn('[useAuth] Profile fetch time out or failed, using defaults.', e);
+            console.warn('[useAuth] Profile fetch timed out (3s) or failed. Proceeding with defaults.');
             // Even if profile fails, we have a user session, so we stop loading.
             // Defaults (null role/plan) are already set in fetchUserProfile error path or init.
           }
@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         try {
           await withTimeout(fetchUserProfile(session.user.id));
         } catch (e) {
-          console.warn('[useAuth] Initial profile fetch time out, allowing app load.', e);
+          console.warn('[useAuth] Initial profile fetch timed out (3s). Proceeding with defaults.');
         }
       }
       setLoading(false);
