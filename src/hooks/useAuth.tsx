@@ -54,7 +54,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
 
   useEffect(() => {
     // Timeout helper
-    const withTimeout = (promise: Promise<any>, ms: number = 5000) => {
+    const withTimeout = (promise: Promise<any>, ms: number = 10000) => {
       return Promise.race([
         promise,
         new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), ms))
