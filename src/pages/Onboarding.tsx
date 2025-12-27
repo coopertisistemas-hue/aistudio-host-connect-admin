@@ -134,19 +134,26 @@ export default function Onboarding() {
     ];
 
     const handleNext = async () => {
+        console.log("handleNext Clicked", { step, totalSteps, formData });
         if (step < totalSteps) {
+            console.log("Advancing to next step");
             setStep(step + 1);
             // Save progress to profile
             if (user) {
-                await supabase
-                    .from('profiles')
-                    .update({
-                        onboarding_step: step + 1,
-                        onboarding_type: formData.type || null
-                    })
-                    .eq('id', user.id);
+                try {
+                    await supabase
+                        .from('profiles')
+                        .update({
+                            onboarding_step: step + 1,
+                            onboarding_type: formData.type || null
+                        })
+                        .eq('id', user.id);
+                } catch (e) {
+                    console.error("Error saving progress:", e);
+                }
             }
         } else {
+            console.log("Finishing onboarding");
             finishOnboarding();
         }
     };
