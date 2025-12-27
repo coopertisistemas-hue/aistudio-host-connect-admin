@@ -53,6 +53,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   };
 
   useEffect(() => {
+    // Timeout helper
+    const withTimeout = (promise: Promise<any>, ms: number = 5000) => {
+      return Promise.race([
+        promise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), ms))
+      ]);
+    };
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('[useAuth] Auth state changed:', event, session?.user?.email);
@@ -60,7 +68,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         setUser(session?.user ?? null);
         if (session?.user) {
           console.log('[useAuth] User detected, fetching profile...');
-          await fetchUserProfile(session.user.id);
+          // Use timeout for profile fetch
+          try {
+            await withTimeout(fetchUserProfile(session.user.id));
+          } catch (e) {
+            console.warn('[useAuth] Profile fetch time out or failed, using defaults.', e);
+            // Even if profile fails, we have a user session, so we stop loading.
+            // Defaults (null role/plan) are already set in fetchUserProfile error path or init.
+          }
         } else {
           console.log('[useAuth] No user session, clearing profile data');
           setUserRole(null);
@@ -76,7 +91,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        await fetchUserProfile(session.user.id);
+        try {
+          await withTimeout(fetchUserProfile(session.user.id));
+        } catch (e) {
+          console.warn('[useAuth] Initial profile fetch time out, allowing app load.', e);
+        }
       }
       setLoading(false);
     }).catch(err => {
