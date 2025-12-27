@@ -618,7 +618,7 @@ export default function Onboarding() {
                         <Button onClick={handleNext} disabled={
                             loading ||
                             (step === 1 && !formData.type) ||
-                            (step === 2 && (!formData.propertyName || !formData.whatsapp || !formData.zipCode || !formData.address || !formData.number || !formData.city || !formData.state))
+                            (step === 2 && (!formData.propertyName || !formData.whatsapp || !formData.zipCode || !formData.address || (!formData.number && !formData.noNumber) || !formData.city || !formData.state))
                         }>
                             {step === totalSteps ? (loading ? 'Concluindo...' : 'Concluir Setup') : 'Próximo'}
                             {step !== totalSteps && <ArrowRight className="ml-2 h-4 w-4" />}
