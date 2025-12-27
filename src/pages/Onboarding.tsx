@@ -10,7 +10,19 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, Home, Hotel, BedDouble, CheckCircle2, ArrowRight, ArrowLeft } from "lucide-react";
+import { Building2, Home, Hotel, BedDouble, CheckCircle2, ArrowRight, ArrowLeft, Tent, Palmtree, Box } from "lucide-react";
+
+// ... (existing code)
+
+const propertyTypes = [
+    { id: "hotel", label: "Hotel", icon: Hotel },
+    { id: "pousada", label: "Pousada", icon: Building2 },
+    { id: "vacation_rental", label: "Casa de Temporada", icon: Home },
+    { id: "hostel", label: "Hostel", icon: BedDouble },
+    { id: "chale", label: "Chalés", icon: Tent },
+    { id: "alternative", label: "Pousada Alternativa", icon: Palmtree },
+    { id: "other", label: "Outros", icon: Box },
+];
 import { AiConfigWarning } from "@/components/AiConfigWarning";
 
 export default function Onboarding() {
@@ -116,6 +128,9 @@ export default function Onboarding() {
         { id: "pousada", label: "Pousada", icon: Building2 },
         { id: "vacation_rental", label: "Casa de Temporada", icon: Home },
         { id: "hostel", label: "Hostel", icon: BedDouble },
+        { id: "chale", label: "Chalés", icon: Tent },
+        { id: "alternative", label: "Pousada Alternativa", icon: Palmtree },
+        { id: "other", label: "Outros", icon: Box },
     ];
 
     const handleNext = async () => {
