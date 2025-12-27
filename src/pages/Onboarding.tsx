@@ -74,7 +74,7 @@ export default function Onboarding() {
     const handleCepBlur = async (e: React.FocusEvent<HTMLInputElement>) => {
         const cep = e.target.value.replace(/\D/g, "");
         if (cep.length === 8) {
-            setLoading(true);
+            setCepLoading(true);
             try {
                 const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
                 const data = await response.json();
@@ -111,7 +111,7 @@ export default function Onboarding() {
                 // On error, unlock all
                 setLockedFields([]);
             } finally {
-                setLoading(false);
+                setCepLoading(false);
             }
         }
     };
@@ -156,7 +156,7 @@ export default function Onboarding() {
     };
 
     const finishOnboarding = async () => {
-        setLoading(true);
+        setSubmitting(true);
 
         const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error("A operação demorou muito. Verifique sua conexão.")), 15000)
@@ -255,7 +255,7 @@ export default function Onboarding() {
                 description: error.message || "Ocorreu um erro desconhecido.",
                 variant: "destructive"
             });
-            setLoading(false);
+            setSubmitting(false);
         }
     };
 
@@ -566,11 +566,19 @@ export default function Onboarding() {
                     </Button>
 
                     <Button onClick={handleNext} disabled={
-                        loading ||
+                        submitting ||
                         (step === 1 && !formData.type) ||
-                        (step === 2 && (!formData.propertyName || !formData.whatsapp || !formData.zipCode || !formData.address || (!formData.number && !formData.noNumber) || !formData.city || !formData.state))
+                        (step === 2 && (
+                            !formData.propertyName.trim() ||
+                            !formData.whatsapp.trim() ||
+                            !formData.zipCode.trim() ||
+                            !formData.address.trim() ||
+                            (!formData.number.trim() && !formData.noNumber) ||
+                            !formData.city.trim() ||
+                            !formData.state.trim()
+                        ))
                     }>
-                        {step === totalSteps ? (loading ? 'Concluindo...' : 'Concluir Setup') : 'Próximo'}
+                        {step === totalSteps ? (submitting ? 'Concluindo...' : 'Concluir Setup') : 'Próximo'}
                         {step !== totalSteps && <ArrowRight className="ml-2 h-4 w-4" />}
                     </Button>
                 </CardFooter>
