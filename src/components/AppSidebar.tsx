@@ -35,6 +35,10 @@ import {
   TrendingUp,
   ChevronDown,
   Hash,
+  Heading,
+  Package,
+  Utensils,
+  ShoppingCart,
 } from "lucide-react";
 import {
   Sidebar,
@@ -84,6 +88,8 @@ const AppSidebar = () => {
         { title: "Quadro de Quartos", url: "/operation/rooms", icon: BedDouble },
         { title: "Governança", url: "/operation/housekeeping", icon: Brush },
         { title: "Manutenção", url: "/operation/demands", icon: Construction },
+        { title: "Estoque da Copa", url: "/ops/pantry-stock", icon: Utensils },
+        { title: "Compra Rápida", url: "/pdv", icon: ShoppingCart },
         { title: "Tarefas", url: "/tasks", icon: ListTodo },
       ]
     },
@@ -116,6 +122,7 @@ const AppSidebar = () => {
         { title: "Tipos de Acomodação", url: "/room-types", icon: BedDouble },
         { title: "Quartos", url: "/rooms", icon: Bed },
         { title: "Comodidades", url: "/amenities", icon: ListChecks },
+        { title: "Inventário de Acomodação", url: "/inventory", icon: Package },
         { title: "Serviços", url: "/services", icon: ConciergeBell },
         { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe, gated: !canAccess('otas') },
       ]

@@ -36,7 +36,7 @@ const getStatusIcon = (status: Room['status']) => {
 const DashboardRoomStatus = () => {
   const { properties, isLoading: propertiesLoading } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
-  
+
   const { rooms, isLoading: roomsLoading } = useRooms(selectedPropertyId);
 
   const roomCounts = rooms.reduce((acc, room) => {
@@ -52,7 +52,7 @@ const DashboardRoomStatus = () => {
       <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Status dos Quartos</CardTitle>
         <Select
-          value={selectedPropertyId}
+          value={selectedPropertyId || ''}
           onValueChange={setSelectedPropertyId}
           disabled={isLoading || properties.length === 0}
         >
@@ -96,8 +96,8 @@ const DashboardRoomStatus = () => {
 
             <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-2 max-h-64 overflow-y-auto p-2 border rounded-md">
               {rooms.map((room) => (
-                <div 
-                  key={room.id} 
+                <div
+                  key={room.id}
                   className={cn(
                     "p-2 rounded-md text-center text-xs font-medium cursor-pointer transition-all hover:scale-105",
                     getStatusClasses(room.status)
