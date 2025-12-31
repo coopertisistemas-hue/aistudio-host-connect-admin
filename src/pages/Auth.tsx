@@ -12,7 +12,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, signupSchema, LoginInput, SignupInput } from "@/lib/auth-schemas";
 
 const Auth = () => {
-  const { user, signIn, signUp, signInWithGoogle, signInWithFacebook } = useAuth(); // Add signInWithFacebook
+  const { user, signIn, signUp, signInWithGoogle, signInWithFacebook, onboardingCompleted, loading } = useAuth(); // Add signInWithFacebook
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
@@ -37,10 +37,14 @@ const Auth = () => {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (user) {
-      navigate('/dashboard');
+    if (user && !loading) {
+      if (onboardingCompleted) {
+        navigate('/dashboard');
+      } else {
+        navigate('/onboarding');
+      }
     }
-  }, [user, navigate]);
+  }, [user, loading, onboardingCompleted, navigate]);
 
   const handleLogin = async (data: LoginInput) => {
     setIsLoading(true);

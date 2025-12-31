@@ -48,7 +48,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
     } else {
       setUserRole(data?.role || 'user');
       setUserPlan(data?.plan || 'free');
-      setOnboardingCompleted(!!data?.onboarding_completed); // Set state
+      const isCompleted = !!data?.onboarding_completed;
+      console.log('[useAuth] Profile fetched:', { id: userId, isCompleted, role: data?.role });
+      setOnboardingCompleted(isCompleted); // Set state
     }
   };
 
@@ -156,7 +158,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       }
 
       trackLogin('email'); // Track login
-      navigate('/dashboard');
+      // navigate('/dashboard'); // Removed to allow Auth.tsx to handle redirect based on onboarding
     } catch (error) {
       console.error('Sign in error:', error);
       throw error;

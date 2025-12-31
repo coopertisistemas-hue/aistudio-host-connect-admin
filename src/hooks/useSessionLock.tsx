@@ -13,7 +13,30 @@ const STORAGE_KEY_LOCKED = 'hc_session_locked';
 
 export const useSessionLock = () => {
     // If feature is disabled, always return false
-    const [isLocked, setIsLocked] = useState(() => IS_FEATURE_ENABLED && localStorage.getItem(STORAGE_KEY_LOCKED) === 'true');
+    const [isLocked, setIsLocked] = useState(() => {
+        if (!IS_FEATURE_ENABLED) return false;
+
+        // Immediate Safety Check on Mount
+        const lockedStored = localStorage.getItem(STORAGE_KEY_LOCKED) === 'true';
+        if (lockedStored) return true;
+
+        const now = Date.now();
+        const lastActive = parseInt(localStorage.getItem(STORAGE_KEY_LAST_ACTIVE) || '0');
+
+        // CORRECTION: If there is no lastActive (new session) do NOT lock. Only lock if explicitly stale.
+        // However, if lastActive is 0 (missing), we should probably set it to now to start the timer.
+        if (!lastActive) {
+            return false;
+        }
+
+        const idleTime = now - lastActive;
+        if (idleTime >= IDLE_TIMEOUT) {
+            console.warn('[SessionLock] Immediate lock: Session stale on mount');
+            return true;
+        }
+
+        return false;
+    });
     const [isWarning, setIsWarning] = useState(false);
     const lastActivityRef = useRef<number>(Date.now());
     const backgroundStartRef = useRef<number | null>(null);
@@ -80,6 +103,7 @@ export const useSessionLock = () => {
 
             // Check for Lock
             if (idleTime >= IDLE_TIMEOUT) {
+                console.log('[SessionLock] Idle timeout reached. Locking.');
                 lock();
             }
             // Check for Warning
