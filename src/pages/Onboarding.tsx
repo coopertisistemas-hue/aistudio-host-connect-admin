@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import { useOrg } from "@/hooks/useOrg";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,9 +16,17 @@ import { Building2, Home, Hotel, BedDouble, CheckCircle2, ArrowRight, ArrowLeft,
 import { AiConfigWarning } from "@/components/AiConfigWarning";
 
 export default function Onboarding() {
-    const { user } = useAuth();
+    const { user, onboardingCompleted } = useAuth();
     const { maxAccommodations, canAccess, isLoading: entitlementsLoading } = useEntitlements();
+    const { currentOrgId } = useOrg(); // Fixed: Get Org ID
     const navigate = useNavigate();
+
+    // Redirect if already completed
+    useEffect(() => {
+        if (onboardingCompleted) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [onboardingCompleted, navigate]);
 
     const [step, setStep] = useState(1);
     const [cepLoading, setCepLoading] = useState(false);
@@ -202,33 +211,34 @@ export default function Onboarding() {
                 }
             }
 
-            // 2. Insert Properties
+            // 2. Insert Properties (Batch)
             if (formData.accommodations.length > 0) {
                 toast({ title: "Criando acomodações...", description: `Registrando ${formData.accommodations.length} unidades.` });
 
-                for (const accName of formData.accommodations) {
-                    const insertPromise = supabase
-                        .from('properties')
-                        .insert({
-                            user_id: user.id,
-                            name: accName,
-                            address: `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''} - ${formData.neighborhood}, ${formData.zipCode}`,
-                            city: formData.city || 'Cidade não informada',
-                            state: formData.state || 'UF',
-                            status: 'active',
-                            total_rooms: 1
-                        });
+                const propertiesToInsert = formData.accommodations.map(accName => ({
+                    user_id: user.id,
+                    org_id: currentOrgId,
+                    name: `${formData.propertyName} - ${accName}`,
+                    address: `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''} - ${formData.neighborhood}, ${formData.zipCode}`,
+                    city: formData.city || 'Cidade não informada',
+                    state: formData.state || 'UF',
+                    status: 'active',
+                    total_rooms: 1
+                }));
 
-                    const { error: propError } = await Promise.race([insertPromise, timeoutPromise]) as any;
+                const insertPromise = supabase
+                    .from('properties')
+                    .insert(propertiesToInsert);
 
-                    if (propError) {
-                        // Check for our custom trigger error code P0001
-                        if (propError.code === 'P0001' || propError.message.includes('Limite de acomodações atingido')) {
-                            throw new Error(propError.message);
-                        }
-                        console.error("Property Error", propError);
-                        throw new Error(`Erro ao criar unidade '${accName}': ${propError.message}`);
+                const { error: propError } = await Promise.race([insertPromise, timeoutPromise]) as any;
+
+                if (propError) {
+                    // Check for our custom trigger error code P0001
+                    if (propError.code === 'P0001' || propError.message.includes('Limite de acomodações atingido')) {
+                        throw new Error(propError.message);
                     }
+                    console.error("Property Batch Error", propError);
+                    throw new Error(`Erro ao criar unidades: ${propError.message}`);
                 }
             }
 

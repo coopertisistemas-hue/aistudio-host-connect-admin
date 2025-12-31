@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Configuration (initial pilot values)
 // FEATURE FLAG: Temporarily disabled due to pilot user feedback (2025-12-22)
-const IS_FEATURE_ENABLED = false;
+const IS_FEATURE_ENABLED = true;
 
 const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
 const BACKGROUND_TIMEOUT = 10 * 60 * 1000; // 10 minutes
