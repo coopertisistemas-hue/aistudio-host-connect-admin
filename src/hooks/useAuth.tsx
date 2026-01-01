@@ -14,7 +14,7 @@ interface AuthContextType {
   loading: boolean;
   userRole: string | null;
   userPlan: string | null;
-  onboardingCompleted: boolean; // Added field
+  onboardingCompleted: boolean | null; // Changed to boolean | null (tri-state)
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string, phone?: string | null) => Promise<void>; // Adicionado phone
   signOut: () => Promise<void>;
@@ -30,7 +30,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string | null>(null);
-  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean>(false); // New State
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null); // Initialized as null (unknown)
   const navigate = useNavigate();
 
   const fetchUserProfile = async (userId: string) => {
@@ -44,7 +44,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       console.error('Error fetching user profile:', error);
       setUserRole(null);
       setUserPlan(null);
-      setOnboardingCompleted(false);
+      // Do NOT set onboardingCompleted to false on error. Keep it null or unknown.
+      // This prevents "offline" or "error" states from rushing the user to onboarding.
+      setOnboardingCompleted(null);
     } else {
       setUserRole(data?.role || 'user');
       setUserPlan(data?.plan || 'free');

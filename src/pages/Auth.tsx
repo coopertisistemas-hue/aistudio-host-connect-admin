@@ -38,11 +38,12 @@ const Auth = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user && !loading) {
-      if (onboardingCompleted) {
+      if (onboardingCompleted === true) {
         navigate('/dashboard');
-      } else {
+      } else if (onboardingCompleted === false) {
         navigate('/onboarding');
       }
+      // If null, do nothing (wait)
     }
   }, [user, loading, onboardingCompleted, navigate]);
 
