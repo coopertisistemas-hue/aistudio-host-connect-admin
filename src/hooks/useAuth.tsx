@@ -51,7 +51,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       setUserRole(data?.role || 'user');
       setUserPlan(data?.plan || 'free');
       const isCompleted = !!data?.onboarding_completed;
-      console.log('[useAuth] Profile fetched:', { id: userId, isCompleted, role: data?.role });
       setOnboardingCompleted(isCompleted); // Set state
     }
   };
@@ -67,11 +66,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('[useAuth] Auth state changed:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         if (session?.user) {
-          console.log('[useAuth] User detected, fetching profile...');
           // Use timeout for profile fetch
           try {
             await withTimeout(fetchUserProfile(session.user.id));
@@ -89,9 +86,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       }
     );
 
-    console.log('[useAuth] Initializing session check...');
+
     supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('[useAuth] Initial session:', session?.user?.email || 'none');
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
@@ -111,7 +107,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
     const safetyTimeout = setTimeout(() => {
       setLoading(currentLoading => {
         if (currentLoading) {
-          console.error('[useAuth] SAFETY TIMEOUT: Loading took too long (>10s), forcing ready state.');
           return false;
         }
         return currentLoading;

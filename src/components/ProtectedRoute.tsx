@@ -12,23 +12,12 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const location = useLocation();
 
   useEffect(() => {
-    // DEBUG LOGGING
-    console.log('[ProtectedRoute] Check:', {
-      loading,
-      hasUser: !!user,
-      onboardingCompleted,
-      path: location.pathname,
-      role: userRole
-    });
-
     if (!loading) {
       if (!user) {
-        console.log('[ProtectedRoute] No user, redirecting to /auth');
         navigate('/auth');
       } else {
         // Only redirect if explicitly FALSE. If NULL (unknown), we wait.
         if (onboardingCompleted === false && !location.pathname.startsWith('/onboarding') && userRole !== 'admin') {
-          console.log('[ProtectedRoute] Onboarding explicitly incomplete, redirecting to /onboarding');
           navigate('/onboarding');
         }
         // If onboardingCompleted is null, we do nothing (let it load or stay in "loading" state)
