@@ -38,14 +38,9 @@ const Auth = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user && !loading) {
-      if (onboardingCompleted === true) {
-        navigate('/dashboard');
-      } else if (onboardingCompleted === false) {
-        navigate('/onboarding');
-      }
-      // If null, do nothing (wait)
+      navigate('/dashboard');
     }
-  }, [user, loading, onboardingCompleted, navigate]);
+  }, [user, loading, navigate]);
 
   const handleLogin = async (data: LoginInput) => {
     setIsLoading(true);
