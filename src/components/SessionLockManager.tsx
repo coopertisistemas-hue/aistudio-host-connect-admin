@@ -152,73 +152,105 @@ export const SessionLockManager: React.FC<SessionLockManagerProps> = ({ children
 
             {/* Lock Screen Overlay */}
             {isLocked && (
-                <div className="fixed inset-0 z-[200] bg-white flex flex-col items-center justify-center px-8 text-center animate-in fade-in duration-300 backdrop-blur-md">
-                    <div className="w-full max-w-sm space-y-8">
+                <div className="fixed inset-0 z-[200] bg-slate-950/80 backdrop-blur-3xl flex flex-col items-center justify-center px-8 text-center animate-in fade-in duration-700">
+                    {/* Background Decorative Gradient */}
+                    <div className="absolute inset-0 overflow-hidden pointer-events-none origin-center">
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-emerald-500/10 rounded-full blur-[120px] animate-pulse" />
+                    </div>
+
+                    <div className="w-full max-w-sm space-y-8 relative z-10 animate-in zoom-in-95 duration-500 delay-150 fill-mode-both">
+                        {/* HostConnect Logo */}
+                        <div className="flex justify-center mb-4">
+                            <img
+                                src="/host-connect-logo-transp.png"
+                                alt="HostConnect"
+                                className="h-20 w-auto object-contain brightness-0 invert opacity-90"
+                            />
+                        </div>
+
                         {/* Header Identity */}
                         <div className="flex flex-col items-center space-y-4">
-                            <Avatar className="h-24 w-24 rounded-3xl border-4 border-emerald-50 shadow-xl overflow-hidden bg-emerald-50">
-                                {identity?.client_logo_url ? (
-                                    <AvatarImage src={identity.client_logo_url} className="object-cover" />
-                                ) : (
-                                    <div className="h-full w-full flex items-center justify-center">
-                                        <ShieldCheck className="h-10 w-10 text-emerald-600" />
-                                    </div>
-                                )}
-                                <AvatarFallback className="text-2xl font-bold text-emerald-600 bg-emerald-50">
-                                    {identity?.client_short_name?.charAt(0) || "H"}
-                                </AvatarFallback>
-                            </Avatar>
+                            <div className="relative">
+                                <Avatar className="h-24 w-24 rounded-full border-2 border-emerald-500/30 shadow-2xl p-0.5 bg-emerald-500/5">
+                                    {identity?.client_logo_url ? (
+                                        <AvatarImage src={identity.client_logo_url} className="object-cover rounded-full" />
+                                    ) : (
+                                        <div className="h-full w-full flex items-center justify-center bg-emerald-500/10 rounded-full">
+                                            <ShieldCheck className="h-10 w-10 text-emerald-400" />
+                                        </div>
+                                    )}
+                                    <AvatarFallback className="text-2xl font-bold text-emerald-400 bg-emerald-950">
+                                        {identity?.client_short_name?.charAt(0) || "H"}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="absolute -bottom-1 -right-1 bg-emerald-500 rounded-full p-1.5 shadow-lg">
+                                    <Lock className="h-3 w-3 text-white" />
+                                </div>
+                            </div>
 
-                            <div className="space-y-1">
-                                <h2 className="text-2xl font-bold text-[var(--ui-color-text-main)] tracking-tight">
+                            <div className="space-y-2">
+                                <h2 className="text-2xl font-bold text-white tracking-tight">
                                     {identity?.client_short_name || "Host Connect"}
-                                </h2 >
-                                <p className="text-sm text-[var(--ui-color-text-muted)] font-medium">
-                                    Sessão bloqueada para <span className="text-[var(--ui-color-text-main)] font-bold">{identity?.staff_short_name}</span>
+                                </h2>
+                                <p className="text-sm text-emerald-50/60 font-medium">
+                                    Sessão bloqueada para <span className="text-emerald-400 font-bold">{identity?.staff_short_name || user?.email}</span>
                                 </p>
                             </div>
                         </div>
 
                         {/* Unlock Form */}
-                        <form onSubmit={handleUnlock} className="space-y-4">
+                        <form onSubmit={handleUnlock} className="space-y-4 pt-4">
                             <div className="space-y-2">
                                 <Input
                                     type="password"
                                     name="password"
                                     id="password"
-                                    placeholder="Senha de acesso"
-                                    className="h-14 rounded-2xl text-center text-lg bg-neutral-50 border-neutral-100 focus:bg-white focus:ring-emerald-500/20 transition-all font-medium"
+                                    placeholder="Sua senha de acesso"
+                                    className="h-14 rounded-2xl text-center text-lg bg-white/5 border-white/10 text-white placeholder:text-white/20 focus:bg-white/10 focus:ring-emerald-500/40 focus:border-emerald-500/40 transition-all font-medium backdrop-blur-sm"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     autoFocus
                                     disabled={isAuthenticating}
                                 />
-                                {error && <p className="text-xs font-bold text-rose-500">{error}</p>}
+                                {error && (
+                                    <div className="flex items-center justify-center gap-1 text-rose-400 text-xs font-bold animate-in shake-1 duration-300">
+                                        <AlertTriangle className="h-3 w-3" />
+                                        {error}
+                                    </div>
+                                )}
                             </div>
 
                             <Button
-                                className="w-full h-14 rounded-2xl text-base font-bold bg-neutral-900 hover:bg-black shadow-lg active:scale-[0.98] transition-all"
+                                className="w-full h-14 rounded-2xl text-base font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-[0_0_20px_rgba(16,185,129,0.3)] active:scale-[0.98] transition-all border-none"
                                 disabled={isAuthenticating || !password}
                                 type="submit"
                             >
-                                {isAuthenticating ? "Verificando..." : "Desbloquear"}
+                                {isAuthenticating ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Validando...
+                                    </div>
+                                ) : "Desbloquear Sistema"}
                             </Button>
                         </form>
 
                         {/* Footer Options */}
-                        <div className="pt-4 flex flex-col items-center gap-6">
+                        <div className="pt-6 flex flex-col items-center gap-8">
                             <button
                                 onClick={handleSignOut}
                                 type="button"
-                                className="flex items-center gap-2 text-sm font-bold text-neutral-400 hover:text-neutral-600 transition-colors"
+                                className="flex items-center gap-2 text-sm font-bold text-white/40 hover:text-white/80 transition-colors group"
                             >
-                                <LogOut className="h-4 w-4" />
-                                Sair da conta
+                                <LogOut className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
+                                Sair da conta e fazer novo login
                             </button>
 
-                            <p className="text-[10px] font-bold text-neutral-300 uppercase tracking-[0.2em]">
-                                PROTEGIDO POR HOST CONNECT SECURITY
-                            </p>
+                            <div className="flex flex-col items-center gap-2 opacity-30">
+                                <div className="h-px w-12 bg-emerald-500/50" />
+                                <p className="text-[10px] font-bold text-white uppercase tracking-[0.3em]">
+                                    Host Connect Security
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
