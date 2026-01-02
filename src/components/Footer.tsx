@@ -16,7 +16,7 @@ const Footer = () => {
   const { data: websiteSettings, isLoading: settingsLoading } = usePublicWebsiteSettings(defaultPropertyId || '');
 
   const siteName = "Host Connect";
-  const siteLogoUrl = "/host-connect-logo.png";
+  const siteLogoUrl = "/host-connect-logo-transp.png";
   const siteDescription = "Sistema completo para gerenciar suas propriedades, reservas, pagamentos e muito mais. Tudo em uma única plataforma intuitiva e poderosa.";
   const contactEmail = websiteSettings?.contact_email || "hostconnect.uc@gmail.com";
   const contactPhone = websiteSettings?.contact_phone || "(51) 98685-9236";

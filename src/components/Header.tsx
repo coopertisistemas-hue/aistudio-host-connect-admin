@@ -11,7 +11,7 @@ const Header = () => {
   const { toast } = useToast();
   // Static defaults for public header to avoid auth hooks
   const siteName = "Host Connect";
-  const siteLogoUrl = "/host-connect-logo.png";
+  const siteLogoUrl = "/host-connect-logo-transp.png";
   const demoUrl = "";
   const settingsLoading = false;
 
