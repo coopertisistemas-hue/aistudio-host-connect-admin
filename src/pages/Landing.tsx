@@ -59,7 +59,7 @@ const Landing = () => {
   const siteName = "HostConnect";
   const siteDescription = "Plataforma completa de gestão hoteleira para propriedades de todos os tamanhos. Dashboard avançado, motor de reservas, pagamentos online e muito mais.";
   const siteFaviconUrl = "/favicon.png";
-  const siteLogoUrl = "/og-image.png"; // Local OG image
+  const siteLogoUrl = "/host-connect-logo-transp.png"; // NEW Transparent Logo
 
   return (
     <div className="min-h-screen bg-background">
@@ -108,7 +108,7 @@ const Landing = () => {
                 "@type": "Organization",
                 "name": siteName,
                 "url": "https://hostconnect.vercel.app",
-                "logo": "https://hostconnect.vercel.app/host-connect-logo.png",
+                "logo": "https://hostconnect.vercel.app/host-connect-logo-transp.png",
                 "contactPoint": {
                   "@type": "ContactPoint",
                   "telephone": "+55-51-98685-9236",
