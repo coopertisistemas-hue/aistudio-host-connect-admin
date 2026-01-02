@@ -117,7 +117,7 @@ const Auth = () => {
         <Card className="shadow-large">
           <CardHeader className="text-center space-y-4">
             <div className="flex justify-center">
-              <img src={logoIcon} alt="HostConnect Logo" className="h-16 w-16 object-contain" />
+              <img src="/host-connect-logo-transp.png" alt="HostConnect Logo" className="h-16 w-16 object-contain" />
             </div>
             <div>
               <CardTitle className="text-2xl">

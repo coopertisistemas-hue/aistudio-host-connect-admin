@@ -163,7 +163,7 @@ const AppSidebar = () => {
           <SidebarMenuItem>
             <SidebarMenuButton size="lg" asChild>
               <Link to="/dashboard" className="flex items-center gap-3">
-                <img src="/host-connect-logo.png" alt="Host Connect Logo" className="h-8 w-auto object-contain" />
+                <img src="/host-connect-logo-transp.png" alt="Host Connect Logo" className="h-8 w-auto object-contain" />
                 {!isCollapsed && <span className="font-bold text-lg leading-none">Host Connect</span>}
               </Link>
             </SidebarMenuButton>
