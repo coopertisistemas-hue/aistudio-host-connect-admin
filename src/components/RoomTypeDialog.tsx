@@ -10,6 +10,9 @@ import { RoomType, RoomTypeInput, roomTypeSchema } from "@/hooks/useRoomTypes";
 import PhotoGallery from "@/components/PhotoGallery";
 import AmenityMultiSelect from "@/components/AmenityMultiSelect";
 import RoomTypeInventoryManager from "@/components/RoomTypeInventoryManager"; // NEW
+import { useForm, Controller } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useProperties } from "@/hooks/useProperties";
 import { Loader2, BedDouble, Info, Package } from "lucide-react";
 
 interface RoomTypeDialogProps {
