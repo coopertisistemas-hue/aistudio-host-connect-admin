@@ -184,9 +184,11 @@ export const useProperties = () => {
     },
   });
 
+  const finalLoading = isPropertiesLoading || isOrgLoading || authLoading;
+
   return {
     properties: properties || [],
-    isLoading: isPropertiesLoading || isOrgLoading,
+    isLoading: finalLoading,
     error,
     createProperty,
     updateProperty,

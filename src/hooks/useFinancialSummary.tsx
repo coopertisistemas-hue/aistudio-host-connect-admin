@@ -17,11 +17,11 @@ interface FinancialSummary {
 // Helper function to calculate occupied room nights within a period
 const calculateOccupiedRoomNights = (bookings: any[], startDate: Date, endDate: Date) => {
   let occupiedNights = 0;
-  
+
   bookings.forEach(booking => {
     const checkIn = parseISO(booking.check_in);
     const checkOut = parseISO(booking.check_out);
-    
+
     // Only consider confirmed/completed bookings for occupancy calculation
     if (booking.status !== 'confirmed' && booking.status !== 'completed') return;
 
@@ -45,7 +45,7 @@ const calculateOccupiedRoomNights = (bookings: any[], startDate: Date, endDate: 
 };
 
 export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Date, to: Date }) => {
-  const { bookings, isLoading: bookingsLoading } = useBookings();
+  const { bookings, isLoading: bookingsLoading } = useBookings(propertyId);
   const { properties, isLoading: propertiesLoading } = useProperties();
 
   const summary = useMemo<FinancialSummary>(() => {
@@ -68,7 +68,7 @@ export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Dat
 
     const startDate = dateRange?.from || new Date(0); // Start of time if no range
     const endDate = dateRange?.to || new Date();
-    
+
     const totalNightsInPeriod = differenceInDays(endDate, startDate);
     const totalRoomNightsAvailable = totalAvailableRooms * totalNightsInPeriod;
 
@@ -83,13 +83,13 @@ export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Dat
 
     if (totalRoomNightsAvailable > 0) {
       const occupiedRoomNights = calculateOccupiedRoomNights(confirmedBookings, startDate, endDate);
-      
+
       occupancyRate = (occupiedRoomNights / totalRoomNightsAvailable) * 100;
-      
+
       if (occupiedRoomNights > 0) {
         adr = totalRevenue / occupiedRoomNights;
       }
-      
+
       revpar = totalRevenue / totalRoomNightsAvailable;
     }
 
@@ -111,5 +111,7 @@ export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Dat
   return {
     summary,
     isLoading: bookingsLoading || propertiesLoading,
+    bookingsLoading,
+    propertiesLoading
   };
 };

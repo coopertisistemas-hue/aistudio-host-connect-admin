@@ -4,7 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
-import { SelectedPropertyProvider } from "@/hooks/useSelectedProperty"; // NEW IMPORT
+import { SelectedPropertyProvider } from "@/hooks/useSelectedProperty";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import DebugOverlay from "@/components/DebugOverlay";
@@ -112,7 +112,8 @@ const App = () => (
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <PageTracker />
           <AuthProvider>
-            <SelectedPropertyProvider> {/* WRAP WITH PROPERTY PROVIDER */}
+            <SelectedPropertyProvider>
+              <DebugOverlay />
               {/* DebugOverlay removed */}
               <Routes>
                 <Route path="/" element={<Landing />} />

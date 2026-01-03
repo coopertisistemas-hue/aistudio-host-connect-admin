@@ -1,4 +1,5 @@
 
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,57 +13,87 @@ export interface Organization {
 export const useOrg = () => {
     const { user, loading: authLoading } = useAuth();
 
-    const { data: org, isLoading } = useQuery({
+    const { data: org, isLoading, error } = useQuery<Organization | null>({
         queryKey: ["organization", user?.id],
         queryFn: async () => {
-            if (!user?.id) {
-                console.log("[useOrg] No user ID, skipping fetch");
-                return null;
-            }
-            console.log("[useOrg] Fetching org for user:", user.id);
+            if (!user?.id) return null;
 
-            const { data, error } = await supabase
-                .from("org_members")
-                .select(`
-          role,
-          organizations (
-            id,
-            name
-          )
-        `)
-                .eq("user_id", user.id)
-                .order("created_at", { ascending: true })
-                .limit(1)
-                .single();
+            console.log("[useOrg] Iniciando consulta (limite 3s)...");
 
-            if (error) {
-                console.error("[useOrg] Error:", error);
-                return null;
-            }
+            const queryPromise = (async () => {
+                try {
+                    const { data: member, error: memError } = await supabase
+                        .from("org_members")
+                        .select("role, org_id")
+                        .eq("user_id", user.id)
+                        .maybeSingle();
 
-            if (!data || !data.organizations) {
-                console.log("[useOrg] No org found");
-                return null;
-            }
+                    if (memError || !member) return null;
 
-            const orgData = data.organizations as unknown as { id: string, name: string };
-            console.log("[useOrg] Org loaded:", orgData.name);
+                    const { data: orgData, error: orgError } = await supabase
+                        .from("organizations")
+                        .select("id, name")
+                        .eq("id", member.org_id)
+                        .maybeSingle();
 
-            return {
-                id: orgData.id,
-                name: orgData.name,
-                role: data.role
-            } as Organization;
+                    if (orgError || !orgData) return null;
+
+                    return {
+                        id: orgData.id,
+                        name: orgData.name,
+                        role: member.role
+                    } as Organization;
+                } catch (err) {
+                    console.error("[useOrg] Erro interno:", err);
+                    return null;
+                }
+            })();
+
+            // Garantia absoluta de que a query resolve em 3.5s
+            const timeoutPromise = new Promise<null>((resolve) =>
+                setTimeout(() => {
+                    console.warn("[useOrg] Timeout atingido, liberando UI.");
+                    resolve(null);
+                }, 3500)
+            );
+
+            return Promise.race([queryPromise, timeoutPromise]);
         },
         enabled: !!user?.id && !authLoading,
-        staleTime: 1000 * 60 * 5,
+        staleTime: 1000 * 60 * 60,
         retry: false,
     });
 
+    const finalLoading = (isLoading || authLoading) && !!user?.id;
+    const [forceReady, setForceReady] = useState(false);
+
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (finalLoading) {
+                console.warn('[useOrg] Force-Ready triggered after 4s hang.');
+                setForceReady(true);
+            }
+        }, 4000);
+        return () => clearTimeout(timer);
+    }, [finalLoading]);
+
+    const isActuallyLoading = finalLoading && !forceReady;
+
+    console.log('[useOrg] Render State:', {
+        hasUser: !!user?.id,
+        authLoading,
+        isQueryLoading: isLoading,
+        isActuallyLoading,
+        hasOrg: !!org
+    });
+
     return {
-        org,
+        org: org || null,
         currentOrgId: org?.id,
         role: org?.role,
-        isLoading
+        isLoading: isActuallyLoading,
+        isAuthLoading: authLoading,
+        isQueryLoading: isLoading,
+        error
     };
 };

@@ -39,14 +39,16 @@ export const bookingSchema = z.object({
 
 export type BookingInput = z.infer<typeof bookingSchema>;
 
-export const useBookings = () => {
+export const useBookings = (propertyId?: string) => {
   const queryClient = useQueryClient();
   const { createNotification } = useNotifications();
 
   const { data: bookings, isLoading, error } = useQuery({
-    queryKey: ['bookings'],
+    queryKey: ['bookings', propertyId],
     queryFn: async () => {
-      const { data, error } = await supabase
+      console.log('[useBookings] Fetching bookings...', { propertyId });
+
+      let query = supabase
         .from('bookings')
         .select(`
           *,
@@ -57,11 +59,25 @@ export const useBookings = () => {
           room_types (
             name
           )
-        `)
-        .order('check_in', { ascending: false });
+        `);
 
-      if (error) throw error;
-      if (!data) return [];
+      if (propertyId) {
+        query = query.eq('property_id', propertyId);
+      }
+
+      const { data, error } = await query.order('check_in', { ascending: false });
+
+      if (error) {
+        console.error('[useBookings] Error fetching bookings:', error);
+        throw error;
+      }
+
+      if (!data) {
+        console.log('[useBookings] No bookings found');
+        return [];
+      }
+
+      console.log(`[useBookings] Successfully fetched ${data.length} bookings`);
 
       // Collect all unique service IDs to fetch them in a single query (batch)
       const allServiceIds = Array.from(new Set(data.flatMap(b => b.services_json || [])));
@@ -75,7 +91,7 @@ export const useBookings = () => {
           .in('id', allServiceIds);
 
         if (servicesError) {
-          console.error('Error fetching services batch:', servicesError);
+          console.error('[useBookings] Error fetching services batch:', servicesError);
         } else if (servicesData) {
           servicesData.forEach(s => {
             servicesMap[s.id] = s as Service;
@@ -93,6 +109,7 @@ export const useBookings = () => {
 
       return bookingsWithServiceDetails as Booking[];
     },
+    enabled: !!propertyId,
   });
 
   const createBooking = useMutation({
@@ -220,6 +237,8 @@ export const useBookings = () => {
   return {
     bookings: bookings || [],
     isLoading,
+    isPending: (bookings === undefined && !!propertyId), // Manual check for v5 consistency if needed
+    isFetching: false, // placeholder or use actual if needed
     error,
     createBooking,
     updateBooking,

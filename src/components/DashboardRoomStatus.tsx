@@ -1,11 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRooms, Room } from '@/hooks/useRooms';
 import { useProperties } from '@/hooks/useProperties';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { Bed, CheckCircle2, XCircle, Wrench, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSelectedProperty } from '@/hooks/useSelectedProperty'; // NEW IMPORT
+import { useSelectedProperty } from '@/hooks/useSelectedProperty';
+import { Button } from '@/components/ui/button';
 
 const getStatusClasses = (status: Room['status']) => {
   switch (status) {
@@ -37,7 +37,20 @@ const DashboardRoomStatus = () => {
   const { properties, isLoading: propertiesLoading } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
 
-  const { rooms, isLoading: roomsLoading } = useRooms(selectedPropertyId);
+  const { rooms, isLoading: roomsLoading, error: roomsError } = useRooms(selectedPropertyId);
+  const [hasTimedOut, setHasTimedOut] = useState(false);
+
+  useEffect(() => {
+    let timer: number;
+    if (roomsLoading) {
+      timer = window.setTimeout(() => {
+        setHasTimedOut(true);
+      }, 10000); // 10s timeout
+    } else {
+      setHasTimedOut(false);
+    }
+    return () => clearTimeout(timer);
+  }, [roomsLoading]);
 
   const roomCounts = rooms.reduce((acc, room) => {
     acc[room.status] = (acc[room.status] || 0) + 1;
@@ -45,38 +58,50 @@ const DashboardRoomStatus = () => {
   }, {} as Record<Room['status'], number>);
 
   const totalRooms = rooms.length;
-  const isLoading = propertiesLoading || roomsLoading || propertyStateLoading;
+  const isLoading = (propertiesLoading || roomsLoading || propertyStateLoading) && !hasTimedOut;
+
+  if (roomsError || hasTimedOut) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Status dos Quartos</CardTitle>
+        </CardHeader>
+        <CardContent className="py-8 text-center">
+          <p className="text-destructive mb-4 font-medium">
+            {hasTimedOut
+              ? "Tempo limite excedido ao carregar quartos"
+              : "Erro ao carregar status dos quartos"}
+          </p>
+          <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
+            <Loader2 className="mr-2 h-4 w-4" />
+            Recarregar Página
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="pb-2">
         <CardTitle>Status dos Quartos</CardTitle>
-        <Select
-          value={selectedPropertyId || ''}
-          onValueChange={setSelectedPropertyId}
-          disabled={isLoading || properties.length === 0}
-        >
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Selecione a Propriedade" />
-          </SelectTrigger>
-          <SelectContent>
-            {properties.map((prop) => (
-              <SelectItem key={prop.id} value={prop.id}>
-                {prop.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
       </CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="text-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto" />
+          <div className="flex flex-col items-center justify-center py-8 gap-3">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-sm text-muted-foreground animate-pulse">Carregando status dos quartos...</span>
           </div>
         ) : !selectedPropertyId ? (
-          <p className="text-muted-foreground text-center py-8">Selecione uma propriedade para ver o status.</p>
+          <div className="py-8 text-center border-2 border-dashed rounded-xl">
+            <Bed className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+            <p className="text-muted-foreground font-medium">Selecione uma propriedade para visualizar o mapa de quartos.</p>
+          </div>
         ) : totalRooms === 0 ? (
-          <p className="text-muted-foreground text-center py-8">Nenhum quarto cadastrado para esta propriedade.</p>
+          <div className="py-8 text-center border-2 border-dashed rounded-xl">
+            <Bed className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
+            <p className="text-muted-foreground font-medium">Nenhum quarto cadastrado para esta propriedade.</p>
+          </div>
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-3 gap-4">

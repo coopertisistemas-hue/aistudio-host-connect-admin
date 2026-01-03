@@ -128,6 +128,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         if (session?.user) {
           // Only fetch profile on specific events to prevent excessive reloading
           if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+            // Reset Session Lock state on every fresh sign-in or session restoration
+            if (event === 'SIGNED_IN') {
+              console.log('[useAuth] Resetting Session Lock state');
+              localStorage.removeItem('hc_session_locked');
+              localStorage.setItem('hc_last_active', Date.now().toString());
+            }
             await fetchUserProfile(session.user.id);
           } else {
             setLoading(false);
@@ -172,7 +178,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
 
     const safetyTimeout = setTimeout(() => {
       setLoading(false);
-    }, 15000);
+    }, 6000);
 
     return () => {
       authListener.data.subscription.unsubscribe();

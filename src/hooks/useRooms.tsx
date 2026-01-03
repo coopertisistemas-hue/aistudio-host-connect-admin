@@ -28,7 +28,11 @@ export const useRooms = (propertyId?: string) => {
   const { data: rooms, isLoading, error } = useQuery({
     queryKey: ['rooms', propertyId],
     queryFn: async () => {
-      if (!propertyId) return [];
+      console.log('[useRooms] Fetching rooms...', { propertyId });
+      if (!propertyId) {
+        console.warn('[useRooms] No propertyId provided');
+        return [];
+      }
       const { data, error } = await supabase
         .from('rooms')
         .select(`
@@ -40,7 +44,11 @@ export const useRooms = (propertyId?: string) => {
         .eq('property_id', propertyId)
         .order('room_number', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useRooms] Error fetching rooms:', error);
+        throw error;
+      }
+      console.log(`[useRooms] Successfully fetched ${data?.length || 0} rooms`);
       return data as Room[];
     },
     enabled: !!propertyId,
