@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -81,6 +81,9 @@ const TaskDialog = ({ open, onOpenChange, task, onSubmit, isLoading, initialProp
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{task ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {task ? "Edite os detalhes da tarefa." : "Cadastre uma nova tarefa e atribua a um colaborador."}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">

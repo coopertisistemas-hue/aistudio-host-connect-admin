@@ -1,18 +1,19 @@
 import { useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RoomType, RoomTypeInput, roomTypeSchema } from "@/hooks/useRoomTypes";
+import { useRoomTypes, RoomType, RoomTypeInput, roomTypeSchema } from "@/hooks/useRoomTypes";
 import PhotoGallery from "@/components/PhotoGallery";
 import AmenityMultiSelect from "@/components/AmenityMultiSelect";
 import RoomTypeInventoryManager from "@/components/RoomTypeInventoryManager"; // NEW
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useProperties } from "@/hooks/useProperties";
+import { useRoomCategories } from "@/hooks/useRoomCategories";
 import { Loader2, BedDouble, Info, Package } from "lucide-react";
 
 interface RoomTypeDialogProps {
@@ -26,12 +27,17 @@ interface RoomTypeDialogProps {
 
 const RoomTypeDialog = ({ open, onOpenChange, roomType, onSubmit, isLoading, initialPropertyId }: RoomTypeDialogProps) => {
   const { properties } = useProperties();
+  const { categories } = useRoomCategories();
   const form = useForm<RoomTypeInput>({
     resolver: zodResolver(roomTypeSchema),
     defaultValues: {
       property_id: initialPropertyId || "",
       name: "",
       description: "",
+      category: "standard",
+      abbreviation: "",
+      occupation_label: "",
+      occupation_abbr: "",
       capacity: 1,
       base_price: 0,
       status: "active",
@@ -40,11 +46,17 @@ const RoomTypeDialog = ({ open, onOpenChange, roomType, onSubmit, isLoading, ini
   });
 
   useEffect(() => {
+    if (!open) return; // Only reset when the dialog is opening or open
+
     if (roomType) {
       form.reset({
         property_id: roomType.property_id,
         name: roomType.name,
         description: roomType.description || "",
+        category: roomType.category || "standard",
+        abbreviation: roomType.abbreviation || "",
+        occupation_label: roomType.occupation_label || "",
+        occupation_abbr: roomType.occupation_abbr || "",
         capacity: roomType.capacity,
         base_price: roomType.base_price,
         status: roomType.status,
@@ -55,13 +67,17 @@ const RoomTypeDialog = ({ open, onOpenChange, roomType, onSubmit, isLoading, ini
         property_id: initialPropertyId || (properties.length > 0 ? properties[0].id : ""),
         name: "",
         description: "",
+        category: "standard",
+        abbreviation: "",
+        occupation_label: "",
+        occupation_abbr: "",
         capacity: 1,
         base_price: 0,
         status: "active",
         amenities_json: [],
       });
     }
-  }, [roomType, open, form, properties, initialPropertyId]);
+  }, [roomType, open, form, initialPropertyId]); // Removed 'properties' from dependencies to prevent loop
 
   const handleFormSubmit = (data: RoomTypeInput) => {
     onSubmit(data);
@@ -72,6 +88,9 @@ const RoomTypeDialog = ({ open, onOpenChange, roomType, onSubmit, isLoading, ini
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{roomType ? "Editar Tipo de Acomodação" : "Novo Tipo de Acomodação"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {roomType ? "Edite os detalhes do tipo de acomodação." : "Cadastre um novo tipo de acomodação para sua propriedade."}
+          </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="info" className="w-full">
@@ -100,7 +119,7 @@ const RoomTypeDialog = ({ open, onOpenChange, roomType, onSubmit, isLoading, ini
                     control={form.control}
                     render={({ field }) => (
                       <Select
-                        value={field.value}
+                        value={field.value || ""}
                         onValueChange={field.onChange}
                         disabled={properties.length === 0 || !!initialPropertyId}
                       >
@@ -124,11 +143,11 @@ const RoomTypeDialog = ({ open, onOpenChange, roomType, onSubmit, isLoading, ini
                   )}
                 </div>
 
-                <div className="col-span-full">
+                <div className="md:col-span-1">
                   <Label htmlFor="name">Nome *</Label>
                   <Input
                     id="name"
-                    placeholder="Ex: Quarto Duplo, Chalé Luxo"
+                    placeholder="Ex: Alpino, Master, Turismo"
                     {...form.register("name")}
                   />
                   {form.formState.errors.name && (
@@ -136,6 +155,77 @@ const RoomTypeDialog = ({ open, onOpenChange, roomType, onSubmit, isLoading, ini
                       {form.formState.errors.name.message}
                     </p>
                   )}
+                </div>
+
+                <div className="md:col-span-1">
+                  <Label htmlFor="abbreviation">Sigla do Tipo (ID)</Label>
+                  <Input
+                    id="abbreviation"
+                    placeholder="Ex: AL, M, T, STD"
+                    {...form.register("abbreviation")}
+                  />
+                  {form.formState.errors.abbreviation && (
+                    <p className="text-destructive text-sm mt-1">
+                      {form.formState.errors.abbreviation.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="col-span-full">
+                  <Label htmlFor="category">Categoria *</Label>
+                  <Controller
+                    name="category"
+                    control={form.control}
+                    render={({ field }) => (
+                      <Select
+                        value={field.value || ""}
+                        onValueChange={field.onChange}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Selecione a categoria" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {categories.map((cat) => (
+                            <SelectItem key={cat.id} value={cat.slug}>
+                              {cat.name}
+                            </SelectItem>
+                          ))}
+                          {categories.length === 0 && (
+                            <div className="p-2 text-xs text-muted-foreground text-center">
+                              Nenhuma categoria cadastrada
+                            </div>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  {form.formState.errors.category && (
+                    <p className="text-destructive text-sm mt-1">
+                      {form.formState.errors.category.message}
+                    </p>
+                  )}
+                </div>
+
+                <div className="col-span-full border-t pt-4">
+                  <h4 className="text-sm font-medium mb-4">Ocupação e Identificação</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="occupation_label">Rótulo de Ocupação</Label>
+                      <Input
+                        id="occupation_label"
+                        placeholder="Ex: Casal, Casal + 1 Solteiro"
+                        {...form.register("occupation_label")}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="occupation_abbr">Sigla de Ocupação</Label>
+                      <Input
+                        id="occupation_abbr"
+                        placeholder="Ex: C, CS, CD2, CT"
+                        {...form.register("occupation_abbr")}
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 <div className="col-span-full">
@@ -191,7 +281,7 @@ const RoomTypeDialog = ({ open, onOpenChange, roomType, onSubmit, isLoading, ini
                     control={form.control}
                     render={({ field }) => (
                       <Select
-                        value={field.value}
+                        value={field.value || ""}
                         onValueChange={field.onChange}
                       >
                         <SelectTrigger>

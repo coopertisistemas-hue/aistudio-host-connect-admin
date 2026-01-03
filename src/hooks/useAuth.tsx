@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
@@ -16,7 +16,7 @@ interface AuthContextType {
   userPlan: string | null;
   onboardingCompleted: boolean | null; // Changed to boolean | null (tri-state)
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, fullName: string, phone?: string | null) => Promise<void>; // Adicionado phone
+  signUp: (email: string, password: string, fullName: string, phone?: string | null, plan?: string) => Promise<void>;
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>; // New: Google sign-in
   signInWithFacebook: () => Promise<void>; // New: Facebook sign-in
@@ -33,89 +33,153 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null); // Initialized as null (unknown)
   const navigate = useNavigate();
 
-  const fetchUserProfile = async (userId: string) => {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('role, plan, onboarding_completed') // Fetch onboarding status
-      .eq('id', userId)
-      .single();
+  const fetchInProgress = useRef(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const timers = useRef<Record<string, number>>({});
 
-    if (error) {
-      console.error('Error fetching user profile:', error);
-      setUserRole(null);
-      setUserPlan(null);
-      // Do NOT set onboardingCompleted to false on error. Keep it null or unknown.
-      // This prevents "offline" or "error" states from rushing the user to onboarding.
-      setOnboardingCompleted(null);
-    } else {
-      setUserRole(data?.role || 'user');
-      setUserPlan(data?.plan || 'free');
-      const isCompleted = !!data?.onboarding_completed;
-      setOnboardingCompleted(isCompleted); // Set state
+  const startTimer = (timerId: string) => {
+    if (timers.current[timerId]) {
+      delete timers.current[timerId];
+    }
+    timers.current[timerId] = performance.now();
+  };
+
+  const endTimer = (timerId: string) => {
+    if (timers.current[timerId]) {
+      const duration = performance.now() - timers.current[timerId];
+      console.log(`[useAuth] ${timerId}: ${duration.toFixed(2)} ms`);
+      delete timers.current[timerId];
+    }
+  };
+
+  const fetchUserProfile = async (userId: string) => {
+    if (fetchInProgress.current) {
+      console.log('[useAuth] Fetch already in progress, skipping redundant request.');
+      return;
+    }
+
+    const timerId = `fetchProfile-${userId}`;
+
+    try {
+      fetchInProgress.current = true;
+      startTimer(timerId);
+
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+
+      abortControllerRef.current = new AbortController();
+      const signal = abortControllerRef.current.signal;
+
+      const timeoutId = setTimeout(() => {
+        if (abortControllerRef.current) {
+          abortControllerRef.current.abort();
+        }
+      }, 20000);
+
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('role, plan, onboarding_completed')
+        .eq('id', userId)
+        .abortSignal(signal)
+        .single();
+
+      clearTimeout(timeoutId);
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          console.log('[useAuth] Profile not found for user:', userId);
+        } else if (error.name === 'AbortError' || (error as any).message === 'AbortError') {
+          console.warn(`[useAuth] Profile fetch timed out after 20s or was aborted. userId: ${userId}`);
+        } else {
+          console.error('[useAuth] Error fetching user profile:', error);
+        }
+        setUserRole(null);
+        setUserPlan(null);
+        setOnboardingCompleted(null);
+      } else {
+        setUserRole(data?.role || 'user');
+        setUserPlan(data?.plan || 'free');
+        const isCompleted = !!data?.onboarding_completed;
+        setOnboardingCompleted(isCompleted);
+      }
+    } catch (e: any) {
+      if (e?.name === 'AbortError') {
+        console.warn(`[useAuth] Profile fetch aborted for user: ${userId}`);
+      } else {
+        console.error('[useAuth] Unexpected error in fetchUserProfile:', e);
+      }
+    } finally {
+      endTimer(timerId);
+      fetchInProgress.current = false;
+      abortControllerRef.current = null;
+      setLoading(false);
     }
   };
 
   useEffect(() => {
-    // Timeout helper
-    const withTimeout = (promise: Promise<any>, ms: number = 3000) => {
-      return Promise.race([
-        promise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error("Profile fetch timeout")), ms))
-      ]);
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const authListener = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
+
+        console.log('[useAuth] Auth Event:', event);
+
         if (session?.user) {
-          // Use timeout for profile fetch
-          try {
-            await withTimeout(fetchUserProfile(session.user.id));
-          } catch (e) {
-            console.warn('[useAuth] Profile fetch timed out (3s) or failed. Proceeding with defaults.');
-            // Even if profile fails, we have a user session, so we stop loading.
-            // Defaults (null role/plan) are already set in fetchUserProfile error path or init.
+          // Only fetch profile on specific events to prevent excessive reloading
+          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+            await fetchUserProfile(session.user.id);
+          } else {
+            setLoading(false);
           }
         } else {
-          console.log('[useAuth] No user session, clearing profile data');
           setUserRole(null);
           setUserPlan(null);
+          setOnboardingCompleted(null);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
+    const initAuth = async () => {
+      try {
+        console.log('[useAuth] initAuth starting...');
+        const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        try {
-          await withTimeout(fetchUserProfile(session.user.id));
-        } catch (e) {
-          console.warn('[useAuth] Initial profile fetch timed out (3s). Proceeding with defaults.');
+        if (sessionError) {
+          console.error('[useAuth] Session error in initAuth:', sessionError);
+          setLoading(false);
+          return;
         }
+
+        setSession(currentSession);
+        setUser(currentSession?.user ?? null);
+
+        if (currentSession?.user) {
+          console.log('[useAuth] Session found, fetching profile...');
+          await fetchUserProfile(currentSession.user.id);
+        } else {
+          console.log('[useAuth] No session found in initAuth');
+          setLoading(false);
+        }
+      } catch (err) {
+        console.error('[useAuth] Unexpected initAuth error:', err);
+        setLoading(false);
       }
-      setLoading(false);
-    }).catch(err => {
-      console.error('[useAuth] getSession error:', err);
-      setLoading(false);
-    });
+    };
 
-    // Safety timeout: If after 10 seconds we are still loading, force loading to false
+    initAuth();
+
     const safetyTimeout = setTimeout(() => {
-      setLoading(currentLoading => {
-        if (currentLoading) {
-          return false;
-        }
-        return currentLoading;
-      });
-    }, 10000);
+      setLoading(false);
+    }, 15000);
 
     return () => {
-      subscription.unsubscribe();
+      authListener.data.subscription.unsubscribe();
       clearTimeout(safetyTimeout);
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
     };
   }, []);
 
@@ -162,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
     }
   };
 
-  const signUp = async (email: string, password: string, fullName: string, phone?: string | null) => { // Adicionado phone
+  const signUp = async (email: string, password: string, fullName: string, phone?: string | null, plan?: string) => {
     try {
       const redirectUrl = `${window.location.origin}/`;
 
@@ -173,7 +237,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
           emailRedirectTo: redirectUrl,
           data: {
             full_name: fullName,
-            phone: phone, // Passando o telefone para user_metadata
+            phone: phone,
+            plan: plan || 'basic', // Pass plan to user_metadata for trigger
           }
         }
       });

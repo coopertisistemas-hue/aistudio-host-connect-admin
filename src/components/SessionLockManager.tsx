@@ -162,9 +162,9 @@ export const SessionLockManager: React.FC<SessionLockManagerProps> = ({ children
                         {/* HostConnect Logo */}
                         <div className="flex justify-center mb-4">
                             <img
-                                src="/favicon.png"
+                                src="/host-connect-logo.png"
                                 alt="HostConnect"
-                                className="h-16 w-auto object-contain brightness-0 invert opacity-90"
+                                className="h-12 w-auto object-contain opacity-100"
                             />
                         </div>
 

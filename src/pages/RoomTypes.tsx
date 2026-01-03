@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +26,7 @@ import { useSelectedProperty } from "@/hooks/useSelectedProperty"; // NEW IMPORT
 const RoomTypesPage = () => {
   const { properties } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
-  
+
   const { roomTypes, isLoading, createRoomType, updateRoomType, deleteRoomType } = useRoomTypes(selectedPropertyId);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -49,17 +50,23 @@ const RoomTypesPage = () => {
 
   const handleSubmit = async (data: RoomTypeInput) => {
     if (!selectedPropertyId) {
-      // This should ideally not happen if the select is disabled or pre-selected
       console.error("No property selected for room type operation.");
       return;
     }
 
-    if (selectedRoomType) {
-      await updateRoomType.mutateAsync({ id: selectedRoomType.id, roomType: data });
-    } else {
-      await createRoomType.mutateAsync({ ...data, property_id: selectedPropertyId });
+    try {
+      console.log("[RoomTypesPage] Starting submit with data:", data);
+      if (selectedRoomType) {
+        await updateRoomType.mutateAsync({ id: selectedRoomType.id, roomType: data });
+      } else {
+        await createRoomType.mutateAsync({ ...data, property_id: selectedPropertyId });
+      }
+      console.log("[RoomTypesPage] Submit successful");
+      setDialogOpen(false);
+    } catch (error) {
+      console.error("[RoomTypesPage] Submit failed:", error);
+      // Let the mutation's onError handle the toast, but we should stop the hang
     }
-    setDialogOpen(false);
   };
 
   const handleDeleteClick = (id: string) => {
@@ -97,7 +104,7 @@ const RoomTypesPage = () => {
         {/* Property Selector and Search */}
         <div className="flex gap-4 flex-col sm:flex-row">
           <Select
-            value={selectedPropertyId}
+            value={selectedPropertyId || ""}
             onValueChange={setSelectedPropertyId}
             disabled={properties.length === 0 || propertyStateLoading}
           >
@@ -129,11 +136,22 @@ const RoomTypesPage = () => {
         {!selectedPropertyId ? (
           <Card className="border-dashed">
             <CardContent className="flex flex-col items-center justify-center py-12">
-              <Home className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Nenhuma propriedade selecionada</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {properties.length === 0 ? "Nenhuma propriedade cadastrada" : "Nenhuma propriedade selecionada"}
+              </h3>
               <p className="text-muted-foreground text-center max-w-md mb-4">
-                Selecione uma propriedade acima para gerenciar seus tipos de acomodação.
+                {properties.length === 0
+                  ? "Você precisa cadastrar sua primeira propriedade antes de gerenciar tipos de acomodação."
+                  : "Selecione uma propriedade acima para gerenciar seus tipos de acomodação."}
               </p>
+              {properties.length === 0 && (
+                <Button asChild>
+                  <Link to="/properties">
+                    <Plus className="mr-2 h-4 w-4" />
+                    Cadastrar Minha Primeira Propriedade
+                  </Link>
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : isDataLoading ? (

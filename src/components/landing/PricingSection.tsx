@@ -31,7 +31,7 @@ const PricingSection = () => {
         {/* Grid de 4 Colunas para os Planos */}
         <PricingCards
           renderAction={(plan) => (
-            <Link to="/auth" className="block w-full">
+            <Link to={`/auth?plan=${plan.id}`} className="block w-full">
               <Button
                 variant={plan.highlight ? "hero" : "outline"}
                 className="w-full"

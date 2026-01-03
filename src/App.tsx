@@ -18,6 +18,7 @@ import Financial from "./pages/Financial";
 import Guests from "./pages/Guests";
 import Settings from "./pages/Settings";
 import RoomTypesPage from "./pages/RoomTypes";
+import RoomCategoriesPage from "./pages/RoomCategoriesPage";
 import AmenitiesPage from "./pages/Amenities";
 import InventoryPage from "./pages/InventoryPage";
 import RoomsPage from "./pages/RoomsPage";
@@ -305,6 +306,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <RoomTypesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/room-categories"
+                  element={
+                    <ProtectedRoute>
+                      <RoomCategoriesPage />
                     </ProtectedRoute>
                   }
                 />

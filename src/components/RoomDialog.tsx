@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -64,6 +64,9 @@ const RoomDialog = ({ open, onOpenChange, room, onSubmit, isLoading, initialProp
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{room ? "Editar Quarto" : "Novo Quarto"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {room ? "Edite os detalhes do quarto." : "Cadastre um novo quarto para sua propriedade."}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">

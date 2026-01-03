@@ -3,17 +3,22 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
+import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 import { useOrg } from '@/hooks/useOrg'; // Import useOrg
 
 export const propertySchema = z.object({
   name: z.string().min(1, "O nome da propriedade é obrigatório."),
   description: z.string().optional().nullable(),
   address: z.string().min(1, "O endereço é obrigatório."),
+  number: z.string().optional().nullable(),
+  no_number: z.boolean().default(false),
+  neighborhood: z.string().optional().nullable(),
   city: z.string().min(1, "A cidade é obrigatória."),
   state: z.string().min(1, "O estado é obrigatório."),
   country: z.string().optional().default('Brasil'),
   postal_code: z.string().optional().nullable(),
   phone: z.string().optional().nullable(),
+  whatsapp: z.string().optional().nullable(),
   email: z.string().email("Email inválido.").optional().nullable().or(z.literal('')),
   total_rooms: z.number().min(0, "O número total de quartos não pode ser negativo."),
   status: z.enum(['active', 'inactive']).default('active'),
@@ -27,11 +32,15 @@ export interface Property {
   name: string;
   description: string | null;
   address: string;
+  number: string | null;
+  no_number: boolean;
+  neighborhood: string | null;
   city: string;
   state: string;
   country: string;
   postal_code: string | null;
   phone: string | null;
+  whatsapp: string | null;
   email: string | null;
   total_rooms: number;
   status: 'active' | 'inactive';
@@ -43,35 +52,32 @@ export type PropertyInput = z.infer<typeof propertySchema>;
 
 export const useProperties = () => {
   const queryClient = useQueryClient();
+  const { user, loading: authLoading } = useAuth();
   const { currentOrgId, isLoading: isOrgLoading } = useOrg(); // Use Org Hook
 
   const { data: properties, isLoading: isPropertiesLoading, error } = useQuery({
-    queryKey: ['properties', currentOrgId], // Add currentOrgId to key
+    queryKey: ['properties', currentOrgId],
     queryFn: async () => {
+      console.log('[useProperties] Fetching properties. currentOrgId:', currentOrgId);
       let query = supabase
         .from('properties')
         .select('*')
         .order('created_at', { ascending: false });
 
-      // If Org ID is available (Multi-tenant mode)
       if (currentOrgId) {
         query = query.eq('org_id', currentOrgId);
       }
-      // Fallback: Legacy Single User Mode (or during migration)
-      // Note: RLS currently enforces auth.uid() = user_id, referencing user_id column.
-      // Until RLS is updated, we might rely on default filtering if we don't explicitly filter?
-      // Actually, if we filter by org_id and RLS says "auth.uid() = user_id", it intersects.
-      // Since we backfilled users, org_id rows ALSO have user_id, so it works.
-
-      // However, if we want to see shared properties (future), we need org_id RLS.
-      // For now, let's just prefer explicit org_id filtering if we know it.
 
       const { data, error } = await query;
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useProperties] Error:', error);
+        throw error;
+      }
+      console.log('[useProperties] Loaded properties count:', data?.length || 0);
       return data as Property[];
     },
-    enabled: !isOrgLoading // Wait for org to load
+    enabled: !authLoading && !isOrgLoading && !!user
   });
 
   const createProperty = useMutation({

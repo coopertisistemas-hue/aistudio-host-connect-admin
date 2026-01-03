@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,8 +12,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { loginSchema, signupSchema, LoginInput, SignupInput } from "@/lib/auth-schemas";
 
 const Auth = () => {
-  const { user, signIn, signUp, signInWithGoogle, signInWithFacebook, onboardingCompleted, loading } = useAuth(); // Add signInWithFacebook
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const selectedPlan = searchParams.get('plan') || 'basic'; // Get plan from URL or default to basic
+  const { user, signIn, signUp, signInWithGoogle, signInWithFacebook, onboardingCompleted, loading } = useAuth(); // Add signInWithFacebook
   const [isLoading, setIsLoading] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
 
@@ -56,7 +58,7 @@ const Auth = () => {
   const handleSignup = async (data: SignupInput) => {
     setIsLoading(true);
     try {
-      await signUp(data.email, data.password, data.full_name, data.phone);
+      await signUp(data.email, data.password, data.full_name, data.phone, selectedPlan);
     } catch (error) {
       // Error handling is done in useAuth
     } finally {

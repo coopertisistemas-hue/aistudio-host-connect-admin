@@ -9,6 +9,10 @@ export const roomTypeSchema = z.object({
   property_id: z.string().min(1, "A propriedade é obrigatória."),
   name: z.string().min(1, "O nome do tipo de acomodação é obrigatório."),
   description: z.string().optional().nullable(),
+  category: z.enum(['standard', 'superior', 'deluxe', 'luxury', 'suite']).default('standard'),
+  abbreviation: z.string().optional().nullable(), // E.g. AL, M, T, STD
+  occupation_label: z.string().optional().nullable(), // E.g. Casal, Casal + 1 Solteiro
+  occupation_abbr: z.string().optional().nullable(), // E.g. C, CS, CD2, CT
   capacity: z.number().min(1, "A capacidade deve ser no mínimo 1 hóspede."),
   base_price: z.number().min(0, "O preço base não pode ser negativo."),
   status: z.enum(['active', 'inactive']).default('active'),
@@ -20,6 +24,10 @@ export type RoomType = {
   property_id: string;
   name: string;
   description: string | null;
+  category: 'standard' | 'superior' | 'deluxe' | 'luxury' | 'suite';
+  abbreviation: string | null;
+  occupation_label: string | null;
+  occupation_abbr: string | null;
   capacity: number;
   base_price: number;
   status: 'active' | 'inactive';
@@ -65,7 +73,7 @@ export const useRoomTypes = (propertyId?: string) => {
           return { ...roomType, amenity_details: [] };
         })
       );
-      
+
       return roomTypesWithAmenities as RoomType[];
     },
     enabled: !!propertyId, // Only run query if propertyId is provided
@@ -73,16 +81,24 @@ export const useRoomTypes = (propertyId?: string) => {
 
   const createRoomType = useMutation({
     mutationFn: async (roomType: RoomTypeInput) => {
+      console.log('[useRoomTypes] Creating room type with data:', roomType);
+      const insertData = { ...roomType, amenities_json: roomType.amenities_json || [] };
+
       const { data, error } = await supabase
         .from('room_types')
-        .insert([{ ...roomType, amenities_json: roomType.amenities_json || [] } as TablesInsert<'room_types'>]) // Explicit cast
+        .insert([insertData as TablesInsert<'room_types'>])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useRoomTypes] Create error:', error);
+        throw error;
+      }
+      console.log('[useRoomTypes] Create success:', data);
       return data;
     },
     onSuccess: () => {
+      console.log('[useRoomTypes] Invaliding room_types for property:', propertyId);
       queryClient.invalidateQueries({ queryKey: ['room_types', propertyId] });
       toast({
         title: "Sucesso!",

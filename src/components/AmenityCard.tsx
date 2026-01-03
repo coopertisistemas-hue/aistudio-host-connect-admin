@@ -10,8 +10,21 @@ interface AmenityCardProps {
   onDelete: (id: string) => void;
 }
 
+const normalizeIconName = (name: string): string => {
+  if (!name) return "";
+  // Convert kebab-case, snake_case or space-separated to PascalCase
+  return name
+    .split(/[-_\s]+/)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join("");
+};
+
 const AmenityCard = ({ amenity, onEdit, onDelete }: AmenityCardProps) => {
-  const IconComponent = amenity.icon ? (LucideIcons as any)[amenity.icon] : LucideIcons.HelpCircle;
+  // Safe icon lookup with normalization and fallback
+  const normalizedName = normalizeIconName(amenity.icon || "");
+  const IconComponent = (normalizedName && (LucideIcons as any)[normalizedName])
+    ? (LucideIcons as any)[normalizedName]
+    : LucideIcons.HelpCircle;
 
   return (
     <Card className="hover:shadow-medium transition-all overflow-hidden">

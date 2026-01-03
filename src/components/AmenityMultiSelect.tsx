@@ -74,16 +74,16 @@ const AmenityMultiSelect = ({ value = [], onChange, disabled }: AmenityMultiSele
                   return amenity ? (
                     <Badge key={amenity.id} variant="secondary" className="flex items-center gap-1">
                       {amenity.name}
-                      <button
-                        type="button"
+                      <span
+                        role="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleSelect(amenity.id);
                         }}
-                        className="ml-1 -mr-1 h-3 w-3 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/40 flex items-center justify-center"
+                        className="ml-1 -mr-1 h-3 w-3 rounded-full bg-muted-foreground/20 hover:bg-muted-foreground/40 flex items-center justify-center cursor-pointer"
                       >
                         <X className="h-2 w-2" />
-                      </button>
+                      </span>
                     </Badge>
                   ) : null;
                 })}

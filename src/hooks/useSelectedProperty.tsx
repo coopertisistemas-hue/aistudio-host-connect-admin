@@ -10,12 +10,17 @@ interface SelectedPropertyContextType {
 const SelectedPropertyContext = createContext<SelectedPropertyContextType | undefined>(undefined);
 
 export const SelectedPropertyProvider = ({ children }: { children: ReactNode }) => {
+  const { user, loading: authLoading } = useAuth();
   const { properties, isLoading: propertiesLoading } = useProperties();
   const [selectedPropertyId, setInternalSelectedPropertyId] = useState<string | undefined>(undefined);
   const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
-    if (propertiesLoading) return;
+    // DO NOT initialize if auth is still loading or properties are still loading
+    if (authLoading || propertiesLoading) return;
+
+    // Additionally, if we are logged in but have no properties yet, we might still be initializing.
+    // But if properties query finished and is empty, we must continue to allow "No property" state.
 
     const storedId = localStorage.getItem('selectedPropertyId');
     const defaultId = properties.length > 0 ? properties[0].id : undefined;
@@ -26,9 +31,10 @@ export const SelectedPropertyProvider = ({ children }: { children: ReactNode }) 
       initialId = storedId;
     }
 
+    console.log('[SelectedPropertyProvider] Initializing with ID:', initialId, 'Properties found:', properties.length);
     setInternalSelectedPropertyId(initialId);
     setIsInitialized(true);
-  }, [propertiesLoading, properties]);
+  }, [authLoading, propertiesLoading, properties]);
 
   const setSelectedPropertyId = (id: string | undefined) => {
     setInternalSelectedPropertyId(id);
@@ -39,7 +45,7 @@ export const SelectedPropertyProvider = ({ children }: { children: ReactNode }) 
     }
   };
 
-  const isLoading = propertiesLoading || !isInitialized;
+  const isLoading = authLoading || propertiesLoading || !isInitialized;
 
   return (
     <SelectedPropertyContext.Provider value={{ selectedPropertyId, setSelectedPropertyId, isLoading }}>

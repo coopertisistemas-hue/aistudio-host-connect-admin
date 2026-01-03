@@ -28,7 +28,8 @@ const HousekeepingPage = () => {
     const [searchQuery, setSearchQuery] = useState("");
     const navigate = useNavigate();
 
-    const filteredQueue = queue.filter(item =>
+
+    const filteredQueue = (queue || []).filter(item =>
         item.room.room_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.reason.toLowerCase().includes(searchQuery.toLowerCase())
     );
@@ -54,19 +55,19 @@ const HousekeepingPage = () => {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         <Card className="border-none bg-rose-50 shadow-sm">
                             <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                                <span className="text-2xl font-bold text-rose-600">{kpis.urgentCheckouts}</span>
+                                <span className="text-2xl font-bold text-rose-600">{kpis?.urgentCheckouts || 0}</span>
                                 <span className="text-[10px] uppercase font-bold text-rose-400">Saídas Pendentes</span>
                             </CardContent>
                         </Card>
                         <Card className="border-none bg-amber-50 shadow-sm">
                             <CardContent className="p-4 flex flex-col items-center justify-center text-center">
-                                <span className="text-2xl font-bold text-amber-600">{kpis.backlogCount}</span>
+                                <span className="text-2xl font-bold text-amber-600">{kpis?.backlogCount || 0}</span>
                                 <span className="text-[10px] uppercase font-bold text-amber-400">Total Sujos</span>
                             </CardContent>
                         </Card>
                         <Card className="border-none bg-emerald-50 shadow-sm hidden md:flex">
                             <CardContent className="p-4 flex flex-col items-center justify-center text-center w-full">
-                                <span className="text-2xl font-bold text-emerald-600">{queue.length}</span>
+                                <span className="text-2xl font-bold text-emerald-600">{queue?.length || 0}</span>
                                 <span className="text-[10px] uppercase font-bold text-emerald-400">Fila Total</span>
                             </CardContent>
                         </Card>
@@ -104,7 +105,7 @@ const HousekeepingPage = () => {
                                     <div className="flex items-stretch min-h-[90px]">
                                         {/* Priority Bar */}
                                         <div className={`w-1.5 ${item.priority === 'high' ? 'bg-rose-500' :
-                                                item.priority === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
+                                            item.priority === 'medium' ? 'bg-amber-500' : 'bg-blue-500'
                                             }`} />
 
                                         <div className="flex-1 p-4 flex items-center justify-between gap-4">

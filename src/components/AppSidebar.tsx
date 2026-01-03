@@ -101,7 +101,7 @@ const AppSidebar = () => {
         { title: "Reservas", url: "/bookings", icon: Calendar },
         { title: "Chegadas", url: "/arrivals", icon: LogIn },
         { title: "Partidas", url: "/departures", icon: LogOut },
-        { title: "Motor de Reservas", url: "/book", icon: Globe },
+        { title: "Motor de Reservas", url: "/bookings", icon: Globe },
       ]
     },
     {
@@ -119,6 +119,7 @@ const AppSidebar = () => {
       icon: Home,
       items: [
         { title: "Propriedades", url: "/properties", icon: Building2 },
+        { title: "Categorias de Acomodação", url: "/room-categories", icon: Tag },
         { title: "Tipos de Acomodação", url: "/room-types", icon: BedDouble },
         { title: "Quartos", url: "/rooms", icon: Bed },
         { title: "Comodidades", url: "/amenities", icon: ListChecks },

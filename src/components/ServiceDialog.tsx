@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,6 +69,9 @@ const ServiceDialog = ({ open, onOpenChange, service, onSubmit, isLoading, initi
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{service ? "Editar Serviço" : "Novo Serviço"}</DialogTitle>
+          <DialogDescription className="sr-only">
+            {service ? "Edite os detalhes do serviço." : "Cadastre um novo serviço para sua propriedade."}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={form.handleSubmit(handleFormSubmit)} className="space-y-4">
