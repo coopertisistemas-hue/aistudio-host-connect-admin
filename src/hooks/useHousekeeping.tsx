@@ -13,7 +13,9 @@ export interface HousekeepingTask {
     property_id: string;
     created_at: string;
     room?: {
-        name: string;
+        room_types?: {
+            name: string;
+        } | null;
         room_number: string;
         status: string;
     };
@@ -36,7 +38,7 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
                 .from('tasks')
                 .select(`
           *,
-          room:rooms(name, room_number, status),
+          room:rooms(room_number, status, room_types(name)),
           reservation:bookings(guest_name, check_in, check_out)
         `)
                 .eq('property_id', propertyId)
