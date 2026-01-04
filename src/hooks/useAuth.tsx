@@ -287,22 +287,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   };
 
   const signOut = async () => {
+    console.log('[useAuth] signOut called');
     try {
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      // 1. Optimistic Clean-up: Clear local state IMMEDIATELY
+      console.log('[useAuth] Clearing local state...');
+      setUser(null);
+      setSession(null);
+      setUserRole(null);
+      setUserPlan(null);
+      setOnboardingCompleted(null);
+
+      // Clear localStorage items manually just in case
+      localStorage.removeItem('hc_session_locked');
+      localStorage.removeItem('supabase.auth.token'); // Adjust key if needed, or let supabase handle it
 
       toast({
         title: "Sessão encerrada",
-        description: "Você foi desconectado com sucesso.",
+        description: "Você foi desconectado.",
       });
+
+      // 2. Navigate away immediately
+      console.log('[useAuth] Navigating to /auth...');
       navigate('/auth');
+
+      // 3. Call Supabase SignOut (don't block UI if this hangs)
+      console.log('[useAuth] Calling supabase.auth.signOut()...');
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('[useAuth] Supabase signOut error (ignored for UX):', error);
+      } else {
+        console.log('[useAuth] Supabase signOut successful');
+      }
+
     } catch (error: any) {
-      console.error('Sign out error:', error);
-      toast({
-        title: "Erro ao sair",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error('[useAuth] Critical Sign out error:', error);
+      // Force navigation anyway
+      navigate('/auth');
     }
   };
 

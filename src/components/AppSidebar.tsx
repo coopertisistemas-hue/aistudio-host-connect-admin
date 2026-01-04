@@ -246,8 +246,12 @@ const AppSidebar = () => {
           <Button
             variant="outline"
             size={isCollapsed ? "icon" : "sm"}
-            onClick={signOut}
-            className="w-full justify-start text-destructive hover:bg-destructive/10 border-none shadow-none bg-transparent h-9"
+            onClick={(e) => {
+              e.preventDefault();
+              console.log("Logout button clicked");
+              signOut();
+            }}
+            className="w-full justify-start text-destructive hover:bg-destructive/10 border-none shadow-none bg-transparent h-9 cursor-pointer relative z-50"
           >
             <LogOut className="h-4 w-4" />
             {!isCollapsed && <span className="ml-2 text-xs font-bold uppercase tracking-wide">Sair</span>}

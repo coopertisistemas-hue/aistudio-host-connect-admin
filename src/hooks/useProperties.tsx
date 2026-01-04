@@ -58,15 +58,18 @@ export const useProperties = () => {
   const { data: properties, isLoading: isPropertiesLoading, error } = useQuery({
     queryKey: ['properties', currentOrgId],
     queryFn: async () => {
+      // Se não houver Org definida, não adianta buscar propriedades (evita erro de RLS ou retorno vazio demorado)
+      if (!currentOrgId) {
+        console.warn('[useProperties] Abortando fetch: currentOrgId indefinido.');
+        return [];
+      }
+
       console.log('[useProperties] Fetching properties. currentOrgId:', currentOrgId);
       let query = supabase
         .from('properties')
         .select('*')
-        .order('created_at', { ascending: false });
-
-      if (currentOrgId) {
-        query = query.eq('org_id', currentOrgId);
-      }
+        .order('created_at', { ascending: false })
+        .eq('org_id', currentOrgId); // Enforce org_id filter directly
 
       const { data, error } = await query;
 
