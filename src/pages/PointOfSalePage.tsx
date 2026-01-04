@@ -127,17 +127,29 @@ const PointOfSalePage = () => {
         setIsProcessing(true);
 
         try {
+            // Fetch booking details to get property_id
+            const { data: booking, error: bookingError } = await supabase
+                .from('bookings')
+                .select('property_id')
+                .eq('id', selectedBookingId)
+                .single();
+
+            if (bookingError || !booking?.property_id) throw new Error("Erro ao buscar detalhes da reserva.");
+
+            const propertyId = booking.property_id;
+
             const expenses = cart.map(item => ({
                 booking_id: selectedBookingId,
                 description: `PDV: ${item.name} (x${item.quantity})`,
                 amount: item.price * item.quantity,
                 category: 'consumo_bar',
-                date: new Date().toISOString()
+                property_id: propertyId,
+                expense_date: new Date().toISOString()
             }));
 
             const { error: expenseError } = await supabase
                 .from('expenses')
-                .insert(expenses);
+                .insert(expenses as any); // Type assertion for joined fields
 
             if (expenseError) throw expenseError;
 
@@ -146,7 +158,7 @@ const PointOfSalePage = () => {
                 const currentStock = stock.find(s => s.item_id === item.id);
                 if (currentStock && currentStock.quantity > 0) {
                     await supabase
-                        .from('item_stock')
+                        .from('item_stock' as any)
                         .update({ quantity: Math.max(0, currentStock.quantity - item.quantity) })
                         .eq('id', currentStock.id);
                 }

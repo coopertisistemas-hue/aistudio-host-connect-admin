@@ -12,9 +12,13 @@ export const taskSchema = z.object({
   status: z.enum(['todo', 'in-progress', 'done']).default('todo'),
   due_date: z.date().optional().nullable(),
   assigned_to: z.string().optional().nullable(), // User ID
+  priority: z.enum(['low', 'medium', 'high', 'critical']).default('medium'),
 });
 
-export type Task = Tables<'tasks'>;
+export type Task = Tables<'tasks'> & {
+  priority?: 'low' | 'medium' | 'high' | 'critical';
+  profiles?: { full_name: string | null } | null;
+};
 export type TaskInput = z.infer<typeof taskSchema>;
 
 export const useTasks = (propertyId?: string) => {
