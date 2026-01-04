@@ -10,6 +10,8 @@ export const inventoryItemSchema = z.object({
     description: z.string().optional().nullable(),
     price: z.number().min(0).default(0),
     is_for_sale: z.boolean().default(false),
+    unit: z.string().default('UN'),
+    min_stock: z.number().min(0).default(5),
 });
 
 export type InventoryItem = {
@@ -20,6 +22,8 @@ export type InventoryItem = {
     description: string | null;
     price: number;
     is_for_sale: boolean;
+    unit?: string;
+    min_stock?: number;
     created_at: string;
 };
 
@@ -98,11 +102,40 @@ export const useInventory = () => {
         },
     });
 
+    const updateItem = useMutation({
+        mutationFn: async ({ id, item }: { id: string; item: Partial<InventoryItemInput> }) => {
+            const { data, error } = await supabase
+                .from('inventory_items')
+                .update(item)
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) throw error;
+            return data;
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['inventory_items', currentOrgId] });
+            toast({
+                title: "Sucesso!",
+                description: "Item atualizado.",
+            });
+        },
+        onError: (error: Error) => {
+            toast({
+                title: "Erro",
+                description: error.message,
+                variant: "destructive",
+            });
+        },
+    });
+
     return {
         items: items || [],
         isLoading,
         error,
         createItem,
+        updateItem,
         deleteItem,
     };
 };
