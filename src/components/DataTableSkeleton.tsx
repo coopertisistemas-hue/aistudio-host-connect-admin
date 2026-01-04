@@ -4,10 +4,33 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 interface DataTableSkeletonProps {
   rows?: number;
   columns?: number;
-  variant?: "card" | "table" | "room-grid" | "housekeeping-queue" | "maintenance";
+  variant?: "card" | "table" | "room-grid" | "housekeeping-queue" | "maintenance" | "pantry";
 }
 
 const DataTableSkeleton = ({ rows = 5, columns = 4, variant = "card" }: DataTableSkeletonProps) => {
+  if (variant === "pantry") {
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {Array.from({ length: rows }).map((_, index) => (
+          <Card key={index} className="overflow-hidden border-2 h-[160px]">
+            <CardContent className="p-5">
+              <div className="flex justify-between items-start mb-3">
+                <Skeleton className="h-5 w-20 rounded-full" />
+                <Skeleton className="h-4 w-4 rounded-full" />
+              </div>
+              <div className="flex items-center gap-4 mb-4">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <div className="space-y-2 flex-1">
+                  <Skeleton className="h-5 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
   if (variant === "maintenance") {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
