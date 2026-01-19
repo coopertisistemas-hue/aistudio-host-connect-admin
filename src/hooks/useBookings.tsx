@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { Service } from './useServices';
 import { useNotifications } from './useNotifications';
 import { Tables, TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
+import { useOrg } from './useOrg'; // Multi-tenant context
 
 // Definindo o tipo de retorno da query de bookings com joins
 type BookingRow = Tables<'bookings'>;
@@ -42,11 +43,18 @@ export type BookingInput = z.infer<typeof bookingSchema>;
 export const useBookings = (propertyId?: string) => {
   const queryClient = useQueryClient();
   const { createNotification } = useNotifications();
+  const { currentOrgId, isLoading: isOrgLoading } = useOrg(); // Get current org context
 
   const { data: bookings, isLoading, error } = useQuery({
-    queryKey: ['bookings', propertyId],
+    queryKey: ['bookings', currentOrgId, propertyId], // Include org_id in cache key
     queryFn: async () => {
-      console.log('[useBookings] Fetching bookings...', { propertyId });
+      // ⚠️ SECURITY: Abort if no org_id - prevents fetching all bookings
+      if (!currentOrgId) {
+        console.warn('[useBookings] Abortando fetch: currentOrgId indefinido.');
+        return [];
+      }
+
+      console.log('[useBookings] Fetching bookings...', { currentOrgId, propertyId });
 
       let query = supabase
         .from('bookings')
@@ -59,8 +67,10 @@ export const useBookings = (propertyId?: string) => {
           room_types (
             name
           )
-        `);
+        `)
+        .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id first
 
+      // Optional property-level filtering
       if (propertyId) {
         query = query.eq('property_id', propertyId);
       }
@@ -109,7 +119,7 @@ export const useBookings = (propertyId?: string) => {
 
       return bookingsWithServiceDetails as Booking[];
     },
-    enabled: !!propertyId,
+    enabled: !isOrgLoading && !!currentOrgId, // Enable only when org is loaded
   });
 
   const createBooking = useMutation({

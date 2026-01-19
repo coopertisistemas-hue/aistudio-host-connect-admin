@@ -28,6 +28,9 @@ import PricingRulesPage from "./pages/PricingRulesPage";
 import ServicesPage from "./pages/ServicesPage";
 import BookingEnginePage from "./pages/BookingEnginePage";
 import WebsiteSettingsPage from "./pages/WebsiteSettingsPage";
+import PermissionsPage from "./pages/PermissionsPage";
+import AuditLogPage from "./pages/AuditLogPage";
+import StaffManagementAdminPage from "./pages/StaffManagementAdminPage";
 import SupportHub from "./pages/support/SupportHub";
 import TicketList from "./pages/support/TicketList";
 import CreateTicket from "./pages/support/CreateTicket";
@@ -419,6 +422,30 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <WebsiteSettingsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/settings/permissions"
+                  element={
+                    <ProtectedRoute>
+                      <PermissionsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/audit-log"
+                  element={
+                    <ProtectedRoute>
+                      <AuditLogPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/staff-management"
+                  element={
+                    <ProtectedRoute>
+                      <StaffManagementAdminPage />
                     </ProtectedRoute>
                   }
                 />
