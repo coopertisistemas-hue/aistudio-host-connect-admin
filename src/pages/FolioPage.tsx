@@ -23,6 +23,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useOrg } from "@/hooks/useOrg"; // Multi-tenant context
 import { useAuth } from "@/hooks/useAuth";
+import BookingParticipants from "@/components/BookingParticipants";
 
 import {
     Dialog,
@@ -228,6 +229,9 @@ const FolioPage = () => {
                     variant={totals.balance > 0 ? "rose" : "default"}
                 />
             </div>
+
+            {/* Booking Participants */}
+            <BookingParticipants bookingId={id!} />
 
             {/* Extrato Detalhado */}
             <Card className="border-none shadow-sm overflow-hidden">
