@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
+import { useOrg } from './useOrg';
 
 export const serviceSchema = z.object({
   property_id: z.string().min(1, "A propriedade é obrigatória."),
@@ -31,28 +32,31 @@ export type ServiceInput = z.infer<typeof serviceSchema>;
 
 export const useServices = (propertyId?: string) => {
   const queryClient = useQueryClient();
+  const { currentOrgId } = useOrg();
 
   const { data: services, isLoading, error } = useQuery({
-    queryKey: ['services', propertyId],
+    queryKey: ['services', currentOrgId, propertyId],
     queryFn: async () => {
-      if (!propertyId) return [];
-      const { data, error } = await supabase
+      if (!propertyId || !currentOrgId) return [];
+      const { data, error } = await (supabase as any)
         .from('services')
         .select('*')
         .eq('property_id', propertyId)
+        .eq('org_id', currentOrgId)
         .order('name', { ascending: true });
 
       if (error) throw error;
       return data as Service[];
     },
-    enabled: !!propertyId, // Only run query if propertyId is provided
+    enabled: !!propertyId && !!currentOrgId, // Only run query if propertyId and currentOrgId are provided
   });
 
   const createService = useMutation({
     mutationFn: async (service: ServiceInput) => {
+      if (!currentOrgId) throw new Error("No Organization ID");
       const { data, error } = await supabase
         .from('services')
-        .insert([service as TablesInsert<'services'>]) // Explicit cast
+        .insert([{ ...service, org_id: currentOrgId } as any]) // Use any to handle org_id
         .select()
         .single();
 
@@ -60,7 +64,7 @@ export const useServices = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['services', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['services', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Serviço criado com sucesso.",
@@ -82,6 +86,7 @@ export const useServices = (propertyId?: string) => {
         .from('services')
         .update(service)
         .eq('id', id)
+        .eq('org_id', currentOrgId)
         .select()
         .single();
 
@@ -89,7 +94,7 @@ export const useServices = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['services', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['services', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Serviço atualizado com sucesso.",
@@ -110,12 +115,13 @@ export const useServices = (propertyId?: string) => {
       const { error } = await supabase
         .from('services')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('org_id', currentOrgId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['services', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['services', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Serviço removido com sucesso.",

@@ -18,9 +18,10 @@ interface ProductCardProps {
     item: InventoryItem;
     onClick: () => void;
     onEdit: (e: React.MouseEvent) => void;
+    isViewer?: boolean;
 }
 
-export const ProductCard = ({ item, onClick, onEdit }: ProductCardProps) => {
+export const ProductCard = ({ item, onClick, onEdit, isViewer }: ProductCardProps) => {
 
     const getCategoryStyle = (category: string) => {
         const styles: Record<string, { color: string, icon: any, bg: string }> = {
@@ -41,16 +42,18 @@ export const ProductCard = ({ item, onClick, onEdit }: ProductCardProps) => {
             onClick={onClick}
         >
             {/* Hover Actions */}
-            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                <Button
-                    size="icon"
-                    variant="secondary"
-                    className="h-8 w-8 rounded-full shadow-sm hover:bg-background"
-                    onClick={onEdit}
-                >
-                    <Edit2 className="h-3.5 w-3.5" />
-                </Button>
-            </div>
+            {!isViewer && (
+                <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                    <Button
+                        size="icon"
+                        variant="secondary"
+                        className="h-8 w-8 rounded-full shadow-sm hover:bg-background"
+                        onClick={onEdit}
+                    >
+                        <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                </div>
+            )}
 
             <CardContent className="p-4 flex flex-col items-center text-center gap-3 pt-6">
                 <div className={cn(

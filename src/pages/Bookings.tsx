@@ -34,11 +34,14 @@ import {
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingDialog from "@/components/BookingDialog";
 import { useBookings, Booking, BookingInput } from "@/hooks/useBookings";
+import { useAuth } from "@/hooks/useAuth"; // Added useAuth
 import { getStatusBadge } from "@/lib/ui-helpers";
 import BookingCalendar from "@/components/BookingCalendar";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
 
 const Bookings = () => {
+  const { userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
   const { bookings, isLoading, createBooking, updateBooking, deleteBooking } = useBookings();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -61,16 +64,19 @@ const Bookings = () => {
   });
 
   const handleCreateBooking = () => {
+    if (isViewer) return;
     setSelectedBooking(null);
     setDialogOpen(true);
   };
 
   const handleEditBooking = (booking: Booking) => {
+    if (isViewer) return;
     setSelectedBooking(booking);
     setDialogOpen(true);
   };
 
   const handleSubmit = async (data: BookingInput) => {
+    if (isViewer) return;
     if (selectedBooking) {
       await updateBooking.mutateAsync({ id: selectedBooking.id, booking: data });
     } else {
@@ -80,11 +86,13 @@ const Bookings = () => {
   };
 
   const handleDeleteClick = (id: string) => {
+    if (isViewer) return;
     setBookingToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
+    if (isViewer) return;
     if (bookingToDelete) {
       await deleteBooking.mutateAsync(bookingToDelete);
       setDeleteDialogOpen(false);
@@ -118,10 +126,12 @@ const Bookings = () => {
             >
               <CalendarDays className="h-4 w-4" />
             </Button>
-            <Button variant="hero" onClick={handleCreateBooking}>
-              <Plus className="mr-2 h-4 w-4" />
-              Nova Reserva
-            </Button>
+            {!isViewer && (
+              <Button variant="hero" onClick={handleCreateBooking}>
+                <Plus className="mr-2 h-4 w-4" />
+                Nova Reserva
+              </Button>
+            )}
           </div>
         </div>
 
@@ -259,17 +269,20 @@ const Bookings = () => {
                           size="sm"
                           className="flex-1"
                           onClick={() => handleEditBooking(booking)}
+                          disabled={isViewer}
                         >
                           <Edit className="h-4 w-4 mr-2" />
-                          Editar
+                          {isViewer ? "Ver Detalhes" : "Editar"}
                         </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDeleteClick(booking.id)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {!isViewer && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDeleteClick(booking.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>

@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EntityDetailTemplate } from "@/components/EntityDetailTemplate";
 import { useDemands, DemandStatus } from "@/hooks/useDemands";
+import { useAuth } from "@/hooks/useAuth"; // Added useAuth
+import { useOrg } from "@/hooks/useOrg";   // Added useOrg
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -24,10 +26,14 @@ import { ptBR } from "date-fns/locale";
 const DemandDetailPage = () => {
     const { id } = useParams();
     const { updateDemandStatus } = useDemands();
+    const { userRole } = useAuth();
+    const { currentOrgId, isLoading: isOrgLoading } = useOrg();
+    const isViewer = userRole === 'viewer';
 
     const { data: demand, isLoading } = useQuery({
-        queryKey: ['demand-detail', id],
+        queryKey: ['demand-detail', currentOrgId, id],
         queryFn: async () => {
+            if (!currentOrgId) return null;
             const { data, error } = await supabase
                 .from('tasks')
                 .select(`
@@ -41,21 +47,23 @@ const DemandDetailPage = () => {
           )
         `)
                 .eq('id', id)
+                .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
                 .single();
 
             if (error) throw error;
             return data;
         },
-        enabled: !!id,
+        enabled: !!id && !isOrgLoading && !!currentOrgId,
     });
 
     const handleStatusUpdate = async (newStatus: DemandStatus) => {
-        if (!demand) return;
+        if (!demand || isViewer) return;
+        const d = demand as any;
         await updateDemandStatus.mutateAsync({
-            id: demand.id,
+            id: d.id,
             status: newStatus,
-            roomId: demand.room_id,
-            impact_operation: demand.impact_operation
+            roomId: d.room_id,
+            impact_operation: d.impact_operation
         });
     };
 
@@ -70,8 +78,8 @@ const DemandDetailPage = () => {
 
     return (
         <EntityDetailTemplate
-            title={demand.title}
-            headerTitle={demand.rooms?.room_number ? `Quarto ${demand.rooms.room_number}` : demand.category}
+            title={(demand as any).title}
+            headerTitle={(demand as any).rooms?.room_number ? `Quarto ${(demand as any).rooms.room_number}` : (demand as any).category}
             headerIcon={<Construction className="h-7 w-7 text-primary" />}
             backUrl="/operation/demands"
             badge={
@@ -86,7 +94,7 @@ const DemandDetailPage = () => {
                         variant="outline"
                         className={`h-auto py-6 flex flex-col gap-2 border-none shadow-sm ${action.bg} hover:${action.bg} transition-all active:scale-95`}
                         onClick={() => handleStatusUpdate(action.status)}
-                        disabled={demand.status === action.status}
+                        disabled={demand.status === action.status || isViewer} // Disable if viewer
                     >
                         <action.icon className={`h-6 w-6 ${action.color}`} />
                         <span className={`text-xs font-bold ${action.color}`}>{action.label}</span>
@@ -114,7 +122,7 @@ const DemandDetailPage = () => {
                             <p className="text-[10px] text-muted-foreground uppercase font-bold">Responsável</p>
                             <p className="text-sm font-medium flex items-center gap-1">
                                 <User className="h-3 w-3 text-primary" />
-                                {demand.profiles?.full_name || 'Não atribuído'}
+                                {(demand as any).profiles?.full_name || 'Não atribuído'}
                             </p>
                         </div>
                     </div>
@@ -126,7 +134,7 @@ const DemandDetailPage = () => {
                         </p>
                     </div>
 
-                    {demand.impact_operation && (
+                    {(demand as any).impact_operation && (
                         <div className="flex items-center gap-3 p-3 bg-rose-50 rounded-lg border border-rose-100">
                             <ShieldAlert className="h-5 w-5 text-rose-500 flex-shrink-0" />
                             <div>

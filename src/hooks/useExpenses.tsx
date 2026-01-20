@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { useOrg } from './useOrg';
 
 export const expenseSchema = z.object({
   property_id: z.string().min(1, "A propriedade é obrigatória."),
@@ -19,32 +20,36 @@ export type ExpenseInput = z.infer<typeof expenseSchema>;
 
 export const useExpenses = (propertyId?: string) => {
   const queryClient = useQueryClient();
+  const { currentOrgId } = useOrg();
 
   const { data: expenses, isLoading, error } = useQuery({
-    queryKey: ['expenses', propertyId],
+    queryKey: ['expenses', currentOrgId, propertyId],
     queryFn: async () => {
-      if (!propertyId) return [];
+      if (!propertyId || !currentOrgId) return [];
       const { data, error } = await supabase
         .from('expenses')
         .select('*')
         .eq('property_id', propertyId)
+        .eq('org_id', currentOrgId)
         .order('expense_date', { ascending: false });
 
       if (error) throw error;
       return data as Expense[];
     },
-    enabled: !!propertyId,
+    enabled: !!propertyId && !!currentOrgId,
   });
 
   const createExpense = useMutation({
     mutationFn: async (expense: ExpenseInput) => {
+      if (!currentOrgId) throw new Error("No Organization ID");
       const { data, error } = await supabase
         .from('expenses')
         .insert([{
           ...expense,
+          org_id: currentOrgId,
           expense_date: expense.expense_date.toISOString().split('T')[0],
           paid_date: expense.paid_date ? expense.paid_date.toISOString().split('T')[0] : null,
-        } as TablesInsert<'expenses'>]) // Explicit cast
+        } as any])
         .select()
         .single();
 
@@ -52,8 +57,8 @@ export const useExpenses = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['financialSummary', propertyId] }); // Invalidate financial summary
+      queryClient.invalidateQueries({ queryKey: ['expenses', currentOrgId, propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['financialSummary', currentOrgId, propertyId] }); // Invalidate financial summary
       toast({
         title: "Sucesso!",
         description: "Despesa criada com sucesso.",
@@ -85,6 +90,7 @@ export const useExpenses = (propertyId?: string) => {
         .from('expenses')
         .update(updateData)
         .eq('id', id)
+        .eq('org_id', currentOrgId)
         .select()
         .single();
 
@@ -92,8 +98,8 @@ export const useExpenses = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['financialSummary', propertyId] }); // Invalidate financial summary
+      queryClient.invalidateQueries({ queryKey: ['expenses', currentOrgId, propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['financialSummary', currentOrgId, propertyId] }); // Invalidate financial summary
       toast({
         title: "Sucesso!",
         description: "Despesa atualizada com sucesso.",
@@ -114,13 +120,14 @@ export const useExpenses = (propertyId?: string) => {
       const { error } = await supabase
         .from('expenses')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('org_id', currentOrgId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['financialSummary', propertyId] }); // Invalidate financial summary
+      queryClient.invalidateQueries({ queryKey: ['expenses', currentOrgId, propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['financialSummary', currentOrgId, propertyId] }); // Invalidate financial summary
       toast({
         title: "Sucesso!",
         description: "Despesa removida com sucesso.",

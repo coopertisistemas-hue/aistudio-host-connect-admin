@@ -17,10 +17,14 @@ import DashboardLayout from "@/components/DashboardLayout";
 import AmenityDialog from "@/components/AmenityDialog";
 import AmenityCard from "@/components/AmenityCard";
 import { useAmenities, Amenity, AmenityInput } from "@/hooks/useAmenities";
+import { useAuth } from "@/hooks/useAuth";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
 
 const AmenitiesPage = () => {
   const { amenities, isLoading, createAmenity, updateAmenity, deleteAmenity } = useAmenities();
+  const { userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
+
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedAmenity, setSelectedAmenity] = useState<Amenity | null>(null);
@@ -34,16 +38,19 @@ const AmenitiesPage = () => {
   );
 
   const handleCreateAmenity = () => {
+    if (isViewer) return;
     setSelectedAmenity(null);
     setDialogOpen(true);
   };
 
   const handleEditAmenity = (amenity: Amenity) => {
+    if (isViewer) return;
     setSelectedAmenity(amenity);
     setDialogOpen(true);
   };
 
   const handleSubmit = async (data: AmenityInput) => {
+    if (isViewer) return;
     if (selectedAmenity) {
       await updateAmenity.mutateAsync({ id: selectedAmenity.id, amenity: data });
     } else {
@@ -53,11 +60,13 @@ const AmenitiesPage = () => {
   };
 
   const handleDeleteClick = (id: string) => {
+    if (isViewer) return;
     setAmenityToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
+    if (isViewer) return;
     if (amenityToDelete) {
       await deleteAmenity.mutateAsync(amenityToDelete);
       setDeleteDialogOpen(false);
@@ -76,7 +85,7 @@ const AmenitiesPage = () => {
               Gerencie as comodidades disponíveis para suas acomodações
             </p>
           </div>
-          <Button variant="hero" onClick={handleCreateAmenity}>
+          <Button variant="hero" onClick={handleCreateAmenity} disabled={isViewer}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Comodidade
           </Button>
@@ -109,7 +118,7 @@ const AmenitiesPage = () => {
                   : "Comece cadastrando as comodidades que suas propriedades oferecem."}
               </p>
               {!searchQuery && (
-                <Button onClick={handleCreateAmenity}>
+                <Button onClick={handleCreateAmenity} disabled={isViewer}>
                   <Plus className="mr-2 h-4 w-4" />
                   Cadastrar Primeira Comodidade
                 </Button>
@@ -124,6 +133,7 @@ const AmenitiesPage = () => {
                 amenity={amenity}
                 onEdit={handleEditAmenity}
                 onDelete={handleDeleteClick}
+                isViewer={isViewer}
               />
             ))}
           </div>

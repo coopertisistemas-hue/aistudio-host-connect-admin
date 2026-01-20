@@ -8,6 +8,7 @@ interface ServiceCardProps {
   service: Service;
   onEdit: (service: Service) => void;
   onDelete: (id: string) => void;
+  isViewer?: boolean;
 }
 
 const getStatusBadge = (status: Service['status']) => {
@@ -21,7 +22,7 @@ const getStatusBadge = (status: Service['status']) => {
   }
 };
 
-const ServiceCard = ({ service, onEdit, onDelete }: ServiceCardProps) => {
+const ServiceCard = ({ service, onEdit, onDelete, isViewer }: ServiceCardProps) => {
   return (
     <Card className="hover:shadow-medium transition-all overflow-hidden">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -65,7 +66,8 @@ const ServiceCard = ({ service, onEdit, onDelete }: ServiceCardProps) => {
             variant="outline"
             size="sm"
             className="flex-1"
-            onClick={() => onEdit(service)}
+            onClick={() => !isViewer && onEdit(service)}
+            disabled={isViewer}
           >
             <Edit className="h-4 w-4 mr-2" />
             Editar
@@ -73,7 +75,8 @@ const ServiceCard = ({ service, onEdit, onDelete }: ServiceCardProps) => {
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => onDelete(service.id)}
+            onClick={() => !isViewer && onDelete(service.id)}
+            disabled={isViewer}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

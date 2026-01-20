@@ -8,6 +8,7 @@ interface AmenityCardProps {
   amenity: Amenity;
   onEdit: (amenity: Amenity) => void;
   onDelete: (id: string) => void;
+  isViewer?: boolean;
 }
 
 const normalizeIconName = (name: string): string => {
@@ -19,7 +20,7 @@ const normalizeIconName = (name: string): string => {
     .join("");
 };
 
-const AmenityCard = ({ amenity, onEdit, onDelete }: AmenityCardProps) => {
+const AmenityCard = ({ amenity, onEdit, onDelete, isViewer }: AmenityCardProps) => {
   // Safe icon lookup with normalization and fallback
   const normalizedName = normalizeIconName(amenity.icon || "");
   const IconComponent = (normalizedName && (LucideIcons as any)[normalizedName])
@@ -49,7 +50,8 @@ const AmenityCard = ({ amenity, onEdit, onDelete }: AmenityCardProps) => {
             variant="outline"
             size="sm"
             className="flex-1"
-            onClick={() => onEdit(amenity)}
+            onClick={() => !isViewer && onEdit(amenity)}
+            disabled={isViewer}
           >
             <Edit className="h-4 w-4 mr-2" />
             Editar
@@ -57,7 +59,8 @@ const AmenityCard = ({ amenity, onEdit, onDelete }: AmenityCardProps) => {
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => onDelete(amenity.id)}
+            onClick={() => !isViewer && onDelete(amenity.id)}
+            disabled={isViewer}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

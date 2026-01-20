@@ -22,6 +22,7 @@ import DataTableSkeleton from "@/components/DataTableSkeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useOrg } from "@/hooks/useOrg"; // Multi-tenant context
+import { useAuth } from "@/hooks/useAuth";
 
 import {
     Dialog,
@@ -38,6 +39,8 @@ import { useToast } from "@/hooks/use-toast";
 const FolioPage = () => {
     const { id } = useParams();
     const { currentOrgId, isLoading: isOrgLoading } = useOrg(); // Get current org context
+    const { userRole } = useAuth();
+    const isViewer = userRole === 'viewer';
 
     const { data: booking, isLoading: bookingLoading, error: bookingError } = useQuery({
         queryKey: ['booking-folio', currentOrgId, id], // Include org_id in cache key
@@ -79,7 +82,7 @@ const FolioPage = () => {
     const [newPay, setNewPay] = useState({ amount: "", method: "cash" as const });
 
     const handleAddItem = async () => {
-        if (!newItem.description || !newItem.amount) return;
+        if (!newItem.description || !newItem.amount || isViewer) return;
         await addItem.mutateAsync({
             booking_id: id!,
             description: newItem.description,
@@ -92,7 +95,7 @@ const FolioPage = () => {
     };
 
     const handleAddPayment = async () => {
-        if (!newPay.amount) return;
+        if (!newPay.amount || isViewer) return;
         await addPayment.mutateAsync({
             booking_id: id!,
             amount: parseFloat(newPay.amount),
@@ -187,6 +190,7 @@ const FolioPage = () => {
                         variant="outline"
                         className="h-auto py-4 flex flex-col gap-1 border-primary/20 bg-primary/5"
                         onClick={() => setIsItemDialogOpen(true)}
+                        disabled={isViewer}
                     >
                         <Plus className="h-5 w-5 text-primary" />
                         <span className="text-[10px] font-bold">Lançar Extra</span>
@@ -195,12 +199,12 @@ const FolioPage = () => {
                         variant="outline"
                         className="h-auto py-4 flex flex-col gap-1 border-success/20 bg-success/5"
                         onClick={() => setIsPaymentDialogOpen(true)}
-                        disabled={totals.balance <= 0}
+                        disabled={totals.balance <= 0 || isViewer}
                     >
                         <DollarSign className="h-5 w-5 text-success" />
                         <span className="text-[10px] font-bold">Pagar</span>
                     </Button>
-                    {totals.balance <= 0 && booking.status !== 'completed' && (
+                    {totals.balance <= 0 && booking.status !== 'completed' && !isViewer && (
                         <Button
                             variant="hero"
                             className="h-auto py-4 flex flex-col gap-1 shadow-md scale-105"

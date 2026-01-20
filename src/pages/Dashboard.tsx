@@ -43,7 +43,8 @@ const getDefaultDateRange = () => ({
 });
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
   const { properties, isLoading: propertiesLoading } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertySelectionLoading } = useSelectedProperty();
   const [dateRange, setDateRange] = useState<DateRange | undefined>(getDefaultDateRange());
@@ -130,7 +131,8 @@ const Dashboard = () => {
   // ═══════════════════════════════════════════════════════════
 
   const { isLoading: isPropertiesLoading, error: propertiesError } = useProperties();
-  const { isAuthLoading, isQueryLoading: isOrgLoading, error: orgError } = useOrg();
+  const { isLoading: isOrgLoading, error: orgError } = useOrg();
+  const { isLoading: isAuthLoading } = useAuth();
 
   // GUARD 1: Loading inicial (properties + selection)
   // SE isBypassing for true, ignoramos esse guard COMPLETAMENTE
@@ -275,7 +277,10 @@ const Dashboard = () => {
       color: "text-blue-500",
       description: `${summary?.totalAvailableRooms || 0} quartos totais`,
     },
-  ];
+  ].filter(stat => {
+    if (isViewer && (stat.title === "Diária Média (ADR)" || stat.title === "RevPAR")) return false;
+    return true;
+  });
 
   return (
     <DashboardLayout>
@@ -505,7 +510,10 @@ const Dashboard = () => {
             { to: "/properties", icon: Building2, label: "Propriedades" },
             { to: "/bookings", icon: Calendar, label: "Calendário" },
             { to: "/financial", icon: DollarSign, label: "Financeiro" }
-          ].map((action, i) => (
+          ].filter(action => {
+            if (isViewer && action.to === "/financial") return false;
+            return true;
+          }).map((action, i) => (
             <Link key={i} to={action.to}>
               <Card className="shadow-soft hover:shadow-medium transition-all cursor-pointer">
                 <CardHeader>

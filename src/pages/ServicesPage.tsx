@@ -20,12 +20,15 @@ import { useServices, Service, ServiceInput } from "@/hooks/useServices";
 import { useProperties } from "@/hooks/useProperties";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
-import { useSelectedProperty } from "@/hooks/useSelectedProperty"; // NEW IMPORT
+import { useSelectedProperty } from "@/hooks/useSelectedProperty";
+import { useAuth } from "@/hooks/useAuth";
 
 const ServicesPage = () => {
   const { properties } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
-  
+  const { userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
+
   const { services, isLoading, createService, updateService, deleteService } = useServices(selectedPropertyId);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -39,16 +42,19 @@ const ServicesPage = () => {
   );
 
   const handleCreateService = () => {
+    if (isViewer) return;
     setSelectedService(null);
     setDialogOpen(true);
   };
 
   const handleEditService = (service: Service) => {
+    if (isViewer) return;
     setSelectedService(service);
     setDialogOpen(true);
   };
 
   const handleSubmit = async (data: ServiceInput) => {
+    if (isViewer) return;
     if (!selectedPropertyId) {
       console.error("No property selected for service operation.");
       return;
@@ -63,11 +69,13 @@ const ServicesPage = () => {
   };
 
   const handleDeleteClick = (id: string) => {
+    if (isViewer) return;
     setServiceToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
+    if (isViewer) return;
     if (serviceToDelete) {
       await deleteService.mutateAsync(serviceToDelete);
       setDeleteDialogOpen(false);
@@ -88,7 +96,7 @@ const ServicesPage = () => {
               Gerencie os serviços adicionais oferecidos em suas propriedades
             </p>
           </div>
-          <Button variant="hero" onClick={handleCreateService} disabled={!selectedPropertyId}>
+          <Button variant="hero" onClick={handleCreateService} disabled={!selectedPropertyId || isViewer}>
             <Plus className="mr-2 h-4 w-4" />
             Novo Serviço
           </Button>
@@ -151,7 +159,7 @@ const ServicesPage = () => {
                   : "Comece cadastrando seu primeiro serviço para esta propriedade."}
               </p>
               {!searchQuery && (
-                <Button onClick={handleCreateService}>
+                <Button onClick={handleCreateService} disabled={isViewer}>
                   <Plus className="mr-2 h-4 w-4" />
                   Cadastrar Primeiro Serviço
                 </Button>
@@ -166,6 +174,7 @@ const ServicesPage = () => {
                 service={service}
                 onEdit={handleEditService}
                 onDelete={handleDeleteClick}
+                isViewer={isViewer}
               />
             ))}
           </div>

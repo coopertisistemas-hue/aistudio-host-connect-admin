@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types';
+import { useOrg } from './useOrg';
 
 export const pricingRuleSchema = z.object({
   property_id: z.string().min(1, "A propriedade é obrigatória."),
@@ -50,12 +51,13 @@ export type PricingRuleInput = z.infer<typeof pricingRuleSchema>;
 
 export const usePricingRules = (propertyId?: string) => {
   const queryClient = useQueryClient();
+  const { currentOrgId } = useOrg();
 
   const { data: pricingRules, isLoading, error } = useQuery({
-    queryKey: ['pricing_rules', propertyId],
+    queryKey: ['pricing_rules', currentOrgId, propertyId],
     queryFn: async () => {
-      if (!propertyId) return [];
-      const { data, error } = await supabase
+      if (!propertyId || !currentOrgId) return [];
+      const { data, error } = await (supabase as any)
         .from('pricing_rules')
         .select(`
           *,
@@ -68,23 +70,26 @@ export const usePricingRules = (propertyId?: string) => {
           )
         `)
         .eq('property_id', propertyId)
+        .eq('org_id', currentOrgId)
         .order('start_date', { ascending: true });
 
       if (error) throw error;
       return data as PricingRule[];
     },
-    enabled: !!propertyId,
+    enabled: !!propertyId && !!currentOrgId,
   });
 
   const createPricingRule = useMutation({
     mutationFn: async (rule: PricingRuleInput) => {
+      if (!currentOrgId) throw new Error("No Organization ID");
       const { data, error } = await supabase
         .from('pricing_rules')
         .insert([{
           ...rule,
+          org_id: currentOrgId,
           start_date: rule.start_date.toISOString().split('T')[0],
           end_date: rule.end_date.toISOString().split('T')[0],
-        } as TablesInsert<'pricing_rules'>]) // Explicit cast
+        } as any])
         .select()
         .single();
 
@@ -92,7 +97,7 @@ export const usePricingRules = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pricing_rules', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['pricing_rules', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Regra de precificação criada com sucesso.",
@@ -111,7 +116,7 @@ export const usePricingRules = (propertyId?: string) => {
   const updatePricingRule = useMutation({
     mutationFn: async ({ id, rule }: { id: string; rule: Partial<PricingRuleInput> }) => {
       const updateData: any = { ...rule };
-      
+
       if (rule.start_date) {
         updateData.start_date = rule.start_date.toISOString().split('T')[0];
       }
@@ -123,6 +128,7 @@ export const usePricingRules = (propertyId?: string) => {
         .from('pricing_rules')
         .update(updateData)
         .eq('id', id)
+        .eq('org_id', currentOrgId)
         .select()
         .single();
 
@@ -130,7 +136,7 @@ export const usePricingRules = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pricing_rules', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['pricing_rules', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Regra de precificação atualizada com sucesso.",
@@ -151,12 +157,13 @@ export const usePricingRules = (propertyId?: string) => {
       const { error } = await supabase
         .from('pricing_rules')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('org_id', currentOrgId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['pricing_rules', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['pricing_rules', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Regra de precificação removida com sucesso.",

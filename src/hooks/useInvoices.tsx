@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useOrg } from "./useOrg"; // Multi-tenant context
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Tables, TablesInsert } from '@/integrations/supabase/types';
@@ -26,10 +27,15 @@ export type InvoiceInput = z.infer<typeof invoiceSchema>;
 
 export const useInvoices = (propertyId?: string) => {
   const queryClient = useQueryClient();
+  const { currentOrgId, isLoading: isOrgLoading } = useOrg();
 
-  const { data: invoices, isLoading, error } = useQuery({
-    queryKey: ['invoices', propertyId],
+  const { data: invoices = [], isLoading, error } = useQuery({
+    queryKey: ['invoices', currentOrgId, propertyId],
     queryFn: async () => {
+      if (!currentOrgId) {
+        console.warn('[useInvoices] Abortando fetch: currentOrgId indefinido.');
+        return [];
+      }
       if (!propertyId) return [];
       const { data, error } = await supabase
         .from('invoices')
@@ -40,13 +46,14 @@ export const useInvoices = (propertyId?: string) => {
             guest_email
           )
         `)
+        .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
         .eq('property_id', propertyId)
-        .order('issue_date', { ascending: false });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       return data as Invoice[];
     },
-    enabled: !!propertyId,
+    enabled: !isOrgLoading && !!currentOrgId && !!propertyId,
   });
 
   const createInvoice = useMutation({
@@ -55,6 +62,7 @@ export const useInvoices = (propertyId?: string) => {
         .from('invoices')
         .insert([{
           ...invoice,
+          org_id: currentOrgId, // 🔐 ALWAYS include org_id
           issue_date: invoice.issue_date ? invoice.issue_date.toISOString() : undefined,
           due_date: invoice.due_date ? invoice.due_date.toISOString() : null,
         } as TablesInsert<'invoices'>]) // Explicit cast
@@ -65,7 +73,7 @@ export const useInvoices = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['invoices', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Fatura criada com sucesso.",
@@ -105,7 +113,7 @@ export const useInvoices = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['invoices', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['invoices', currentOrgId, propertyId] });
       queryClient.invalidateQueries({ queryKey: ['bookings'] }); // Invalidate bookings as status might change
       toast({
         title: "Sucesso!",

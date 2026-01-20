@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
+import { useOrg } from './useOrg';
 
 export const amenitySchema = z.object({
   name: z.string().min(1, "O nome da comodidade é obrigatório."),
@@ -23,25 +24,30 @@ export type AmenityInput = z.infer<typeof amenitySchema>;
 
 export const useAmenities = () => {
   const queryClient = useQueryClient();
+  const { currentOrgId } = useOrg();
 
   const { data: amenities, isLoading, error } = useQuery({
-    queryKey: ['amenities'],
+    queryKey: ['amenities', currentOrgId],
     queryFn: async () => {
+      if (!currentOrgId) return [];
       const { data, error } = await supabase
         .from('amenities')
         .select('*')
+        .eq('org_id', currentOrgId)
         .order('name', { ascending: true });
 
       if (error) throw error;
       return data as Amenity[];
     },
+    enabled: !!currentOrgId,
   });
 
   const createAmenity = useMutation({
     mutationFn: async (amenity: AmenityInput) => {
+      if (!currentOrgId) throw new Error("No Organization ID");
       const { data, error } = await supabase
         .from('amenities')
-        .insert([amenity as TablesInsert<'amenities'>]) // Explicit cast
+        .insert([{ ...amenity, org_id: currentOrgId } as any])
         .select()
         .single();
 
@@ -49,7 +55,7 @@ export const useAmenities = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['amenities'] });
+      queryClient.invalidateQueries({ queryKey: ['amenities', currentOrgId] });
       toast({
         title: "Sucesso!",
         description: "Comodidade criada com sucesso.",
@@ -71,6 +77,7 @@ export const useAmenities = () => {
         .from('amenities')
         .update(amenity)
         .eq('id', id)
+        .eq('org_id', currentOrgId)
         .select()
         .single();
 
@@ -78,7 +85,7 @@ export const useAmenities = () => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['amenities'] });
+      queryClient.invalidateQueries({ queryKey: ['amenities', currentOrgId] });
       toast({
         title: "Sucesso!",
         description: "Comodidade atualizada com sucesso.",
@@ -99,12 +106,13 @@ export const useAmenities = () => {
       const { error } = await supabase
         .from('amenities')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('org_id', currentOrgId);
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['amenities'] });
+      queryClient.invalidateQueries({ queryKey: ['amenities', currentOrgId] });
       toast({
         title: "Sucesso!",
         description: "Comodidade removida com sucesso.",

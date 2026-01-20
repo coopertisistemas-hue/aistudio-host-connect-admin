@@ -23,12 +23,15 @@ import { format, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { useSelectedProperty } from "@/hooks/useSelectedProperty"; // NEW IMPORT
+import { useSelectedProperty } from "@/hooks/useSelectedProperty";
+import { useAuth } from "@/hooks/useAuth";
 
 const ExpensesPage = () => {
   const { properties, isLoading: propertiesLoading } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
-  
+  const { userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
+
   const { expenses, isLoading, createExpense, updateExpense, deleteExpense } = useExpenses(selectedPropertyId);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -42,16 +45,19 @@ const ExpensesPage = () => {
   );
 
   const handleCreateExpense = () => {
+    if (isViewer) return;
     setSelectedExpense(null);
     setDialogOpen(true);
   };
 
   const handleEditExpense = (expense: Expense) => {
+    if (isViewer) return;
     setSelectedExpense(expense);
     setDialogOpen(true);
   };
 
   const handleSubmit = async (data: ExpenseInput) => {
+    if (isViewer) return;
     if (!selectedPropertyId) {
       console.error("No property selected for expense operation.");
       return;
@@ -72,11 +78,13 @@ const ExpensesPage = () => {
   };
 
   const handleDeleteClick = (id: string) => {
+    if (isViewer) return;
     setExpenseToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
+    if (isViewer) return;
     if (expenseToDelete) {
       await deleteExpense.mutateAsync(expenseToDelete);
       setDeleteDialogOpen(false);
@@ -86,7 +94,7 @@ const ExpensesPage = () => {
 
   const getPaymentStatusBadge = (status: Expense['payment_status'], expenseDate: string) => {
     const isOverdue = status === 'pending' && isPast(new Date(expenseDate));
-    
+
     if (isOverdue) {
       return <Badge variant="destructive" className="flex items-center gap-1"><Clock className="h-3 w-3" /> Atrasada</Badge>;
     }
@@ -116,7 +124,7 @@ const ExpensesPage = () => {
               Gerencie as despesas das suas propriedades
             </p>
           </div>
-          <Button variant="hero" onClick={handleCreateExpense} disabled={!selectedPropertyId}>
+          <Button variant="hero" onClick={handleCreateExpense} disabled={!selectedPropertyId || isViewer}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Despesa
           </Button>
@@ -179,7 +187,7 @@ const ExpensesPage = () => {
                   : "Comece cadastrando sua primeira despesa para esta propriedade."}
               </p>
               {!searchQuery && (
-                <Button onClick={handleCreateExpense}>
+                <Button onClick={handleCreateExpense} disabled={isViewer}>
                   <Plus className="mr-2 h-4 w-4" />
                   Cadastrar Primeira Despesa
                 </Button>
@@ -220,10 +228,10 @@ const ExpensesPage = () => {
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)}>
+                            <Button variant="outline" size="sm" onClick={() => handleEditExpense(expense)} disabled={isViewer}>
                               <Edit className="h-4 w-4" />
                             </Button>
-                            <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(expense.id)}>
+                            <Button variant="destructive" size="sm" onClick={() => handleDeleteClick(expense.id)} disabled={isViewer}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>

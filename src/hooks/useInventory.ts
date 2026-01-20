@@ -82,7 +82,8 @@ export const useInventory = () => {
             const { error } = await supabase
                 .from('inventory_items')
                 .delete()
-                .eq('id', id);
+                .eq('id', id)
+                .eq('org_id', currentOrgId);
 
             if (error) throw error;
         },
@@ -108,6 +109,7 @@ export const useInventory = () => {
                 .from('inventory_items')
                 .update(item)
                 .eq('id', id)
+                .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
                 .select()
                 .single();
 

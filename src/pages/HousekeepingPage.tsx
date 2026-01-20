@@ -19,21 +19,25 @@ import {
 import { Input } from "@/components/ui/input";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth"; // Added useAuth
 import { HousekeepingTaskCard } from "@/components/HousekeepingTaskCard";
 
 const HousekeepingPage = () => {
     const { selectedPropertyId } = useSelectedProperty();
-    const { queue, kpis, isLoading } = useHousekeeping(selectedPropertyId);
+    const { tasks: queue, isLoading } = useHousekeeping(selectedPropertyId);
     const { updateStatus } = useRoomOperation(selectedPropertyId);
+    const { userRole } = useAuth();
+    const isViewer = userRole === 'viewer';
     const [searchQuery, setSearchQuery] = useState("");
     const navigate = useNavigate();
 
     const filteredQueue = (queue || []).filter(item =>
-        item.room.room_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.reason.toLowerCase().includes(searchQuery.toLowerCase())
+        item.room?.room_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (item.title || "").toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const handleMarkClean = async (roomId: string, currentStatus: string) => {
+        if (isViewer) return;
         await updateStatus.mutateAsync({
             roomId,
             newStatus: 'clean',
@@ -41,10 +45,9 @@ const HousekeepingPage = () => {
         });
     };
 
-    // Calculate dynamic values for KPIs based on current data if not fully available in kpis object
-    // Assuming kpis object matches what we need or falling back to defaults
-    const urgentCount = kpis?.urgentCheckouts || 0;
-    const dirtyCount = kpis?.backlogCount || 0; // Assuming backlogCount is roughly dirty count
+    // Calculate dynamic values for KPIs locally
+    const urgentCount = queue?.filter(t => t.priority === 'high').length || 0;
+    const dirtyCount = queue?.filter(t => t.room?.status === 'dirty').length || 0;
     const totalQueueCount = queue?.length || 0;
 
     return (
@@ -219,11 +222,19 @@ const HousekeepingPage = () => {
                                 key={item.room.id}
                                 task={{
                                     ...item,
+                                    room: item.room ? {
+                                        id: item.room_id,
+                                        room_number: item.room.room_number,
+                                        room_types: item.room.room_types || { name: 'Standard' },
+                                        status: item.room.status
+                                    } : undefined,
+                                    reason: item.title || 'Limpeza Geral',
                                     status: item.priority === 'high' ? 'urgent' : 'pending' // Mapping simple status for visual flair
                                 }}
+                                isViewer={isViewer}
                                 onStartCleaning={() => { }} // Placeholder logic for now, standard is directly Mark Clean
-                                onCompleteCleaning={() => handleMarkClean(item.room.id, item.room.status)}
-                                onViewDetails={() => navigate(`/operation/rooms/${item.room.id}`)}
+                                onCompleteCleaning={() => handleMarkClean(item.room_id, item.room?.status || '')}
+                                onViewDetails={() => navigate(`/operation/rooms/${item.room_id}`)}
                             />
                         ))
                     )}

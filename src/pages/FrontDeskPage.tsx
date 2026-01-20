@@ -9,6 +9,8 @@ import { useFrontDesk } from "@/hooks/useFrontDesk";
 import { RoomInput } from "@/hooks/useRooms";
 import { Booking } from "@/hooks/useBookings";
 import { useInvoices, Invoice } from "@/hooks/useInvoices";
+import { useAuth } from "@/hooks/useAuth"; // Added useAuth
+import { useOrg } from "@/hooks/useOrg";   // Added useOrg
 import {
   Loader2,
   BedDouble,
@@ -30,6 +32,9 @@ import { supabase } from "@/integrations/supabase/client";
 const FrontDeskPage = () => {
   const { properties, isLoading: propertiesLoading } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId } = useSelectedProperty();
+  const { userRole } = useAuth();
+  const { currentOrgId } = useOrg();
+  const isViewer = userRole === 'viewer';
   const navigate = useNavigate();
 
   const {
@@ -58,14 +63,17 @@ const FrontDeskPage = () => {
   const checkOutsToday = propertyBookings.filter(b => format(parseISO(b.check_out), 'yyyy-MM-dd') === todayKey && b.status === 'confirmed');
 
   const handleRoomStatusChange = async (roomId: string, newStatus: RoomInput['status']) => {
+    if (isViewer) return;
     await updateRoomStatus({ id: roomId, room: { status: newStatus } });
   };
 
   const handleCheckIn = async (bookingId: string, roomId: string) => {
+    if (isViewer) return;
     await checkIn({ bookingId, roomId });
   };
 
   const handleCheckOut = async (bookingId: string, roomId: string) => {
+    if (isViewer) return;
     const booking = propertyBookings.find(b => b.id === bookingId);
     if (booking && booking.total_amount > 0) {
       navigate(`/operation/folio/${bookingId}`);
@@ -95,6 +103,7 @@ const FrontDeskPage = () => {
       .from('invoices')
       .select('*')
       .eq('id', invoiceId)
+      .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
       .single();
 
     if (!updatedInvoice) return;
@@ -392,6 +401,7 @@ const FrontDeskPage = () => {
                     onStatusChange={handleRoomStatusChange}
                     onCheckIn={() => handleCheckIn(room.check_in_today!.id, room.id)}
                     onCheckOut={() => handleCheckOut(room.check_out_today!.id, room.id)}
+                    isViewer={isViewer} // Pass isViewer prop
                   />
                 ))}
               </div>

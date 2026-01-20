@@ -24,6 +24,7 @@ interface FrontDeskRoomCardProps {
   onStatusChange: (roomId: string, newStatus: Room['status']) => void;
   onCheckIn: () => void;
   onCheckOut: () => void;
+  isViewer?: boolean; // Added isViewer
 }
 
 const getStatusConfig = (status: Room['status']) => {
@@ -39,16 +40,17 @@ const getStatusConfig = (status: Room['status']) => {
   }
 };
 
-const FrontDeskRoomCard = ({ room, currentBooking, checkInToday, checkOutToday, onStatusChange, onCheckIn, onCheckOut }: FrontDeskRoomCardProps) => {
+const FrontDeskRoomCard = ({ room, currentBooking, checkInToday, checkOutToday, onStatusChange, onCheckIn, onCheckOut, isViewer }: FrontDeskRoomCardProps) => {
   const statusConfig = getStatusConfig(room.status);
 
   const handleAction = (action: Room['status']) => {
+    if (isViewer) return;
     onStatusChange(room.id, action);
   };
 
   // Determine the primary action button based on room status and daily events
   let primaryAction = null;
-  
+
   if (room.status === 'available' && checkInToday) {
     // Room is available and there is a booking of this type checking in today
     primaryAction = {
@@ -79,7 +81,7 @@ const FrontDeskRoomCard = ({ room, currentBooking, checkInToday, checkOutToday, 
     primaryAction = {
       label: 'Nenhuma Ação Diária',
       icon: Clock,
-      onClick: () => {},
+      onClick: () => { },
       variant: "outline" as const,
       disabled: true,
     };
@@ -87,7 +89,7 @@ const FrontDeskRoomCard = ({ room, currentBooking, checkInToday, checkOutToday, 
 
   // Determine which booking details to show
   const bookingToShow = currentBooking || checkInToday || checkOutToday;
-  
+
   // Check for conflicts (e.g., room occupied but no active booking allocated)
   const isConflict = room.status === 'occupied' && !currentBooking;
 
@@ -150,14 +152,14 @@ const FrontDeskRoomCard = ({ room, currentBooking, checkInToday, checkOutToday, 
 
         {/* Daily Actions */}
         <div className="flex gap-2 pt-2">
-          <Button 
-            size="sm" 
-            className="flex-1" 
-            variant={primaryAction.variant} 
-            onClick={primaryAction.onClick} 
-            disabled={primaryAction.disabled || isConflict}
+          <Button
+            size="sm"
+            className="flex-1"
+            variant={primaryAction.variant}
+            onClick={primaryAction.onClick}
+            disabled={primaryAction.disabled || isConflict || isViewer} // Disable if viewer
           >
-            <primaryAction.icon className="h-4 w-4 mr-2" /> 
+            <primaryAction.icon className="h-4 w-4 mr-2" />
             {primaryAction.label}
           </Button>
 
@@ -171,16 +173,20 @@ const FrontDeskRoomCard = ({ room, currentBooking, checkInToday, checkOutToday, 
               <DropdownMenuItem onClick={() => console.log('View Room Details')}>
                 Ver Detalhes do Quarto
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleAction('available')} disabled={room.status === 'available'}>
-                Marcar como Disponível
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction('occupied')} disabled={room.status === 'occupied'}>
-                Marcar como Ocupado
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleAction('maintenance')} disabled={room.status === 'maintenance'}>
-                Marcar para Manutenção
-              </DropdownMenuItem>
+              {!isViewer && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleAction('available')} disabled={room.status === 'available'}>
+                    Marcar como Disponível
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAction('occupied')} disabled={room.status === 'occupied'}>
+                    Marcar como Ocupado
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleAction('maintenance')} disabled={room.status === 'maintenance'}>
+                    Marcar para Manutenção
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>

@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useRooms, Room, RoomInput } from './useRooms'; // Import RoomInput
 import { useBookings, Booking } from './useBookings';
 import { useInvoices } from './useInvoices';
+import { useOrg } from './useOrg'; // Multi-tenant context
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -18,6 +19,7 @@ export interface RoomAllocation extends Room {
 
 export const useFrontDesk = (propertyId?: string) => {
   const queryClient = useQueryClient();
+  const { currentOrgId } = useOrg();
   const { rooms, isLoading: roomsLoading, updateRoom } = useRooms(propertyId);
   const { bookings, isLoading: bookingsLoading, updateBooking } = useBookings();
   const { createInvoice } = useInvoices(propertyId);
@@ -43,9 +45,9 @@ export const useFrontDesk = (propertyId?: string) => {
       const checkOutDate = parseISO(b.check_out);
 
       // Check if booking is currently active (between check-in and check-out date, excluding check-out day)
-      const isActive = (b.status === 'confirmed' || b.status === 'pending') && 
-                       isWithinInterval(today, { start: checkInDate, end: checkOutDate }) &&
-                       !isSameDay(today, checkOutDate); // Exclude check-out day
+      const isActive = (b.status === 'confirmed' || b.status === 'pending') &&
+        isWithinInterval(today, { start: checkInDate, end: checkOutDate }) &&
+        !isSameDay(today, checkOutDate); // Exclude check-out day
 
       if (isActive && b.current_room_id) {
         activeBookingsMap.set(b.current_room_id, b);
@@ -71,16 +73,16 @@ export const useFrontDesk = (propertyId?: string) => {
     // 2. Map rooms to their status and associated bookings
     return rooms.map(room => {
       const roomTypeName = room.room_types?.name || 'N/A';
-      
+
       // Current booking is the one explicitly allocated to this room and active today
       const currentBooking = activeBookingsMap.get(room.id) || null;
-      
+
       // Check-out today is the one explicitly allocated to this room
       const checkOutToday = checkOutsTodayMap.get(room.id) || null;
 
       // Check-in today: Find a pending/confirmed booking of this room type checking in today
-      const checkInToday = propertyBookings.find(b => 
-        (b.status === 'confirmed' || b.status === 'pending') && 
+      const checkInToday = propertyBookings.find(b =>
+        (b.status === 'confirmed' || b.status === 'pending') &&
         format(parseISO(b.check_in), 'yyyy-MM-dd') === todayKey &&
         b.room_type_id === room.room_type_id &&
         !b.current_room_id // Only consider bookings not yet allocated
@@ -101,13 +103,13 @@ export const useFrontDesk = (propertyId?: string) => {
     mutationFn: async ({ bookingId, roomId }: { bookingId: string; roomId: string }) => {
       // 1. Update Room Status to 'occupied'
       await updateRoom.mutateAsync({ id: roomId, room: { status: 'occupied', last_booking_id: bookingId } });
-      
+
       // 2. Update Booking Status to 'confirmed' (if pending) AND set current_room_id
       await updateBooking.mutateAsync({ id: bookingId, booking: { status: 'confirmed', current_room_id: roomId } });
     },
     onSuccess: (_, { roomId }) => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms', currentOrgId, propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['bookings', currentOrgId] });
       toast({ title: "Check-in Realizado", description: `Quarto ${rooms.find(r => r.id === roomId)?.room_number} ocupado.` });
     },
     onError: (error: Error) => {
@@ -126,6 +128,7 @@ export const useFrontDesk = (propertyId?: string) => {
         .from('invoices')
         .select('*')
         .eq('booking_id', bookingId)
+        .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
         .single();
 
       if (existingInvoice) return existingInvoice;
@@ -133,6 +136,7 @@ export const useFrontDesk = (propertyId?: string) => {
       // Generate initial invoice based on booking total amount
       const newInvoiceData = {
         booking_id: bookingId,
+        org_id: currentOrgId, // 🔐 ALWAYS include org_id
         property_id: propertyId,
         issue_date: new Date().toISOString(), // Convert Date to ISO string
         due_date: new Date().toISOString(),   // Convert Date to ISO string
@@ -140,7 +144,7 @@ export const useFrontDesk = (propertyId?: string) => {
         paid_amount: 0,
         status: 'pending' as const,
       };
-      
+
       const { data: newInvoice, error } = await supabase
         .from('invoices')
         .insert([newInvoiceData as TablesInsert<'invoices'>]) // Explicit cast
@@ -163,13 +167,13 @@ export const useFrontDesk = (propertyId?: string) => {
     mutationFn: async ({ bookingId, roomId }: { bookingId: string; roomId: string }) => {
       // 1. Update Booking Status to 'completed' and remove current_room_id allocation
       await updateBooking.mutateAsync({ id: bookingId, booking: { status: 'completed', current_room_id: null } });
-      
+
       // 2. Update Room Status to 'available'
       await updateRoom.mutateAsync({ id: roomId, room: { status: 'available' } });
     },
     onSuccess: (_, { roomId }) => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', propertyId] });
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['rooms', currentOrgId, propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['bookings', currentOrgId] });
       toast({ title: "Check-out Concluído", description: `Quarto ${rooms.find(r => r.id === roomId)?.room_number} liberado.` });
     },
     onError: (error: Error) => {

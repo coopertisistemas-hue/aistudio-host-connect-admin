@@ -11,17 +11,21 @@ import { Loader2, LogIn, Calendar, Building2, User, Home } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Badge } from "@/components/ui/badge";
+import { useAuth } from "@/hooks/useAuth"; // Added useAuth
 import { getStatusBadge } from "@/lib/ui-helpers";
 
 const ArrivalsPage = () => {
     const { properties, isLoading: propertiesLoading } = useProperties();
     const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
+    const { userRole } = useAuth();
+    const isViewer = userRole === 'viewer';
     const { arrivals, isLoading: arrivalsLoading } = useArrivals(selectedPropertyId);
     const { checkIn, allocatedRooms } = useFrontDesk(selectedPropertyId);
 
     const isLoading = propertiesLoading || arrivalsLoading || propertyStateLoading;
 
     const handleCheckIn = async (bookingId: string, roomId: string) => {
+        if (isViewer) return;
         await checkIn({ bookingId, roomId });
     };
 
@@ -141,10 +145,10 @@ const ArrivalsPage = () => {
 
                                                 {availableRooms.length > 0 ? (
                                                     <div className="space-y-2">
-                                                        <Select onValueChange={(roomId) => handleCheckIn(arrival.id, roomId)}>
-                                                            <SelectTrigger className="w-full bg-primary text-primary-foreground hover:bg-primary/90">
+                                                        <Select onValueChange={(roomId) => handleCheckIn(arrival.id, roomId)} disabled={isViewer}>
+                                                            <SelectTrigger className="w-full bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50">
                                                                 <LogIn className="h-4 w-4 mr-2" />
-                                                                <SelectValue placeholder="Realizar Check-in" />
+                                                                <SelectValue placeholder={isViewer ? "Acesso Restrito" : "Realizar Check-in"} />
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 {availableRooms.map((room) => (

@@ -23,6 +23,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Plus, Search, Package, Trash2 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useInventory, InventoryItemInput } from "@/hooks/useInventory";
+import { useAuth } from "@/hooks/useAuth";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
 
 const CATEGORIES = [
@@ -38,6 +39,9 @@ const CATEGORIES = [
 
 const InventoryPage = () => {
     const { items, isLoading, createItem, deleteItem } = useInventory();
+    const { userRole } = useAuth();
+    const isViewer = userRole === 'viewer';
+
     const [searchQuery, setSearchQuery] = useState("");
     const [dialogOpen, setDialogOpen] = useState(false);
     const [newItem, setNewItem] = useState<InventoryItemInput>({
@@ -52,6 +56,7 @@ const InventoryPage = () => {
     );
 
     const handleCreate = async () => {
+        if (isViewer) return;
         if (!newItem.name) return;
         await createItem.mutateAsync(newItem);
         setDialogOpen(false);
@@ -70,7 +75,7 @@ const InventoryPage = () => {
                     </div>
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button variant="hero">
+                            <Button variant="hero" disabled={isViewer}>
                                 <Plus className="mr-2 h-4 w-4" />
                                 Novo Item
                             </Button>
@@ -211,7 +216,8 @@ const InventoryPage = () => {
                                                     variant="ghost"
                                                     size="sm"
                                                     className="text-destructive hover:text-destructive"
-                                                    onClick={() => deleteItem.mutate(item.id)}
+                                                    onClick={() => !isViewer && deleteItem.mutate(item.id)}
+                                                    disabled={isViewer}
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>

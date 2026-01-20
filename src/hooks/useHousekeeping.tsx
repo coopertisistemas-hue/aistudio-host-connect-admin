@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useOrg } from "./useOrg"; // Multi-tenant context
 
 export interface HousekeepingTask {
     id: string;
@@ -28,19 +29,25 @@ export interface HousekeepingTask {
 
 export const useHousekeeping = (propertyId?: string, userId?: string | null) => {
     const queryClient = useQueryClient();
+    const { currentOrgId, isLoading: isOrgLoading } = useOrg();
 
     // Fetch housekeeping tasks
     const { data: tasks = [], isLoading } = useQuery({
-        queryKey: ['housekeeping-tasks', propertyId, userId],
+        queryKey: ['housekeeping-tasks', currentOrgId, propertyId, userId],
         queryFn: async () => {
+            if (!currentOrgId) {
+                console.warn('[useHousekeeping] Abortando fetch: currentOrgId indefinido.');
+                return [];
+            }
             if (!propertyId) return [];
             let query = supabase
                 .from('tasks')
                 .select(`
           *,
-          room:rooms(room_number, status, room_types(name)),
+          room:rooms(id, room_number, status, room_types(name)),
           reservation:bookings(guest_name, check_in, check_out)
         `)
+                .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
                 .eq('property_id', propertyId)
                 .eq('type', 'housekeeping')
                 .order('created_at', { ascending: false });
@@ -54,7 +61,7 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
             if (error) throw error;
             return data as HousekeepingTask[];
         },
-        enabled: !!propertyId
+        enabled: !isOrgLoading && !!currentOrgId && !!propertyId
     });
 
     // Update task and room status
@@ -69,7 +76,8 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
             const { error: taskError } = await supabase
                 .from('tasks')
                 .update({ status, notes, updated_at: new Date().toISOString() })
-                .eq('id', taskId);
+                .eq('id', taskId)
+                .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 
             if (taskError) throw taskError;
 
@@ -89,13 +97,14 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
             const { error: roomError } = await supabase
                 .from('rooms')
                 .update({ status: roomStatus })
-                .eq('id', roomId);
+                .eq('id', roomId)
+                .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 
             if (roomError) throw roomError;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['housekeeping-tasks'] });
-            queryClient.invalidateQueries({ queryKey: ['rooms'] });
+            queryClient.invalidateQueries({ queryKey: ['housekeeping-tasks', currentOrgId] });
+            queryClient.invalidateQueries({ queryKey: ['rooms', currentOrgId] });
             toast.success("Status atualizado com sucesso");
         }
     });
@@ -108,16 +117,16 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
         }) => {
             const charges = items.map(item => ({
                 booking_id: reservationId,
+                org_id: currentOrgId, // 🔐 ALWAYS include org_id
                 description: `Consumo: ${item.name} (x${item.quantity})`,
                 amount: item.price * item.quantity,
                 category: 'minibar',
                 created_at: new Date().toISOString()
             }));
 
-            // Use 'booking_charges' table created via migration
-            // @ts-ignore - Ignore type error until types are regenerated
+            // Use 'folio_items' table standardized for extra charges
             const { error } = await supabase
-                .from('booking_charges')
+                .from('folio_items' as any)
                 .insert(charges);
 
             if (error) throw error;
@@ -137,6 +146,7 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
             const { error } = await supabase
                 .from('tasks')
                 .insert({
+                    org_id: currentOrgId, // 🔐 ALWAYS include org_id
                     property_id: propertyId,
                     room_id: roomId,
                     type: 'maintenance',

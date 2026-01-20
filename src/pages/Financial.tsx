@@ -17,12 +17,15 @@ import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 import { Link } from "react-router-dom";
-import { useSelectedProperty } from "@/hooks/useSelectedProperty"; // NEW IMPORT
+import { useSelectedProperty } from "@/hooks/useSelectedProperty";
+import { useAuth } from "@/hooks/useAuth";
 
 const Financial = () => {
   const { properties, isLoading: propertiesLoading } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
-  
+  const { userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
+
   const defaultDateRange = useMemo(() => ({
     from: startOfMonth(subMonths(new Date(), 5)),
     to: new Date(),
@@ -34,10 +37,10 @@ const Financial = () => {
   const { expenses, isLoading: expensesLoading } = useExpenses(selectedPropertyId);
   // Ensure dateRange.to is always defined for useFinancialSummary
   const { summary, isLoading: summaryLoading } = useFinancialSummary(
-    selectedPropertyId, 
+    selectedPropertyId,
     dateRange?.from && dateRange?.to ? { from: dateRange.from, to: dateRange.to } : undefined
   );
-  
+
   const isLoading = bookingsLoading || propertiesLoading || expensesLoading || summaryLoading || propertyStateLoading;
 
   const filteredBookings = useMemo(() => {
@@ -85,9 +88,9 @@ const Financial = () => {
 
   const revenueByProperty = useMemo(() => {
     const propertyMap = new Map<string, number>();
-    
+
     // Use confirmed/completed bookings for revenue calculation
-    bookings.filter(b => b.status === 'confirmed' || b.status === 'completed').forEach(booking => { 
+    bookings.filter(b => b.status === 'confirmed' || b.status === 'completed').forEach(booking => {
       const propertyName = booking.properties?.name || 'N/A';
       const current = propertyMap.get(propertyName) || 0;
       propertyMap.set(propertyName, current + Number(booking.total_amount));
@@ -108,7 +111,7 @@ const Financial = () => {
     return months.map(month => {
       const monthStart = startOfMonth(month);
       const monthEnd = endOfMonth(month);
-      
+
       const revenue = filteredBookings
         .filter(booking => {
           const createdDate = parseISO(booking.created_at);
@@ -241,44 +244,55 @@ const Financial = () => {
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">R$ {stats.totalRevenue.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    De {stats.totalBookings} reservas
-                  </p>
-                </CardContent>
-              </Card>
+              {!isViewer ? (
+                <>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Receita Total</CardTitle>
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">R$ {stats.totalRevenue.toFixed(2)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        De {stats.totalBookings} reservas
+                      </p>
+                    </CardContent>
+                  </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Despesas Totais</CardTitle>
-                  <Wallet className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">R$ {stats.totalExpenses.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Despesas registradas
-                  </p>
-                </CardContent>
-              </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Despesas Totais</CardTitle>
+                      <Wallet className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">R$ {stats.totalExpenses.toFixed(2)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Despesas registradas
+                      </p>
+                    </CardContent>
+                  </Card>
 
-              <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                </CardHeader>
-                <CardContent>
-                  <div className="text-2xl font-bold">R$ {stats.netProfit.toFixed(2)}</div>
-                  <p className="text-xs text-muted-foreground">
-                    Receita - Despesas
-                  </p>
-                </CardContent>
-              </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
+                      <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">R$ {stats.netProfit.toFixed(2)}</div>
+                      <p className="text-xs text-muted-foreground">
+                        Receita - Despesas
+                      </p>
+                    </CardContent>
+                  </Card>
+                </>
+              ) : (
+                <Card className="lg:col-span-3">
+                  <CardContent className="flex flex-col items-center justify-center py-6 text-muted-foreground">
+                    <PieChart className="h-8 w-8 mb-2 opacity-50" />
+                    <p className="text-sm">Dados financeiros detalhados restritos a administradores.</p>
+                  </CardContent>
+                </Card>
+              )}
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -307,75 +321,86 @@ const Financial = () => {
               </Card>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
+            {!isViewer ? (
+              <>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Fluxo de Caixa Mensal (Receita vs. Despesas)</CardTitle>
+                      <CardDescription>No período selecionado</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart data={monthlyData}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="month" />
+                          <YAxis />
+                          <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
+                          <Legend />
+                          <Line type="monotone" dataKey="receita" stroke="hsl(var(--primary))" strokeWidth={2} />
+                          <Line type="monotone" dataKey="despesas" stroke="hsl(var(--destructive))" strokeWidth={2} />
+                          <Line type="monotone" dataKey="lucro" stroke="hsl(var(--success))" strokeWidth={2} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Receita por Propriedade</CardTitle>
+                      <CardDescription>Distribuição de receita (todas as reservas)</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ResponsiveContainer width="100%" height={300}>
+                        <BarChart data={revenueByProperty}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="name" />
+                          <YAxis />
+                          <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
+                          <Legend />
+                          <Bar dataKey="value" fill="hsl(var(--primary))" />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Distribuição de Status das Reservas</CardTitle>
+                    <CardDescription>No período selecionado</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ResponsiveContainer width="100%" height={300}>
+                      <RechartPieChart>
+                        <Pie
+                          data={statusDistribution}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {statusDistribution.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </RechartPieChart>
+                    </ResponsiveContainer>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
               <Card>
-                <CardHeader>
-                  <CardTitle>Fluxo de Caixa Mensal (Receita vs. Despesas)</CardTitle>
-                  <CardDescription>No período selecionado</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={monthlyData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="month" />
-                      <YAxis />
-                      <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
-                      <Legend />
-                      <Line type="monotone" dataKey="receita" stroke="hsl(var(--primary))" strokeWidth={2} />
-                      <Line type="monotone" dataKey="despesas" stroke="hsl(var(--destructive))" strokeWidth={2} />
-                      <Line type="monotone" dataKey="lucro" stroke="hsl(var(--success))" strokeWidth={2} />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-60">
+                  <BarChart3 className="h-16 w-16 mb-4" />
+                  <p>Gráficos e analytics financeiros estão disponíveis apenas para administradores.</p>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Receita por Propriedade</CardTitle>
-                  <CardDescription>Distribuição de receita (todas as reservas)</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={revenueByProperty}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip formatter={(value: number) => `R$ ${value.toFixed(2)}`} />
-                      <Legend />
-                      <Bar dataKey="value" fill="hsl(var(--primary))" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Distribuição de Status das Reservas</CardTitle>
-                <CardDescription>No período selecionado</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <RechartPieChart>
-                    <Pie
-                      data={statusDistribution}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {statusDistribution.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </RechartPieChart>
-                </ResponsiveContainer> {/* Added closing tag */}
-              </CardContent>
-            </Card>
+            )}
 
             {/* Advanced Reports Section - Placeholders */}
             <Card>

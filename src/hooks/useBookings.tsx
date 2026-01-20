@@ -128,6 +128,7 @@ export const useBookings = (propertyId?: string) => {
         .from('bookings')
         .insert([{
           ...booking,
+          org_id: currentOrgId, // 🔐 ALWAYS include org_id
           check_in: booking.check_in.toISOString().split('T')[0],
           check_out: booking.check_out.toISOString().split('T')[0],
           services_json: booking.services_json || [],
@@ -140,7 +141,7 @@ export const useBookings = (propertyId?: string) => {
       return data;
     },
     onSuccess: async (newBooking) => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings', currentOrgId] });
       toast({
         title: "Sucesso!",
         description: "Reserva criada com sucesso.",
@@ -195,6 +196,7 @@ export const useBookings = (propertyId?: string) => {
         .from('bookings')
         .update(updateData)
         .eq('id', id)
+        .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
         .select()
         .single();
 
@@ -202,7 +204,7 @@ export const useBookings = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings', currentOrgId] });
       toast({
         title: "Sucesso!",
         description: "Reserva atualizada com sucesso.",
@@ -223,12 +225,13 @@ export const useBookings = (propertyId?: string) => {
       const { error } = await supabase
         .from('bookings')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+      queryClient.invalidateQueries({ queryKey: ['bookings', currentOrgId] });
       toast({
         title: "Sucesso!",
         description: "Reserva removida com sucesso.",

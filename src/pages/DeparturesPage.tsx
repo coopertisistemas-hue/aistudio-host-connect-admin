@@ -15,11 +15,16 @@ import { Badge } from "@/components/ui/badge";
 import { getStatusBadge } from "@/lib/ui-helpers";
 import InvoiceDialog from "@/components/InvoiceDialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth"; // Added useAuth
+import { useOrg } from "@/hooks/useOrg";   // Added useOrg
 import { useToast } from "@/hooks/use-toast";
 
 const DeparturesPage = () => {
     const { properties, isLoading: propertiesLoading } = useProperties();
     const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
+    const { userRole } = useAuth();
+    const { currentOrgId } = useOrg();
+    const isViewer = userRole === 'viewer';
     const { departures, isLoading: departuresLoading } = useDepartures(selectedPropertyId);
     const { checkOutStart, finalizeCheckOut } = useFrontDesk(selectedPropertyId);
     const { updateInvoice } = useInvoices(selectedPropertyId);
@@ -34,6 +39,7 @@ const DeparturesPage = () => {
     const isLoading = propertiesLoading || departuresLoading || propertyStateLoading;
 
     const handleCheckOut = async (departure: any) => {
+        if (isViewer) return;
         if (!departure.current_room_id) {
             toast({
                 title: "Erro no Check-out",
@@ -64,6 +70,7 @@ const DeparturesPage = () => {
             .from('invoices')
             .select('*')
             .eq('id', invoiceId)
+            .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
             .single();
 
         if (!updatedInvoice || !currentBooking || !currentRoomId) return;
@@ -165,7 +172,7 @@ const DeparturesPage = () => {
                                                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                                                         {getStatusBadge(departure.status as any)}
                                                         <span>•</span>
-                                                        <span>Quarto: {departure.rooms?.room_number || 'Não alocado'}</span>
+                                                        <span>Quarto: {(departure as any).rooms?.room_number || 'Não alocado'}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -194,14 +201,14 @@ const DeparturesPage = () => {
                                                 variant="destructive"
                                                 className="w-full"
                                                 onClick={() => handleCheckOut(departure)}
-                                                disabled={isProcessingPayment}
+                                                disabled={isProcessingPayment || isViewer}
                                             >
                                                 {isProcessingPayment ? (
                                                     <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                                 ) : (
                                                     <LogOut className="h-4 w-4 mr-2" />
                                                 )}
-                                                Realizar Check-out
+                                                {isViewer ? "Detalhes (Leitura)" : "Realizar Check-out"}
                                             </Button>
                                         </div>
                                     </div>

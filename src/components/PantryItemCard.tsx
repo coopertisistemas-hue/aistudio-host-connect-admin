@@ -26,9 +26,10 @@ interface PantryItemCardProps {
     item: StockItem;
     onAdjust: (delta: number) => void;
     isUpdating: boolean;
+    isViewer?: boolean;
 }
 
-export const PantryItemCard = ({ item, onAdjust, isUpdating }: PantryItemCardProps) => {
+export const PantryItemCard = ({ item, onAdjust, isUpdating, isViewer }: PantryItemCardProps) => {
     // Determine status based on quantity (assuming min_stock is around 5 if not set)
     const minStock = item.item_details.min_stock || 5;
     const isLowStock = item.quantity <= minStock;
@@ -90,8 +91,8 @@ export const PantryItemCard = ({ item, onAdjust, isUpdating }: PantryItemCardPro
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 rounded-lg hover:bg-destructive/10 hover:text-destructive"
-                        onClick={() => onAdjust(-1)}
-                        disabled={isUpdating || item.quantity === 0}
+                        onClick={() => !isViewer && onAdjust(-1)}
+                        disabled={isUpdating || item.quantity === 0 || isViewer}
                     >
                         <Minus className="h-4 w-4" />
                     </Button>
@@ -109,8 +110,8 @@ export const PantryItemCard = ({ item, onAdjust, isUpdating }: PantryItemCardPro
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 rounded-lg hover:bg-primary/10 hover:text-primary"
-                        onClick={() => onAdjust(1)}
-                        disabled={isUpdating}
+                        onClick={() => !isViewer && onAdjust(1)}
+                        disabled={isUpdating || isViewer}
                     >
                         <Plus className="h-4 w-4" />
                     </Button>

@@ -21,9 +21,10 @@ interface HousekeepingTaskCardProps {
     onStartCleaning: () => void;
     onCompleteCleaning: () => void;
     onViewDetails: () => void;
+    isViewer?: boolean;
 }
 
-export const HousekeepingTaskCard = ({ task, onStartCleaning, onCompleteCleaning, onViewDetails }: HousekeepingTaskCardProps) => {
+export const HousekeepingTaskCard = ({ task, onStartCleaning, onCompleteCleaning, onViewDetails, isViewer }: HousekeepingTaskCardProps) => {
     const priorityStyles = {
         high: "border-rose-500/40 bg-gradient-to-br from-rose-500/10 to-rose-600/5",
         medium: "border-amber-500/40 bg-gradient-to-br from-amber-500/10 to-amber-600/5",
@@ -82,14 +83,12 @@ export const HousekeepingTaskCard = ({ task, onStartCleaning, onCompleteCleaning
                 <div className="flex items-center gap-2">
                     {task.room.status === 'dirty' && (
                         <Button
-                            onClick={(e) => { e.stopPropagation(); onCompleteCleaning(); }} // Originally onStart, but mapped to "Mark Clean" effectively cleans it in current logic. 
-                            // Wait, looking at the user request, "Start Cleaning" -> "In Progress". Current logic is distinct.
-                            // Current logic only has 'dirty' status. 
-                            // Let's assume standard flow: Click to Mark Clean (Clean button).
-                            className="flex-1 rounded-xl shadow-md hover:shadow-lg transition-all bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={(e) => { e.stopPropagation(); onCompleteCleaning(); }}
+                            disabled={isViewer}
+                            className="flex-1 rounded-xl shadow-md hover:shadow-lg transition-all bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-50"
                         >
                             <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Marcar Limpo
+                            {isViewer ? "Acesso Restrito" : "Marcar Limpo"}
                         </Button>
                     )}
 

@@ -12,6 +12,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { ProductDialog } from "@/components/ProductDialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useStock } from "@/hooks/useStock";
+import { useAuth } from "@/hooks/useAuth";
 
 // Types for Cart
 type CartItem = {
@@ -25,6 +26,8 @@ const PointOfSalePage = () => {
     const queryClient = useQueryClient();
     const { items, isLoading: loadingCatalog, createItem, updateItem } = useInventory();
     const { stock } = useStock('pantry'); // For future stock validation if needed
+    const { userRole } = useAuth();
+    const isViewer = userRole === 'viewer';
 
     // Local State
     const [searchQuery, setSearchQuery] = useState("");
@@ -101,6 +104,7 @@ const PointOfSalePage = () => {
 
     // CRUD Logic
     const handleSaveProduct = async (data: InventoryItemInput) => {
+        if (isViewer) return;
         if (editingItem) {
             await updateItem.mutateAsync({ id: editingItem.id, item: data });
         } else {
@@ -111,18 +115,21 @@ const PointOfSalePage = () => {
     };
 
     const handleEditClick = (e: React.MouseEvent, item: InventoryItem) => {
+        if (isViewer) return;
         e.stopPropagation();
         setEditingItem(item);
         setDialogOpen(true);
     };
 
     const handleNewClick = () => {
+        if (isViewer) return;
         setEditingItem(null);
         setDialogOpen(true);
     }
 
     // Process Sale
     const processSale = async () => {
+        if (isViewer) return;
         if (!selectedBookingId || cart.length === 0) return;
         setIsProcessing(true);
 
@@ -187,7 +194,7 @@ const PointOfSalePage = () => {
                             <h1 className="text-3xl font-bold tracking-tight">Ponto de Venda</h1>
                             <p className="text-muted-foreground">Selecione os itens para a comanda.</p>
                         </div>
-                        <Button onClick={handleNewClick} className="rounded-xl shadow-lg shadow-primary/20">
+                        <Button onClick={handleNewClick} className="rounded-xl shadow-lg shadow-primary/20" disabled={isViewer}>
                             <Plus className="mr-2 h-4 w-4" />
                             Novo Produto
                         </Button>
@@ -218,22 +225,25 @@ const PointOfSalePage = () => {
                     </div>
 
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto pb-20 pr-2 content-start">
-                        <div
-                            className="border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors min-h-[140px] gap-2 text-muted-foreground hover:text-primary hover:border-primary/50"
-                            onClick={handleNewClick}
-                        >
-                            <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
-                                <Plus className="h-6 w-6" />
+                        {!isViewer && (
+                            <div
+                                className="border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-muted/50 transition-colors min-h-[140px] gap-2 text-muted-foreground hover:text-primary hover:border-primary/50"
+                                onClick={handleNewClick}
+                            >
+                                <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                                    <Plus className="h-6 w-6" />
+                                </div>
+                                <span className="text-sm font-medium">Cadastrar Novo</span>
                             </div>
-                            <span className="text-sm font-medium">Cadastrar Novo</span>
-                        </div>
+                        )}
 
                         {sellableItems.map(item => (
                             <ProductCard
                                 key={item.id}
                                 item={item}
-                                onClick={() => addToCart(item)}
+                                onClick={() => !isViewer && addToCart(item)}
                                 onEdit={(e) => handleEditClick(e, item)}
+                                isViewer={isViewer}
                             />
                         ))}
                     </div>
@@ -254,13 +264,13 @@ const PointOfSalePage = () => {
                                 </div>
                             </div>
                             {cart.length > 0 && (
-                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={emptyCart}>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={emptyCart} disabled={isViewer}>
                                     <Trash2 className="h-4 w-4" />
                                 </Button>
                             )}
                         </div>
 
-                        <Select value={selectedBookingId || ""} onValueChange={setSelectedBookingId}>
+                        <Select value={selectedBookingId || ""} onValueChange={setSelectedBookingId} disabled={isViewer}>
                             <SelectTrigger className="w-full bg-background border-muted-foreground/20 h-11 rounded-xl">
                                 <SelectValue placeholder="Selecione o Hóspede / Quarto" />
                             </SelectTrigger>
@@ -296,20 +306,22 @@ const PointOfSalePage = () => {
                                     </div>
                                     <div className="flex flex-col items-end gap-1">
                                         <span className="font-bold text-sm">R$ {(item.price * item.quantity).toFixed(2)}</span>
-                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button
-                                                className="h-6 w-6 rounded flex items-center justify-center hover:bg-muted text-muted-foreground"
-                                                onClick={() => updateQuantity(item.id, -1)}
-                                            >
-                                                -
-                                            </button>
-                                            <button
-                                                className="h-6 w-6 rounded flex items-center justify-center hover:bg-muted text-muted-foreground"
-                                                onClick={() => addToCart({ id: item.id } as any)}
-                                            >
-                                                +
-                                            </button>
-                                        </div>
+                                        {!isViewer && (
+                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button
+                                                    className="h-6 w-6 rounded flex items-center justify-center hover:bg-muted text-muted-foreground"
+                                                    onClick={() => updateQuantity(item.id, -1)}
+                                                >
+                                                    -
+                                                </button>
+                                                <button
+                                                    className="h-6 w-6 rounded flex items-center justify-center hover:bg-muted text-muted-foreground"
+                                                    onClick={() => addToCart({ id: item.id } as any)}
+                                                >
+                                                    +
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))
@@ -332,7 +344,7 @@ const PointOfSalePage = () => {
                         <Button
                             className="w-full h-12 rounded-xl text-lg font-bold shadow-lg shadow-primary/20"
                             size="lg"
-                            disabled={cart.length === 0 || !selectedBookingId || isProcessing}
+                            disabled={cart.length === 0 || !selectedBookingId || isProcessing || isViewer}
                             onClick={processSale}
                         >
                             {isProcessing ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <CreditCard className="mr-2 h-5 w-5" />}

@@ -10,9 +10,10 @@ interface PricingRuleCardProps {
   rule: PricingRule;
   onEdit: (rule: PricingRule) => void;
   onDelete: (id: string) => void;
+  isViewer?: boolean;
 }
 
-const PricingRuleCard = ({ rule, onEdit, onDelete }: PricingRuleCardProps) => {
+const PricingRuleCard = ({ rule, onEdit, onDelete, isViewer }: PricingRuleCardProps) => {
   const getStatusBadge = (status: PricingRule['status']) => {
     switch (status) {
       case 'active':
@@ -87,7 +88,8 @@ const PricingRuleCard = ({ rule, onEdit, onDelete }: PricingRuleCardProps) => {
             variant="outline"
             size="sm"
             className="flex-1"
-            onClick={() => onEdit(rule)}
+            onClick={() => !isViewer && onEdit(rule)}
+            disabled={isViewer}
           >
             <Edit className="h-4 w-4 mr-2" />
             Editar
@@ -95,7 +97,8 @@ const PricingRuleCard = ({ rule, onEdit, onDelete }: PricingRuleCardProps) => {
           <Button
             variant="destructive"
             size="sm"
-            onClick={() => onDelete(rule.id)}
+            onClick={() => !isViewer && onDelete(rule.id)}
+            disabled={isViewer}
           >
             <Trash2 className="h-4 w-4" />
           </Button>

@@ -79,8 +79,9 @@ export const useFolio = (bookingId?: string, orgId?: string | null) => {
                 .from('folio_items' as any)
                 .insert([{
                     ...item,
+                    org_id: effectiveOrgId, // 🔐 ALWAYS include org_id
                     created_by: user?.id,
-                    property_id: (item as any).property_id // Assumed to be passed in or handled
+                    property_id: (item as any).property_id
                 }])
                 .select()
                 .single();
@@ -89,7 +90,7 @@ export const useFolio = (bookingId?: string, orgId?: string | null) => {
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['folio-items', bookingId] });
+            queryClient.invalidateQueries({ queryKey: ['folio-items', effectiveOrgId, bookingId] });
             toast({ title: "Item Adicionado", description: "O lançamento foi registrado no folio." });
         }
     });
@@ -100,6 +101,7 @@ export const useFolio = (bookingId?: string, orgId?: string | null) => {
                 .from('folio_payments' as any)
                 .insert([{
                     ...payment,
+                    org_id: effectiveOrgId, // 🔐 ALWAYS include org_id
                     created_by: user?.id,
                     property_id: (payment as any).property_id
                 }])
@@ -110,7 +112,7 @@ export const useFolio = (bookingId?: string, orgId?: string | null) => {
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['folio-payments', bookingId] });
+            queryClient.invalidateQueries({ queryKey: ['folio-payments', effectiveOrgId, bookingId] });
             toast({ title: "Pagamento Registrado", description: "O pagamento foi processado com sucesso." });
         }
     });
@@ -139,8 +141,8 @@ export const useFolio = (bookingId?: string, orgId?: string | null) => {
             return true;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['booking-folio'] });
-            queryClient.invalidateQueries({ queryKey: ['bookings'] });
+            queryClient.invalidateQueries({ queryKey: ['booking-folio', effectiveOrgId, bookingId] });
+            queryClient.invalidateQueries({ queryKey: ['bookings', effectiveOrgId] });
             toast({ title: "Folio Fechado", description: "Reserva concluída com sucesso." });
         }
     });

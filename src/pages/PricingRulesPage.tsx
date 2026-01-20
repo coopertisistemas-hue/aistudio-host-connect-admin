@@ -20,12 +20,15 @@ import { usePricingRules, PricingRule, PricingRuleInput } from "@/hooks/usePrici
 import { useProperties } from "@/hooks/useProperties";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
-import { useSelectedProperty } from "@/hooks/useSelectedProperty"; // NEW IMPORT
+import { useSelectedProperty } from "@/hooks/useSelectedProperty";
+import { useAuth } from "@/hooks/useAuth";
 
 const PricingRulesPage = () => {
   const { properties } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
-  
+  const { userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
+
   const { pricingRules, isLoading, createPricingRule, updatePricingRule, deletePricingRule } = usePricingRules(selectedPropertyId);
   const [searchQuery, setSearchQuery] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,16 +43,19 @@ const PricingRulesPage = () => {
   );
 
   const handleCreateRule = () => {
+    if (isViewer) return;
     setSelectedPricingRule(null);
     setDialogOpen(true);
   };
 
   const handleEditRule = (rule: PricingRule) => {
+    if (isViewer) return;
     setSelectedPricingRule(rule);
     setDialogOpen(true);
   };
 
   const handleSubmit = async (data: PricingRuleInput) => {
+    if (isViewer) return;
     if (!selectedPropertyId) {
       console.error("No property selected for pricing rule operation.");
       return;
@@ -64,11 +70,13 @@ const PricingRulesPage = () => {
   };
 
   const handleDeleteClick = (id: string) => {
+    if (isViewer) return;
     setRuleToDelete(id);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
+    if (isViewer) return;
     if (ruleToDelete) {
       await deletePricingRule.mutateAsync(ruleToDelete);
       setDeleteDialogOpen(false);
@@ -89,7 +97,7 @@ const PricingRulesPage = () => {
               Gerencie regras de preços, promoções e estadias mínimas/máximas
             </p>
           </div>
-          <Button variant="hero" onClick={handleCreateRule} disabled={!selectedPropertyId}>
+          <Button variant="hero" onClick={handleCreateRule} disabled={!selectedPropertyId || isViewer}>
             <Plus className="mr-2 h-4 w-4" />
             Nova Regra
           </Button>
@@ -152,7 +160,7 @@ const PricingRulesPage = () => {
                   : "Comece cadastrando sua primeira regra de precificação para esta propriedade."}
               </p>
               {!searchQuery && (
-                <Button onClick={handleCreateRule}>
+                <Button onClick={handleCreateRule} disabled={isViewer}>
                   <Plus className="mr-2 h-4 w-4" />
                   Cadastrar Primeira Regra
                 </Button>
@@ -167,6 +175,7 @@ const PricingRulesPage = () => {
                 rule={rule}
                 onEdit={handleEditRule}
                 onDelete={handleDeleteClick}
+                isViewer={isViewer}
               />
             ))}
           </div>

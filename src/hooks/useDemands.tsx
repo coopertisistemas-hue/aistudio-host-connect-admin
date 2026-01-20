@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './useAuth';
 import { useRoomOperation } from './useRoomOperation';
+import { useOrg } from './useOrg'; // Multi-tenant context
 
 export type DemandStatus = 'todo' | 'in-progress' | 'waiting' | 'done';
 export type DemandPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -32,11 +33,16 @@ export interface MaintenanceDemand {
 export const useDemands = (propertyId?: string) => {
     const queryClient = useQueryClient();
     const { user } = useAuth();
+    const { currentOrgId } = useOrg();
     const { updateStatus: updateRoomStatus } = useRoomOperation(propertyId);
 
     const { data: demands, isLoading } = useQuery({
-        queryKey: ['maintenance-demands', propertyId],
+        queryKey: ['maintenance-demands', currentOrgId, propertyId],
         queryFn: async () => {
+            if (!currentOrgId) {
+                console.warn('[useDemands] Abortando fetch: currentOrgId indefinido.');
+                return [];
+            }
             if (!propertyId) return [];
             const { data, error } = await supabase
                 .from('tasks')
@@ -50,6 +56,7 @@ export const useDemands = (propertyId?: string) => {
             full_name
           )
         `)
+                .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
                 .eq('property_id', propertyId)
                 .order('created_at', { ascending: false });
 
@@ -65,6 +72,7 @@ export const useDemands = (propertyId?: string) => {
                 .from('tasks')
                 .insert([{
                     ...demand,
+                    org_id: currentOrgId, // 🔐 ALWAYS include org_id
                     property_id: propertyId,
                     assigned_to: demand.assigned_to || user?.id
                 }])
@@ -86,7 +94,7 @@ export const useDemands = (propertyId?: string) => {
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['maintenance-demands', propertyId] });
+            queryClient.invalidateQueries({ queryKey: ['maintenance-demands', currentOrgId, propertyId] });
             toast({ title: "Demanda Criada", description: "A solicitação foi registrada com sucesso." });
         }
     });
@@ -96,7 +104,8 @@ export const useDemands = (propertyId?: string) => {
             const { data, error } = await supabase
                 .from('tasks')
                 .update({ status })
-                .eq('id', id);
+                .eq('id', id)
+                .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 
             if (error) throw error;
 
@@ -108,8 +117,8 @@ export const useDemands = (propertyId?: string) => {
             return data;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['maintenance-demands', propertyId] });
-            queryClient.invalidateQueries({ queryKey: ['demand-detail'] });
+            queryClient.invalidateQueries({ queryKey: ['maintenance-demands', currentOrgId, propertyId] });
+            queryClient.invalidateQueries({ queryKey: ['demand-detail', currentOrgId] });
         }
     });
 

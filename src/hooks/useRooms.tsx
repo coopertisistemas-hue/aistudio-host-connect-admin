@@ -4,6 +4,8 @@ import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Tables, TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
 
+import { useOrg } from './useOrg'; // Multi-tenant context
+
 // Definindo o tipo de retorno da query de rooms com joins
 type RoomRow = Tables<'rooms'>;
 type RoomTypeRow = Tables<'room_types'>;
@@ -24,16 +26,21 @@ export type RoomInput = z.infer<typeof roomSchema>;
 
 export const useRooms = (propertyId?: string) => {
   const queryClient = useQueryClient();
+  const { currentOrgId, isLoading: isOrgLoading } = useOrg();
 
   const { data: rooms, isLoading, error } = useQuery({
-    queryKey: ['rooms', propertyId],
+    queryKey: ['rooms', currentOrgId, propertyId],
     queryFn: async () => {
-      console.log('[useRooms] Fetching rooms...', { propertyId });
+      console.log('[useRooms] Fetching rooms...', { currentOrgId, propertyId });
+      if (!currentOrgId) {
+        console.warn('[useRooms] Abortando fetch: currentOrgId indefinido.');
+        return [];
+      }
       if (!propertyId) {
         console.warn('[useRooms] No propertyId provided');
         return [];
       }
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('rooms')
         .select(`
           *,
@@ -41,6 +48,7 @@ export const useRooms = (propertyId?: string) => {
             name
           )
         `)
+        .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
         .eq('property_id', propertyId)
         .order('room_number', { ascending: true });
 
@@ -51,14 +59,17 @@ export const useRooms = (propertyId?: string) => {
       console.log(`[useRooms] Successfully fetched ${data?.length || 0} rooms`);
       return data as Room[];
     },
-    enabled: !!propertyId,
+    enabled: !isOrgLoading && !!currentOrgId && !!propertyId,
   });
 
   const createRoom = useMutation({
     mutationFn: async (room: RoomInput) => {
       const { data, error } = await supabase
         .from('rooms')
-        .insert([room as TablesInsert<'rooms'>]) // Explicit cast
+        .insert([{
+          ...room,
+          org_id: currentOrgId // 🔐 ALWAYS include org_id
+        } as TablesInsert<'rooms'>])
         .select()
         .single();
 
@@ -66,7 +77,7 @@ export const useRooms = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['rooms', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Quarto criado com sucesso.",
@@ -88,6 +99,7 @@ export const useRooms = (propertyId?: string) => {
         .from('rooms')
         .update(room)
         .eq('id', id)
+        .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
         .select()
         .single();
 
@@ -95,7 +107,7 @@ export const useRooms = (propertyId?: string) => {
       return data;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['rooms', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Quarto atualizado com sucesso.",
@@ -116,12 +128,13 @@ export const useRooms = (propertyId?: string) => {
       const { error } = await supabase
         .from('rooms')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rooms', propertyId] });
+      queryClient.invalidateQueries({ queryKey: ['rooms', currentOrgId, propertyId] });
       toast({
         title: "Sucesso!",
         description: "Quarto removido com sucesso.",

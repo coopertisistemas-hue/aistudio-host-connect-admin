@@ -22,6 +22,8 @@ import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
+import { useAuth } from "@/hooks/useAuth";
+import { useOrg } from "@/hooks/useOrg";
 
 const RoomOperationDetailPage = () => {
     const { id } = useParams();
@@ -29,10 +31,14 @@ const RoomOperationDetailPage = () => {
     const { toast } = useToast();
     const { updateStatus, getStatusLogs } = useRoomOperation();
     const { isAdmin } = useIsAdmin();
+    const { userRole } = useAuth();
+    const { currentOrgId, isLoading: isOrgLoading } = useOrg();
+    const isViewer = userRole === 'viewer';
 
     const { data: room, isLoading: roomLoading } = useQuery({
-        queryKey: ['room-detail', id],
+        queryKey: ['room-detail', currentOrgId, id],
         queryFn: async () => {
+            if (!currentOrgId) return null;
             const { data, error } = await supabase
                 .from('rooms')
                 .select(`
@@ -42,18 +48,19 @@ const RoomOperationDetailPage = () => {
           )
         `)
                 .eq('id', id)
+                .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
                 .single();
 
             if (error) throw error;
             return data;
         },
-        enabled: !!id,
+        enabled: !!id && !isOrgLoading && !!currentOrgId,
     });
 
     const { data: logs, isLoading: logsLoading } = getStatusLogs(id || '');
 
     const handleStatusChange = async (newStatus: RoomOperationalStatus) => {
-        if (!room) return;
+        if (!room || isViewer) return;
 
         try {
             await updateStatus.mutateAsync({
@@ -137,7 +144,7 @@ const RoomOperationDetailPage = () => {
                                 variant="outline"
                                 className={`h-auto py-6 flex flex-col gap-2 border-none shadow-sm ${action.bg} hover:${action.bg} transition-all active:scale-95`}
                                 onClick={() => handleStatusChange(action.status)}
-                                disabled={room.status === action.status}
+                                disabled={room.status === action.status || isViewer} // Disable if viewer
                             >
                                 <action.icon className={`h-6 w-6 ${action.color}`} />
                                 <span className={`text-xs font-bold ${action.color}`}>{action.label}</span>

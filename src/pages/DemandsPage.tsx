@@ -22,16 +22,20 @@ import { DemandDialog } from "@/components/DemandDialog";
 import DashboardLayout from "@/components/DashboardLayout";
 import { MaintenanceTaskCard } from "@/components/MaintenanceTaskCard";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth"; // Added useAuth
 
 const DemandsPage = () => {
     const { selectedPropertyId } = useSelectedProperty();
     const { demands, isLoading, createDemand } = useDemands(selectedPropertyId);
+    const { userRole } = useAuth();
+    const isViewer = userRole === 'viewer';
     const [searchQuery, setSearchQuery] = useState("");
     const [statusFilter, setStatusFilter] = useState<string>("all");
     const [dialogOpen, setDialogOpen] = useState(false);
     const navigate = useNavigate();
 
     const handleCreateDemand = async (data: any) => {
+        if (isViewer) return;
         const room_id = data.room_id === 'none' ? null : data.room_id;
         await createDemand.mutateAsync({ ...data, room_id });
         setDialogOpen(false);
@@ -78,13 +82,15 @@ const DemandsPage = () => {
                         </div>
 
                         <div className="flex items-center gap-2">
-                            <Button
-                                className="rounded-xl shadow-lg shadow-orange-500/20 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 transition-all hover:-translate-y-0.5"
-                                onClick={() => setDialogOpen(true)}
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Nova Demanda
-                            </Button>
+                            {!isViewer && (
+                                <Button
+                                    className="rounded-xl shadow-lg shadow-orange-500/20 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 transition-all hover:-translate-y-0.5"
+                                    onClick={() => setDialogOpen(true)}
+                                >
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Nova Demanda
+                                </Button>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -234,11 +240,20 @@ const DemandsPage = () => {
                             </div>
 
                             <Button
-                                onClick={() => setDialogOpen(true)}
+                                onClick={() => isViewer ? navigate('/operation/rooms') : setDialogOpen(true)}
                                 className="rounded-xl shadow-lg shadow-orange-500/20 bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all"
                             >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Abrir Nova Demanda
+                                {isViewer ? (
+                                    <>
+                                        <Hammer className="mr-2 h-4 w-4" />
+                                        Ver Quadro de Quartos
+                                    </>
+                                ) : (
+                                    <>
+                                        <Plus className="mr-2 h-4 w-4" />
+                                        Abrir Nova Demanda
+                                    </>
+                                )}
                             </Button>
                         </div>
                     </div>

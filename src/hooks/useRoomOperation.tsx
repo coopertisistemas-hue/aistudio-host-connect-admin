@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './useAuth';
+import { useOrg } from './useOrg'; // Multi-tenant context
 
 export type RoomOperationalStatus = 'available' | 'occupied' | 'maintenance' | 'dirty' | 'clean' | 'inspected' | 'ooo';
 
@@ -21,6 +22,7 @@ export interface RoomStatusLog {
 export const useRoomOperation = (propertyId?: string) => {
     const queryClient = useQueryClient();
     const { user } = useAuth();
+    const { currentOrgId } = useOrg();
 
     const updateStatus = useMutation({
         mutationFn: async ({
@@ -38,16 +40,18 @@ export const useRoomOperation = (propertyId?: string) => {
             const { error: updateError } = await supabase
                 .from('rooms')
                 .update({ status: newStatus })
-                .eq('id', roomId);
+                .eq('id', roomId)
+                .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 
             if (updateError) throw updateError;
 
             // 2. Log the change (if room_status_logs table exists, else we just update)
             // Note: We'll assume for now we might need to create this table or use a generic log
             const { error: logError } = await supabase
-                .from('room_status_logs')
+                .from('room_status_logs' as any)
                 .insert([{
                     room_id: roomId,
+                    org_id: currentOrgId, // 🔐 ALWAYS include org_id
                     old_status: oldStatus,
                     new_status: newStatus,
                     user_id: user?.id,
@@ -62,8 +66,8 @@ export const useRoomOperation = (propertyId?: string) => {
             return { roomId, newStatus };
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['rooms', propertyId] });
-            queryClient.invalidateQueries({ queryKey: ['room-detail'] });
+            queryClient.invalidateQueries({ queryKey: ['rooms', currentOrgId, propertyId] });
+            queryClient.invalidateQueries({ queryKey: ['room-detail', currentOrgId] });
             toast({
                 title: "Status Atualizado",
                 description: "O status do quarto foi alterado com sucesso.",
@@ -80,10 +84,11 @@ export const useRoomOperation = (propertyId?: string) => {
 
     const getStatusLogs = (roomId: string) => {
         return useQuery({
-            queryKey: ['room-status-logs', roomId],
+            queryKey: ['room-status-logs', currentOrgId, roomId],
             queryFn: async () => {
+                if (!currentOrgId) return [];
                 const { data, error } = await supabase
-                    .from('room_status_logs')
+                    .from('room_status_logs' as any)
                     .select(`
             *,
             profiles (
@@ -91,6 +96,7 @@ export const useRoomOperation = (propertyId?: string) => {
             )
           `)
                     .eq('room_id', roomId)
+                    .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
                     .order('created_at', { ascending: false })
                     .limit(10);
 

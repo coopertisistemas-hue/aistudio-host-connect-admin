@@ -14,12 +14,16 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useStock } from "@/hooks/useStock";
+import { useAuth } from "@/hooks/useAuth";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
 import { PantryItemCard, StockItem } from "@/components/PantryItemCard";
 import { useNavigate } from "react-router-dom";
 
 const PantryStockPage = () => {
     const { stock, isLoading, updateStock } = useStock('pantry');
+    const { userRole } = useAuth();
+    const isViewer = userRole === 'viewer';
+
     const [searchQuery, setSearchQuery] = useState("");
     const [filterCategory, setFilterCategory] = useState("all");
     const navigate = useNavigate();
@@ -47,6 +51,7 @@ const PantryStockPage = () => {
     });
 
     const handleAdjust = (itemId: string, currentQty: number, delta: number) => {
+        if (isViewer) return;
         const newQty = Math.max(0, currentQty + delta);
         updateStock.mutate({ itemId, quantity: newQty });
     };
@@ -236,6 +241,7 @@ const PantryStockPage = () => {
                                 item={item}
                                 onAdjust={(delta) => handleAdjust(item.item_id, item.quantity, delta)}
                                 isUpdating={updateStock.isPending}
+                                isViewer={isViewer}
                             />
                         ))}
                     </div>
