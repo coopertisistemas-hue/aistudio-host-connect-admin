@@ -16,6 +16,7 @@ import Properties from "./pages/Properties";
 import Bookings from "./pages/Bookings";
 import Financial from "./pages/Financial";
 import Guests from "./pages/Guests";
+import GuestDetailPage from "./pages/GuestDetailPage";
 import Settings from "./pages/Settings";
 import RoomTypesPage from "./pages/RoomTypes";
 import RoomCategoriesPage from "./pages/RoomCategoriesPage";
@@ -403,6 +404,16 @@ const App = () => (
                     <ProtectedRoute>
                       <SessionLockManager>
                         <Guests />
+                      </SessionLockManager>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/guests/:id"
+                  element={
+                    <ProtectedRoute>
+                      <SessionLockManager>
+                        <GuestDetailPage />
                       </SessionLockManager>
                     </ProtectedRoute>
                   }
