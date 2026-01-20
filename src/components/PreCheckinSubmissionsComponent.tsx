@@ -499,7 +499,11 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                                 <div className="flex items-center gap-2 ml-4">
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="outline" size="sm">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={applySubmission.isPending || rejectSubmission.isPending || isBatchApplying}
+                                            >
                                                 <CheckCircle className="h-4 w-4 mr-2" />
                                                 Aplicar
                                             </Button>
@@ -525,7 +529,11 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
 
                                     <AlertDialog>
                                         <AlertDialogTrigger asChild>
-                                            <Button variant="ghost" size="sm">
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                disabled={applySubmission.isPending || rejectSubmission.isPending || isBatchApplying}
+                                            >
                                                 <XCircle className="h-4 w-4 mr-2" />
                                                 Rejeitar
                                             </Button>

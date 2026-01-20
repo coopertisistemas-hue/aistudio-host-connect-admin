@@ -130,7 +130,10 @@ const PreCheckinSessions = ({ bookingId }: PreCheckinSessionsProps) => {
                     {!isViewer && (
                         <AlertDialog open={showGenerateDialog} onOpenChange={setShowGenerateDialog}>
                             <AlertDialogTrigger asChild>
-                                <Button size="sm">
+                                <Button
+                                    size="sm"
+                                    disabled={createSession.isPending || finalizeSession.isPending}
+                                >
                                     <Plus className="h-4 w-4 mr-2" />
                                     Gerar Link
                                 </Button>
@@ -217,7 +220,11 @@ const PreCheckinSessions = ({ bookingId }: PreCheckinSessionsProps) => {
                                     {!isViewer && isPending && (
                                         <AlertDialog>
                                             <AlertDialogTrigger asChild>
-                                                <Button variant="outline" size="sm">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={createSession.isPending || finalizeSession.isPending}
+                                                >
                                                     <CheckCircle className="h-4 w-4 mr-2" />
                                                     Finalizar
                                                 </Button>
