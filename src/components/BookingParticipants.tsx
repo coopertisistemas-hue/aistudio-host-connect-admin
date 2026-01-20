@@ -293,7 +293,14 @@ const BookingParticipants = ({ bookingId }: BookingParticipantsProps) => {
                                     <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
                                 )}
                                 <div>
-                                    <p className="font-medium">{participant.full_name}</p>
+                                    <div className="flex items-center gap-2">
+                                        <p className="font-medium">{participant.full_name}</p>
+                                        {participant.is_primary && (
+                                            <Badge variant="secondary" className="text-xs">
+                                                Principal
+                                            </Badge>
+                                        )}
+                                    </div>
                                     {participant.document && (
                                         <p className="text-sm text-muted-foreground">
                                             CPF: {participant.document}

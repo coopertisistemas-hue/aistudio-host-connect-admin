@@ -149,7 +149,18 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                 guestId = newGuest.id;
             }
 
-            // Step 2: Insert booking_guests
+            // Step 2: Check if booking already has a primary participant
+            const { data: existingPrimary } = await supabase
+                .from('booking_guests')
+                .select('id')
+                .eq('org_id', currentOrgId)
+                .eq('booking_id', bookingId)
+                .eq('is_primary', true)
+                .limit(1);
+
+            const shouldBePrimary = !existingPrimary || existingPrimary.length === 0;
+
+            // Step 3: Insert booking_guests
             const { error: bookingGuestError } = await supabase
                 .from('booking_guests')
                 .insert({
@@ -158,7 +169,7 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                     guest_id: guestId,
                     full_name: payload.full_name,
                     document: payload.document || null,
-                    is_primary: false, // Can be changed later by admin
+                    is_primary: shouldBePrimary, // Auto-set primary if none exists
                 });
 
             if (bookingGuestError) throw bookingGuestError;
