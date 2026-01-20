@@ -97,6 +97,7 @@ import MobileTaskDetail from "./pages/mobile/MobileTaskDetail";
 import MobileExecutive from "./pages/mobile/MobileExecutive";
 import { MobileRouteGuard } from "./components/mobile/MobileRouteGuard";
 import { SessionLockManager } from "./components/SessionLockManager";
+import PublicPreCheckinPage from "./pages/PublicPreCheckinPage";
 
 import { usePageTracking } from "./hooks/usePageTracking"; // GA4 Tracking
 
@@ -126,6 +127,7 @@ const App = () => (
                 <Route path="/book/:propertyId?" element={<BookingEnginePage />} />
                 <Route path="/booking-success" element={<BookingSuccessPage />} />
                 <Route path="/booking-cancel" element={<BookingCancelPage />} />
+                <Route path="/pre-checkin/:token" element={<PublicPreCheckinPage />} />
                 <Route path="/marketing/overview" element={<ProtectedRoute><MarketingOverview /></ProtectedRoute>} />
                 <Route path="/marketing/connectors" element={<ProtectedRoute><MarketingConnectors /></ProtectedRoute>} />
                 <Route path="/marketing/google" element={<ProtectedRoute><GoogleMarketingDetails /></ProtectedRoute>} />
