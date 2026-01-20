@@ -1,79 +1,199 @@
-import { useMemo } from 'react';
-import { useBookings } from './useBookings';
+import { useQuery, useMutation, useQueryClient } from '@tantml:react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+import { useOrg } from './useOrg';
+import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
-export interface Guest {
-  name: string;
-  email: string;
-  phone: string | null;
-  totalBookings: number;
-  totalSpent: number;
-  lastVisit: string;
-  bookings: Array<{
-    id: string;
-    property: string;
-    checkIn: string;
-    checkOut: string;
-    status: string;
-    amount: number;
-  }>;
-}
+export type Guest = Tables<'guests'>;
+export type GuestInsert = TablesInsert<'guests'>;
+export type GuestUpdate = TablesUpdate<'guests'>;
 
-export const useGuests = () => {
-  const { bookings, isLoading } = useBookings();
+export const useGuests = (searchTerm?: string) => {
+  const queryClient = useQueryClient();
+  const { currentOrgId, isLoading: isOrgLoading } = useOrg();
 
-  const guests = useMemo(() => {
-    const guestMap = new Map<string, Guest>();
+  const { data: guests, isLoading, error } = useQuery({
+    queryKey: ['guests', currentOrgId, searchTerm],
+    queryFn: async () => {
+      if (!currentOrgId) throw new Error('Organization context required');
 
-    bookings.forEach((booking) => {
-      const email = booking.guest_email;
-      
-      if (guestMap.has(email)) {
-        const guest = guestMap.get(email)!;
-        guest.totalBookings += 1;
-        guest.totalSpent += Number(booking.total_amount);
-        guest.bookings.push({
-          id: booking.id,
-          property: booking.properties?.name || 'N/A',
-          checkIn: booking.check_in,
-          checkOut: booking.check_out,
-          status: booking.status,
-          amount: Number(booking.total_amount),
-        });
-        
-        // Update last visit if this booking is more recent
-        if (new Date(booking.check_in) > new Date(guest.lastVisit)) {
-          guest.lastVisit = booking.check_in;
-        }
-      } else {
-        guestMap.set(email, {
-          name: booking.guest_name,
-          email: booking.guest_email,
-          phone: booking.guest_phone,
-          totalBookings: 1,
-          totalSpent: Number(booking.total_amount),
-          lastVisit: booking.check_in,
-          bookings: [
-            {
-              id: booking.id,
-              property: booking.properties?.name || 'N/A',
-              checkIn: booking.check_in,
-              checkOut: booking.check_out,
-              status: booking.status,
-              amount: Number(booking.total_amount),
-            },
-          ],
-        });
+      let query = supabase
+        .from('guests')
+        .select('*')
+        .eq('org_id', currentOrgId)
+        .order('created_at', { ascending: false });
+
+      if (searchTerm && searchTerm.trim()) {
+        const term = `%${searchTerm.trim()}%`;
+        query = query.or(`first_name.ilike.${term},last_name.ilike.${term},email.ilike.${term},document.ilike.${term}`);
       }
-    });
 
-    return Array.from(guestMap.values()).sort(
-      (a, b) => new Date(b.lastVisit).getTime() - new Date(a.lastVisit).getTime()
-    );
-  }, [bookings]);
+      const { data, error } = await query;
+
+      if (error) throw error;
+      return data as Guest[];
+    },
+    enabled: !!currentOrgId && !isOrgLoading,
+  });
+
+  const createGuest = useMutation({
+    mutationFn: async (guest: GuestInsert) => {
+      if (!currentOrgId) throw new Error('Organization context required');
+
+      const { data, error } = await supabase
+        .from('guests')
+        .insert({ ...guest, org_id: currentOrgId })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guests', currentOrgId] });
+      toast({
+        title: 'Sucesso',
+        description: 'Hóspede cadastrado com sucesso.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao cadastrar hóspede.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const updateGuest = useMutation({
+    mutationFn: async ({ id, updates }: { id: string; updates: GuestUpdate }) => {
+      if (!currentOrgId) throw new Error('Organization context required');
+
+      const { data, error } = await supabase
+        .from('guests')
+        .update(updates)
+        .eq('id', id)
+        .eq('org_id', currentOrgId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guests', currentOrgId] });
+      toast({
+        title: 'Sucesso',
+        description: 'Hóspede atualizado com sucesso.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao atualizar hóspede.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const deleteGuest = useMutation({
+    mutationFn: async (id: string) => {
+      if (!currentOrgId) throw new Error('Organization context required');
+
+      const { error } = await supabase
+        .from('guests')
+        .delete()
+        .eq('id', id)
+        .eq('org_id', currentOrgId);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guests', currentOrgId] });
+      toast({
+        title: 'Sucesso',
+        description: 'Hóspede removido com sucesso.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao remover hóspede.',
+        variant: 'destructive',
+      });
+    },
+  });
 
   return {
-    guests,
-    isLoading,
-    totalGuests: guests.length,
+    guests: guests || [],
+    isLoading: isLoading || isOrgLoading,
+    error,
+    createGuest,
+    updateGuest,
+    deleteGuest,
+  };
+};
+
+export const useGuest = (id: string | undefined) => {
+  const queryClient = useQueryClient();
+  const { currentOrgId, isLoading: isOrgLoading } = useOrg();
+
+  const { data: guest, isLoading, error } = useQuery({
+    queryKey: ['guest', currentOrgId, id],
+    queryFn: async () => {
+      if (!currentOrgId) throw new Error('Organization context required');
+      if (!id) throw new Error('Guest ID required');
+
+      const { data, error } = await supabase
+        .from('guests')
+        .select('*')
+        .eq('id', id)
+        .eq('org_id', currentOrgId)
+        .single();
+
+      if (error) throw error;
+      return data as Guest;
+    },
+    enabled: !!currentOrgId && !!id && !isOrgLoading,
+  });
+
+  const updateGuest = useMutation({
+    mutationFn: async (updates: GuestUpdate) => {
+      if (!currentOrgId) throw new Error('Organization context required');
+      if (!id) throw new Error('Guest ID required');
+
+      const { data, error } = await supabase
+        .from('guests')
+        .update(updates)
+        .eq('id', id)
+        .eq('org_id', currentOrgId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['guest', currentOrgId, id] });
+      queryClient.invalidateQueries({ queryKey: ['guests', currentOrgId] });
+      toast({
+        title: 'Sucesso',
+        description: 'Hóspede atualizado com sucesso.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Erro',
+        description: error.message || 'Erro ao atualizar hóspede.',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  return {
+    guest,
+    isLoading: isLoading || isOrgLoading,
+    error,
+    updateGuest,
   };
 };
