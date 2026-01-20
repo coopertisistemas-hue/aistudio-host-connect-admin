@@ -347,12 +347,17 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                 <div className="text-center py-8">
                     <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
                     <p className="text-muted-foreground">
-                        Nenhum pré-check-in recebido para esta reserva
+                        Nenhum pré-check-in enviado para esta reserva
                     </p>
                 </div>
             </Card>
         );
     }
+
+    // Calculate progress indicators
+    const submittedCount = submissions.filter((s) => s.status === 'submitted').length;
+    const appliedCount = submissions.filter((s) => s.status === 'applied').length;
+    const rejectedCount = submissions.filter((s) => s.status === 'rejected').length;
 
     return (
         <Card className="p-6">
@@ -397,6 +402,28 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                         )}
                     </div>
                 )}
+            </div>
+
+            {/* Progress Indicators */}
+            <div className="flex items-center gap-4 mb-3 p-3 bg-muted/20 rounded-lg border border-muted">
+                <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Pré-check-in:</span>
+                    <Badge variant="secondary" className="font-mono">
+                        {submittedCount} enviados
+                    </Badge>
+                    <span className="text-muted-foreground">/</span>
+                    <Badge variant="default" className="bg-green-600 font-mono">
+                        {appliedCount} aplicados
+                    </Badge>
+                    {rejectedCount > 0 && (
+                        <>
+                            <span className="text-muted-foreground">/</span>
+                            <Badge variant="destructive" className="font-mono">
+                                {rejectedCount} rejeitados
+                            </Badge>
+                        </>
+                    )}
+                </div>
             </div>
 
             {!isViewer && submissions.some((s) => s.status === 'submitted') && (
