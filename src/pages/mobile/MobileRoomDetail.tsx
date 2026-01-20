@@ -29,6 +29,7 @@ import { CreateConsumptionSheet } from '@/components/mobile/CreateConsumptionShe
 import { format, differenceInDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from 'sonner';
+import { BookingStatus } from '@/lib/constants/statuses';
 
 const MobileRoomDetail: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -46,7 +47,7 @@ const MobileRoomDetail: React.FC = () => {
 
     const activeBooking = bookings.find(b =>
         b.current_room_id === id &&
-        (b.status === 'confirmed' || b.status === 'checked_in')
+        (b.status === BookingStatus.RESERVED || b.status === BookingStatus.CHECKED_IN)
         // Optional: Date check, but status usually implies occupancy
     );
 

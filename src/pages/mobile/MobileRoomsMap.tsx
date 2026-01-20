@@ -23,6 +23,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { RoomStatusBadge } from '@/components/RoomStatusBadge';
 import { differenceInDays } from 'date-fns';
+import { BookingStatus } from '@/lib/constants/statuses';
 
 import {
     Sheet,
@@ -116,7 +117,7 @@ const MobileRoomsMap = () => {
 
         const map = new Map();
         bookings.forEach(b => {
-            if ((b.status === 'confirmed' || b.status === 'checked_in') && b.current_room_id) {
+            if ((b.status === BookingStatus.RESERVED || b.status === BookingStatus.CHECKED_IN) && b.current_room_id) {
                 map.set(b.current_room_id, b);
             }
         });
@@ -295,7 +296,7 @@ const MobileRoomsMap = () => {
                         </div>
                         <div className="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center border border-indigo-100">
                             <span className="text-sm font-black text-indigo-600">
-                                {bookings ? bookings.filter(b => b.status === 'checked_in' && differenceInDays(new Date(), new Date(b.check_in)) > 7).length : 0}
+                                {bookings ? bookings.filter(b => b.status === BookingStatus.CHECKED_IN && differenceInDays(new Date(), new Date(b.check_in)) > 7).length : 0}
                             </span>
                         </div>
                     </div>
@@ -307,7 +308,7 @@ const MobileRoomsMap = () => {
                         </div>
                         <div className="h-8 w-8 rounded-lg bg-purple-50 flex items-center justify-center border border-purple-100">
                             <span className="text-sm font-black text-purple-600">
-                                {bookings ? bookings.filter(b => b.status === 'checked_in' && differenceInDays(new Date(), new Date(b.check_in)) > 15).length : 0}
+                                {bookings ? bookings.filter(b => b.status === BookingStatus.CHECKED_IN && differenceInDays(new Date(), new Date(b.check_in)) > 15).length : 0}
                             </span>
                         </div>
                     </div>

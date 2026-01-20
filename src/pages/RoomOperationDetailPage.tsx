@@ -98,9 +98,9 @@ const RoomOperationDetailPage = () => {
     }
 
     const actions = [
-        { label: "Sujo", status: 'dirty' as const, icon: RefreshCcw, color: "text-rose-500", bg: "bg-rose-50" },
-        { label: "Limpo", status: 'clean' as const, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
-        { label: "Inspecionado", status: 'inspected' as const, icon: ShieldAlert, color: "text-indigo-500", bg: "bg-indigo-50" },
+        { label: getRoomStatusLabel(RoomStatus.DIRTY), status: RoomStatus.DIRTY, icon: RefreshCcw, color: "text-rose-500", bg: "bg-rose-50" },
+        { label: getRoomStatusLabel(RoomStatus.CLEAN), status: RoomStatus.CLEAN, icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
+        { label: getRoomStatusLabel(RoomStatus.INSPECTED), status: RoomStatus.INSPECTED, icon: ShieldAlert, color: "text-indigo-500", bg: "bg-indigo-50" },
         { label: "Fora de Serviço", status: 'ooo' as const, icon: Settings, color: "text-slate-500", bg: "bg-slate-50" },
     ];
 

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Search, Filter, LayoutGrid, SlidersHorizontal, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
+import { RoomStatus, getRoomStatusLabel } from '@/lib/constants/statuses';
 
 const RoomsBoardPage = () => {
     const { selectedPropertyId } = useSelectedProperty();
@@ -24,9 +25,9 @@ const RoomsBoardPage = () => {
 
     const statuses: { label: string; value: string; count: number }[] = [
         { label: "Todos", value: "all", count: rooms.length },
-        { label: "Sujo", value: "dirty", count: rooms.filter(r => r.status === 'dirty').length },
-        { label: "Limpo", value: "clean", count: rooms.filter(r => r.status === 'clean').length },
-        { label: "Inspecionado", value: "inspected", count: rooms.filter(r => r.status === 'inspected').length },
+        { label: getRoomStatusLabel(RoomStatus.DIRTY), value: RoomStatus.DIRTY, count: rooms.filter(r => r.status === RoomStatus.DIRTY).length },
+        { label: getRoomStatusLabel(RoomStatus.CLEAN), value: RoomStatus.CLEAN, count: rooms.filter(r => r.status === RoomStatus.CLEAN).length },
+        { label: getRoomStatusLabel(RoomStatus.INSPECTED), value: RoomStatus.INSPECTED, count: rooms.filter(r => r.status === RoomStatus.INSPECTED).length },
         { label: "Ocupado", value: "occupied", count: rooms.filter(r => r.status === 'occupied').length },
         { label: "OOO", value: "ooo", count: rooms.filter(r => r.status === 'ooo').length },
     ];
