@@ -75,7 +75,10 @@ export const useBookings = (propertyId?: string) => {
         query = query.eq('property_id', propertyId);
       }
 
-      const { data, error } = await query.order('check_in', { ascending: false });
+      const { data, error } = await query
+        .order('check_in', { ascending: false }) // Recent check-ins first
+        .order('created_at', { ascending: false }) // Stable secondary sort
+        .limit(200); // Reasonable limit for Front Desk operations
 
       if (error) {
         console.error('[useBookings] Error fetching bookings:', error);
