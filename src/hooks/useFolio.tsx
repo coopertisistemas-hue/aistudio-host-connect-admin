@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './useAuth';
+import { useOrg } from './useOrg'; // Multi-tenant context
 
 export interface FolioItem {
     id: string;
@@ -22,40 +23,54 @@ export interface FolioPayment {
     created_by: string;
 }
 
-export const useFolio = (bookingId?: string) => {
+export const useFolio = (bookingId?: string, orgId?: string | null) => {
     const queryClient = useQueryClient();
     const { user } = useAuth();
+    const { currentOrgId } = useOrg(); // Get current org if not passed
+    const effectiveOrgId = orgId || currentOrgId; // Use passed orgId or fallback
 
     const { data: folioItems, isLoading: loadingItems } = useQuery({
-        queryKey: ['folio-items', bookingId],
+        queryKey: ['folio-items', effectiveOrgId, bookingId], // Include org_id in cache key
         queryFn: async () => {
-            if (!bookingId) return [];
+            // 🔐 SECURITY: Abort if no org_id or bookingId
+            if (!bookingId || !effectiveOrgId) {
+                console.warn('[useFolio] Abortando fetch folio_items: missing bookingId or orgId.');
+                return [];
+            }
+
             const { data, error } = await supabase
                 .from('folio_items' as any)
                 .select('*')
                 .eq('booking_id', bookingId)
+                .eq('org_id', effectiveOrgId) // 🔐 ALWAYS filter by org_id
                 .order('created_at', { ascending: true });
 
             if (error) throw error;
             return data as FolioItem[];
         },
-        enabled: !!bookingId,
+        enabled: !!bookingId && !!effectiveOrgId,
     });
 
     const { data: folioPayments, isLoading: loadingPayments } = useQuery({
-        queryKey: ['folio-payments', bookingId],
+        queryKey: ['folio-payments', effectiveOrgId, bookingId], // Include org_id in cache key
         queryFn: async () => {
-            if (!bookingId) return [];
+            // 🔐 SECURITY: Abort if no org_id or bookingId
+            if (!bookingId || !effectiveOrgId) {
+                console.warn('[useFolio] Abortando fetch folio_payments: missing bookingId or orgId.');
+                return [];
+            }
+
             const { data, error } = await supabase
                 .from('folio_payments' as any)
                 .select('*')
                 .eq('booking_id', bookingId)
+                .eq('org_id', effectiveOrgId) // 🔐 ALWAYS filter by org_id
                 .order('payment_date', { ascending: true });
 
             if (error) throw error;
             return data as FolioPayment[];
         },
-        enabled: !!bookingId,
+        enabled: !!bookingId && !!effectiveOrgId,
     });
 
     const addItem = useMutation({
@@ -109,16 +124,22 @@ export const useFolio = (bookingId?: string) => {
 
     const closeFolio = useMutation({
         mutationFn: async () => {
+            // 🔐 SECURITY: Ensure org_id is present
+            if (!effectiveOrgId || !bookingId) {
+                throw new Error('Missing org_id or booking_id for close folio');
+            }
+
             const { error } = await supabase
                 .from('bookings')
                 .update({ status: 'completed' })
-                .eq('id', bookingId!);
+                .eq('id', bookingId)
+                .eq('org_id', effectiveOrgId); // 🔐 ALWAYS filter by org_id
 
             if (error) throw error;
             return true;
         },
         onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['booking-folio', bookingId] });
+            queryClient.invalidateQueries({ queryKey: ['booking-folio'] });
             queryClient.invalidateQueries({ queryKey: ['bookings'] });
             toast({ title: "Folio Fechado", description: "Reserva concluída com sucesso." });
         }

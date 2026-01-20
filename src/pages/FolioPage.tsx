@@ -15,11 +15,13 @@ import {
     Download,
     History,
     AlertCircle,
-    CheckCircle2
+    CheckCircle2,
+    ShieldAlert
 } from "lucide-react";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { useOrg } from "@/hooks/useOrg"; // Multi-tenant context
 
 import {
     Dialog,
@@ -35,22 +37,39 @@ import { useToast } from "@/hooks/use-toast";
 
 const FolioPage = () => {
     const { id } = useParams();
+    const { currentOrgId, isLoading: isOrgLoading } = useOrg(); // Get current org context
 
-    const { data: booking, isLoading: bookingLoading } = useQuery({
-        queryKey: ['booking-folio', id],
+    const { data: booking, isLoading: bookingLoading, error: bookingError } = useQuery({
+        queryKey: ['booking-folio', currentOrgId, id], // Include org_id in cache key
         queryFn: async () => {
+            // 🔐 SECURITY: Abort if no org_id - prevents unauthorized access
+            if (!currentOrgId) {
+                console.warn('[FolioPage] Abortando fetch: currentOrgId indefinido.');
+                throw new Error('ORG_REQUIRED');
+            }
+
+            console.log('[FolioPage] Fetching booking...', { currentOrgId, bookingId: id });
+
             const { data, error } = await supabase
                 .from('bookings')
                 .select('*, properties(*)')
                 .eq('id', id)
+                .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
                 .single();
-            if (error) throw error;
+
+            if (error) {
+                // Don't leak whether booking exists in other org
+                if (error.code === 'PGRST116') {
+                    throw new Error('NOT_FOUND');
+                }
+                throw error;
+            }
             return data;
         },
-        enabled: !!id
+        enabled: !isOrgLoading && !!currentOrgId && !!id, // Enable only when org is loaded
     });
 
-    const { items, payments, totals, isLoading: folioLoading, addItem, addPayment } = useFolio(id);
+    const { items, payments, totals, isLoading: folioLoading, addItem, addPayment, closeFolio } = useFolio(id, currentOrgId);
     const { toast } = useToast();
 
     const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
@@ -84,8 +103,41 @@ const FolioPage = () => {
         setNewPay({ amount: "", method: "cash" });
     };
 
-    if (bookingLoading || folioLoading) return <DataTableSkeleton />;
-    if (!booking) return <div className="p-10 text-center">Reserva não encontrada.</div>;
+    // Loading state
+    if (isOrgLoading || bookingLoading || folioLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="text-center space-y-4">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+                    <p className="text-muted-foreground">Carregando folio...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Access restricted state (org missing or booking not found in org)
+    if (!currentOrgId || bookingError || !booking) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <Card className="max-w-md">
+                    <CardContent className="p-8 text-center space-y-4">
+                        <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto">
+                            <ShieldAlert className="h-8 w-8 text-destructive" />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-lg font-bold">Acesso Restrito</h3>
+                            <p className="text-sm text-muted-foreground">
+                                Você não tem permissão para acessar este registro ou ele não existe.
+                            </p>
+                        </div>
+                        <Button onClick={() => window.history.back()} variant="outline">
+                            Voltar
+                        </Button>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    }
 
     const exportCSV = () => {
         const headers = ["Data", "Descrição", "Categoria", "Débito", "Crédito"];
