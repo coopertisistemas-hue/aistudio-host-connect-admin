@@ -1,17 +1,18 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProperties } from "@/hooks/useProperties";
-import { useBookings, Booking } from "@/hooks/useBookings";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrg } from "@/hooks/useOrg";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
-import { BookingStatus, getBookingStatusLabel, isActiveStay, isPreArrival, normalizeLegacyStatus } from "@/lib/constants/statuses";
+import { Booking } from "@/hooks/useBookings";
+import { getBookingStatusLabel } from "@/lib/constants/statuses";
 import {
   Loader2,
   Home,
@@ -19,13 +20,12 @@ import {
   LogOut,
   Building2,
   Monitor,
-  Search,
   FileText,
   Calendar,
   User,
   BedDouble
 } from "lucide-react";
-import { format, parseISO, startOfDay, isSameDay } from "date-fns";
+import { format, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 const FrontDeskPage = () => {
@@ -33,52 +33,94 @@ const FrontDeskPage = () => {
   const { selectedPropertyId, setSelectedPropertyId } = useSelectedProperty();
   const { userRole } = useAuth();
   const { currentOrgId } = useOrg();
-  const { bookings, isLoading: bookingsLoading } = useBookings(selectedPropertyId);
   const isViewer = userRole === 'viewer';
   const navigate = useNavigate();
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
-  const today = startOfDay(new Date());
+  // Arrivals Query: check_in today, pre-arrival statuses, limit 50, ordered ASC
+  const { data: arrivals = [], isLoading: arrivalsLoading } = useQuery({
+    queryKey: ['frontdesk-arrivals', currentOrgId, selectedPropertyId, today],
+    queryFn: async () => {
+      if (!currentOrgId) return [];
 
-  // Filter bookings by property and compute sections
-  const { arrivals, departures, inHouse } = useMemo(() => {
-    const propertyBookings = selectedPropertyId
-      ? bookings.filter(b => b.property_id === selectedPropertyId)
-      : bookings;
+      let query = supabase
+        .from('bookings')
+        .select('*')
+        .eq('org_id', currentOrgId)
+        .gte('check_in', today)
+        .lte('check_in', today)
+        .in('status', ['reserved', 'pre_checkin', 'pending', 'confirmed'])
+        .order('check_in', { ascending: true })
+        .order('created_at', { ascending: true })
+        .limit(50);
 
-    // Search filter
-    const searchedBookings = searchQuery.trim()
-      ? propertyBookings.filter(b =>
-        b.guest_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        b.guest_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (b.guest_document && b.guest_document.includes(searchQuery))
-      )
-      : propertyBookings;
+      if (selectedPropertyId) {
+        query = query.eq('property_id', selectedPropertyId);
+      }
 
-    // Arrivals: check_in today AND status is pre-arrival (reserved or pre_checkin)
-    const arrivalsToday = searchedBookings.filter(b => {
-      const checkInDate = parseISO(b.check_in);
-      return isSameDay(checkInDate, today) && isPreArrival(normalizeLegacyStatus(b.status));
-    });
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentOrgId && !!selectedPropertyId,
+  });
 
-    // Departures: check_out today AND status is active (checked_in or in_house)
-    const departuresToday = searchedBookings.filter(b => {
-      const checkOutDate = parseISO(b.check_out);
-      return isSameDay(checkOutDate, today) && isActiveStay(normalizeLegacyStatus(b.status));
-    });
+  // Departures Query: check_out today, active statuses, limit 50, ordered ASC
+  const { data: departures = [], isLoading: departuresLoading } = useQuery({
+    queryKey: ['frontdesk-departures', currentOrgId, selectedPropertyId, today],
+    queryFn: async () => {
+      if (!currentOrgId) return [];
 
-    // In-house: status is checked_in or in_house (regardless of date)
-    const inHouseNow = searchedBookings.filter(b =>
-      isActiveStay(normalizeLegacyStatus(b.status))
-    );
+      let query = supabase
+        .from('bookings')
+        .select('*')
+        .eq('org_id', currentOrgId)
+        .gte('check_out', today)
+        .lte('check_out', today)
+        .in('status', ['checked_in', 'in_house', 'confirmed'])
+        .order('check_out', { ascending: true })
+        .order('created_at', { ascending: true })
+        .limit(50);
 
-    return {
-      arrivals: arrivalsToday,
-      departures: departuresToday,
-      inHouse: inHouseNow
-    };
-  }, [bookings, selectedPropertyId, searchQuery, today]);
+      if (selectedPropertyId) {
+        query = query.eq('property_id', selectedPropertyId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentOrgId && !!selectedPropertyId,
+  });
+
+  // In-House Query: active statuses, limit 50, ordered by check_in ASC
+  const { data: inHouse = [], isLoading: inHouseLoading } = useQuery({
+    queryKey: ['frontdesk-inhouse', currentOrgId, selectedPropertyId],
+    queryFn: async () => {
+      if (!currentOrgId) return [];
+
+      let query = supabase
+        .from('bookings')
+        .select('*')
+        .eq('org_id', currentOrgId)
+        .in('status', ['checked_in', 'in_house', 'confirmed'])
+        .order('check_in', { ascending: true })
+        .order('created_at', { ascending: true })
+        .limit(50);
+
+      if (selectedPropertyId) {
+        query = query.eq('property_id', selectedPropertyId);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!currentOrgId && !!selectedPropertyId,
+  });
+
+  const isLoading = arrivalsLoading || departuresLoading || inHouseLoading;
 
   if (propertiesLoading) {
     return (
@@ -136,35 +178,22 @@ const FrontDeskPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar hóspede..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-[240px] pl-9 rounded-xl"
-                />
-              </div>
-
-              {/* Property Selector */}
-              <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
-                <SelectTrigger className="w-[280px] h-12 rounded-xl font-semibold shadow-sm border-2">
-                  <div className="flex items-center gap-2">
-                    <Building2 className="h-4 w-4 text-primary" />
-                    <SelectValue placeholder="Selecione uma propriedade" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {properties.map((prop) => (
-                    <SelectItem key={prop.id} value={prop.id} className="font-medium rounded-lg">
-                      {prop.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {/* Property Selector */}
+            <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+              <SelectTrigger className="w-[280px] h-12 rounded-xl font-semibold shadow-sm border-2">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <SelectValue placeholder="Selecione uma propriedade" />
+                </div>
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {properties.map((prop) => (
+                  <SelectItem key={prop.id} value={prop.id} className="font-medium rounded-lg">
+                    {prop.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -255,7 +284,7 @@ const FrontDeskPage = () => {
             iconColor="text-emerald-600"
             bgColor="bg-emerald-50"
             bookings={arrivals}
-            isLoading={bookingsLoading}
+            isLoading={arrivalsLoading}
             onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
           />
 
@@ -266,7 +295,7 @@ const FrontDeskPage = () => {
             iconColor="text-rose-600"
             bgColor="bg-rose-50"
             bookings={departures}
-            isLoading={bookingsLoading}
+            isLoading={departuresLoading}
             onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
           />
 
@@ -277,7 +306,7 @@ const FrontDeskPage = () => {
             iconColor="text-blue-600"
             bgColor="bg-blue-50"
             bookings={inHouse}
-            isLoading={bookingsLoading}
+            isLoading={inHouseLoading}
             onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
           />
         </div>
