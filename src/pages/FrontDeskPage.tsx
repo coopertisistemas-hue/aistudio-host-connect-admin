@@ -11,7 +11,7 @@ import { useBookings, Booking } from "@/hooks/useBookings";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrg } from "@/hooks/useOrg";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
-import { BookingStatus, getBookingStatusLabel, isActiveStay, isPreArrival } from "@/lib/constants/statuses";
+import { BookingStatus, getBookingStatusLabel, isActiveStay, isPreArrival, normalizeLegacyStatus } from "@/lib/constants/statuses";
 import {
   Loader2,
   Home,
@@ -59,18 +59,18 @@ const FrontDeskPage = () => {
     // Arrivals: check_in today AND status is pre-arrival (reserved or pre_checkin)
     const arrivalsToday = searchedBookings.filter(b => {
       const checkInDate = parseISO(b.check_in);
-      return isSameDay(checkInDate, today) && isPreArrival(b.status as BookingStatus);
+      return isSameDay(checkInDate, today) && isPreArrival(normalizeLegacyStatus(b.status));
     });
 
     // Departures: check_out today AND status is active (checked_in or in_house)
     const departuresToday = searchedBookings.filter(b => {
       const checkOutDate = parseISO(b.check_out);
-      return isSameDay(checkOutDate, today) && isActiveStay(b.status as BookingStatus);
+      return isSameDay(checkOutDate, today) && isActiveStay(normalizeLegacyStatus(b.status));
     });
 
     // In-house: status is checked_in or in_house (regardless of date)
     const inHouseNow = searchedBookings.filter(b =>
-      isActiveStay(b.status as BookingStatus)
+      isActiveStay(normalizeLegacyStatus(b.status))
     );
 
     return {

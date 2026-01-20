@@ -161,3 +161,22 @@ export const getAllBookingStatuses = (): BookingStatus[] => {
 export const getAllRoomStatuses = (): RoomStatus[] => {
     return Object.values(RoomStatus);
 };
+
+/**
+ * Normalize legacy booking statuses to canonical BookingStatus
+ * For pilot safety during transition period while database may contain legacy values
+ */
+export const normalizeLegacyStatus = (status: string): BookingStatus => {
+    // Map legacy statuses to canonical equivalents
+    switch (status) {
+        case 'pending':
+            return BookingStatus.RESERVED; // Pending bookings are reservations
+        case 'confirmed':
+            return BookingStatus.RESERVED; // Confirmed but not checked-in yet
+        case 'completed':
+            return BookingStatus.CHECKED_OUT; // Completed stays are checked out
+        default:
+            // If already canonical or unknown, return as-is
+            return status as BookingStatus;
+    }
+};
