@@ -103,6 +103,13 @@ export const canCancel = (status: BookingStatus): boolean => {
 };
 
 /**
+ * Check if a booking can be marked as no-show
+ */
+export const canMarkNoShow = (status: BookingStatus): boolean => {
+    return isPreArrival(status);
+};
+
+/**
  * Check if a room needs cleaning
  */
 export const needsCleaning = (status: RoomStatus): boolean => {
