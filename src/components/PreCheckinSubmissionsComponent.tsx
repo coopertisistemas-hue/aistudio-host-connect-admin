@@ -6,6 +6,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     AlertDialog,
     AlertDialogAction,
@@ -39,6 +40,10 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
     const { currentOrgId } = useOrg();
     const queryClient = useQueryClient();
     const isViewer = user?.user_metadata?.role === 'viewer';
+
+    // State for batch selection
+    const [selectedSubmissions, setSelectedSubmissions] = useState<Set<string>>(new Set());
+    const [isBatchApplying, setIsBatchApplying] = useState(false);
 
     // Fetch sessions for this booking
     const { data: sessions } = useQuery({
@@ -240,6 +245,72 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
         await rejectSubmission.mutateAsync(submissionId);
     };
 
+    const handleBatchApply = async () => {
+        if (isViewer) {
+            toast({
+                title: 'Acesso negado',
+                description: 'Você não tem permissão para aplicar pré-check-ins.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        const selectedArray = Array.from(selectedSubmissions);
+        if (selectedArray.length === 0) return;
+
+        setIsBatchApplying(true);
+
+        const results = { success: 0, failed: 0 };
+
+        for (const submissionId of selectedArray) {
+            const submission = submissions?.find((s) => s.id === submissionId);
+            if (!submission) continue;
+
+            try {
+                await applySubmission.mutateAsync(submission);
+                results.success++;
+            } catch (error) {
+                results.failed++;
+            }
+        }
+
+        setIsBatchApplying(false);
+        setSelectedSubmissions(new Set());
+
+        // Show summary toast
+        if (results.failed === 0) {
+            toast({
+                title: 'Sucesso',
+                description: `${results.success} pré-check-ins aplicados com sucesso.`,
+            });
+        } else {
+            toast({
+                title: 'Aplicação parcial',
+                description: `${results.success} aplicados com sucesso, ${results.failed} com erro.`,
+                variant: results.success > 0 ? 'default' : 'destructive',
+            });
+        }
+    };
+
+    const toggleSelection = (submissionId: string) => {
+        const newSelection = new Set(selectedSubmissions);
+        if (newSelection.has(submissionId)) {
+            newSelection.delete(submissionId);
+        } else {
+            newSelection.add(submissionId);
+        }
+        setSelectedSubmissions(newSelection);
+    };
+
+    const toggleSelectAll = () => {
+        const pendingSubmissions = submissions?.filter((s) => s.status === 'submitted') || [];
+        if (selectedSubmissions.size === pendingSubmissions.length) {
+            setSelectedSubmissions(new Set());
+        } else {
+            setSelectedSubmissions(new Set(pendingSubmissions.map((s) => s.id)));
+        }
+    };
+
     const getStatusBadge = (status: string) => {
         switch (status) {
             case 'submitted':
@@ -291,7 +362,58 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                     <h3 className="text-lg font-semibold">Pré-Check-ins Recebidos</h3>
                     <Badge variant="secondary">{submissions.length}</Badge>
                 </div>
+
+                {!isViewer && submissions.some((s) => s.status === 'submitted') && (
+                    <div className="flex items-center gap-2">
+                        {selectedSubmissions.size > 0 && (
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        size="sm"
+                                        disabled={isBatchApplying || selectedSubmissions.size === 0}
+                                    >
+                                        <CheckCircle className="h-4 w-4 mr-2" />
+                                        Aplicar selecionados ({selectedSubmissions.size})
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Aplicar pré-check-ins selecionados?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            {selectedSubmissions.size} pré-check-ins serão aplicados ao check-in.
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            onClick={handleBatchApply}
+                                            disabled={isBatchApplying}
+                                        >
+                                            Confirmar
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        )}
+                    </div>
+                )}
             </div>
+
+            {!isViewer && submissions.some((s) => s.status === 'submitted') && (
+                <div className="flex items-center gap-2 mb-3 p-3 bg-muted/30 rounded-lg">
+                    <Checkbox
+                        id="select-all"
+                        checked={
+                            selectedSubmissions.size > 0 &&
+                            selectedSubmissions.size === submissions.filter((s) => s.status === 'submitted').length
+                        }
+                        onCheckedChange={toggleSelectAll}
+                    />
+                    <label htmlFor="select-all" className="text-sm font-medium cursor-pointer">
+                        Selecionar todos pendentes
+                    </label>
+                </div>
+            )}
 
             <div className="space-y-3">
                 {submissions.map((submission) => {
@@ -303,6 +425,15 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                             key={submission.id}
                             className="flex items-start justify-between p-4 border rounded-lg"
                         >
+                            {!isViewer && isPending && (
+                                <div className="flex items-start pt-1 mr-3">
+                                    <Checkbox
+                                        checked={selectedSubmissions.has(submission.id)}
+                                        onCheckedChange={() => toggleSelection(submission.id)}
+                                    />
+                                </div>
+                            )}
+
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
                                     {getStatusBadge(submission.status)}
