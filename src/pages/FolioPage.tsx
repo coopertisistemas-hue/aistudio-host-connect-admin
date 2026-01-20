@@ -25,6 +25,7 @@ import { useOrg } from "@/hooks/useOrg"; // Multi-tenant context
 import { useAuth } from "@/hooks/useAuth";
 import BookingParticipants from "@/components/BookingParticipants";
 import PreCheckinSessions from "@/components/PreCheckinSessions";
+import PreCheckinSubmissionsComponent from "@/components/PreCheckinSubmissionsComponent";
 
 import {
     Dialog,
@@ -236,6 +237,9 @@ const FolioPage = () => {
 
             {/* Pre-Check-in Sessions */}
             <PreCheckinSessions bookingId={id!} />
+
+            {/* Pre-Check-in Submissions */}
+            <PreCheckinSubmissionsComponent bookingId={id!} />
 
             {/* Extrato Detalhado */}
             <Card className="border-none shadow-sm overflow-hidden">
