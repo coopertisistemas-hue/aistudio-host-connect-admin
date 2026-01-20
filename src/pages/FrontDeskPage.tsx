@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useProperties } from "@/hooks/useProperties";
@@ -20,6 +21,7 @@ import {
   LogOut,
   Building2,
   Monitor,
+  Search,
   FileText,
   Calendar,
   User,
@@ -122,6 +124,30 @@ const FrontDeskPage = () => {
 
   const isLoading = arrivalsLoading || departuresLoading || inHouseLoading;
 
+  // Client-side search filtering over DB-limited datasets
+  const { filteredArrivals, filteredDepartures, filteredInHouse } = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase();
+
+    if (!search) {
+      return {
+        filteredArrivals: arrivals,
+        filteredDepartures: departures,
+        filteredInHouse: inHouse
+      };
+    }
+
+    const filterBooking = (b: Booking) =>
+      b.guest_name?.toLowerCase().includes(search) ||
+      b.guest_email?.toLowerCase().includes(search) ||
+      (b.guest_document && b.guest_document.includes(searchQuery.trim()));
+
+    return {
+      filteredArrivals: arrivals.filter(filterBooking),
+      filteredDepartures: departures.filter(filterBooking),
+      filteredInHouse: inHouse.filter(filterBooking)
+    };
+  }, [arrivals, departures, inHouse, searchQuery]);
+
   if (propertiesLoading) {
     return (
       <DashboardLayout>
@@ -178,139 +204,151 @@ const FrontDeskPage = () => {
               </div>
             </div>
 
-            {/* Property Selector */}
-            <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
-              <SelectTrigger className="w-[280px] h-12 rounded-xl font-semibold shadow-sm border-2">
-                <div className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4 text-primary" />
-                  <SelectValue placeholder="Selecione uma propriedade" />
+            <div className="flex items-center gap-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar hóspede..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-[240px] pl-9 rounded-xl"
+                />
+              </div>
+
+              {/* Property Selector */}
+              <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
+                <SelectTrigger className="w-[280px] h-12 rounded-xl font-semibold shadow-sm border-2">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="h-4 w-4 text-primary" />
+                    <SelectValue placeholder="Selecione uma propriedade" />
+                  </div>
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {properties.map((prop) => (
+                    <SelectItem key={prop.id} value={prop.id} className="font-medium rounded-lg">
+                      {prop.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {/* KPIs */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Arrivals Today */}
+            <Card className="border-none bg-gradient-to-br from-emerald-50 via-emerald-50/80 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 overflow-hidden shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                        Chegadas Hoje
+                      </p>
+                    </div>
+                    <p className="text-4xl font-black text-emerald-700 dark:text-emerald-300 tracking-tight">
+                      {filteredArrivals.length}
+                    </p>
+                    <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 font-medium">
+                      Reservas previstas
+                    </p>
+                  </div>
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                    <LogIn className="h-8 w-8 text-white drop-shadow-sm" />
+                  </div>
                 </div>
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {properties.map((prop) => (
-                  <SelectItem key={prop.id} value={prop.id} className="font-medium rounded-lg">
-                    {prop.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              </CardContent>
+            </Card>
+
+            {/* Departures Today */}
+            <Card className="border-none bg-gradient-to-br from-rose-50 via-rose-50/80 to-rose-100 dark:from-rose-950/50 dark:to-rose-900/50 overflow-hidden shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                      <p className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+                        Saídas Hoje
+                      </p>
+                    </div>
+                    <p className="text-4xl font-black text-rose-700 dark:text-rose-300 tracking-tight">
+                      {filteredDepartures.length}
+                    </p>
+                    <p className="text-xs text-rose-600/80 dark:text-rose-400/80 font-medium">
+                      Partidas previstas
+                    </p>
+                  </div>
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-lg shadow-rose-500/30">
+                    <LogOut className="h-8 w-8 text-white drop-shadow-sm" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* In-House */}
+            <Card className="border-none bg-gradient-to-br from-blue-50 via-blue-50/80 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 overflow-hidden shadow-md">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                      <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                        Em Casa
+                      </p>
+                    </div>
+                    <p className="text-4xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
+                      {filteredInHouse.length}
+                    </p>
+                    <p className="text-xs text-blue-600/80 dark:text-blue-400/80 font-medium">
+                      Hóspedes hospedados
+                    </p>
+                  </div>
+                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                    <BedDouble className="h-8 w-8 text-white drop-shadow-sm" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sections: Arrivals, Departures, In-House */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Arrivals Section */}
+            <BookingSection
+              title="Chegadas (Hoje)"
+              icon={LogIn}
+              iconColor="text-emerald-600"
+              bgColor="bg-emerald-50"
+              bookings={filteredArrivals}
+              isLoading={arrivalsLoading}
+              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+            />
+
+            {/* Departures Section */}
+            <BookingSection
+              title="Saídas (Hoje)"
+              icon={LogOut}
+              iconColor="text-rose-600"
+              bgColor="bg-rose-50"
+              bookings={filteredDepartures}
+              isLoading={departuresLoading}
+              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+            />
+
+            {/* In-House Section */}
+            <BookingSection
+              title="Em Casa"
+              icon={BedDouble}
+              iconColor="text-blue-600"
+              bgColor="bg-blue-50"
+              bookings={filteredInHouse}
+              isLoading={inHouseLoading}
+              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+            />
           </div>
         </div>
-
-        {/* KPIs */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Arrivals Today */}
-          <Card className="border-none bg-gradient-to-br from-emerald-50 via-emerald-50/80 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 overflow-hidden shadow-md">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                    <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                      Chegadas Hoje
-                    </p>
-                  </div>
-                  <p className="text-4xl font-black text-emerald-700 dark:text-emerald-300 tracking-tight">
-                    {arrivals.length}
-                  </p>
-                  <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 font-medium">
-                    Reservas previstas
-                  </p>
-                </div>
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                  <LogIn className="h-8 w-8 text-white drop-shadow-sm" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Departures Today */}
-          <Card className="border-none bg-gradient-to-br from-rose-50 via-rose-50/80 to-rose-100 dark:from-rose-950/50 dark:to-rose-900/50 overflow-hidden shadow-md">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                    <p className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-                      Saídas Hoje
-                    </p>
-                  </div>
-                  <p className="text-4xl font-black text-rose-700 dark:text-rose-300 tracking-tight">
-                    {departures.length}
-                  </p>
-                  <p className="text-xs text-rose-600/80 dark:text-rose-400/80 font-medium">
-                    Partidas previstas
-                  </p>
-                </div>
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-lg shadow-rose-500/30">
-                  <LogOut className="h-8 w-8 text-white drop-shadow-sm" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* In-House */}
-          <Card className="border-none bg-gradient-to-br from-blue-50 via-blue-50/80 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 overflow-hidden shadow-md">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                    <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                      Em Casa
-                    </p>
-                  </div>
-                  <p className="text-4xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
-                    {inHouse.length}
-                  </p>
-                  <p className="text-xs text-blue-600/80 dark:text-blue-400/80 font-medium">
-                    Hóspedes hospedados
-                  </p>
-                </div>
-                <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                  <BedDouble className="h-8 w-8 text-white drop-shadow-sm" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Sections: Arrivals, Departures, In-House */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Arrivals Section */}
-          <BookingSection
-            title="Chegadas (Hoje)"
-            icon={LogIn}
-            iconColor="text-emerald-600"
-            bgColor="bg-emerald-50"
-            bookings={arrivals}
-            isLoading={arrivalsLoading}
-            onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-          />
-
-          {/* Departures Section */}
-          <BookingSection
-            title="Saídas (Hoje)"
-            icon={LogOut}
-            iconColor="text-rose-600"
-            bgColor="bg-rose-50"
-            bookings={departures}
-            isLoading={departuresLoading}
-            onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-          />
-
-          {/* In-House Section */}
-          <BookingSection
-            title="Em Casa"
-            icon={BedDouble}
-            iconColor="text-blue-600"
-            bgColor="bg-blue-50"
-            bookings={inHouse}
-            isLoading={inHouseLoading}
-            onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-          />
-        </div>
-      </div>
     </DashboardLayout>
   );
 };
