@@ -432,6 +432,8 @@ interface BookingCardProps {
 }
 
 const BookingCard = ({ booking, onOpenFolio }: BookingCardProps) => {
+  const navigate = useNavigate();
+
   return (
     <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-md">
       <CardContent className="p-4">
@@ -457,16 +459,36 @@ const BookingCard = ({ booking, onOpenFolio }: BookingCardProps) => {
             </span>
           </div>
 
-          {/* Action Button */}
-          <Button
-            onClick={() => onOpenFolio(booking.id)}
-            size="sm"
-            variant="outline"
-            className="w-full text-xs"
-          >
-            <FileText className="h-3 w-3 mr-1" />
-            Abrir Folio
-          </Button>
+          {/* Quick Actions */}
+          <div className="grid grid-cols-3 gap-1">
+            <Button
+              onClick={() => navigate(`/operation/folio/${booking.id}`)}
+              size="sm"
+              variant="outline"
+              className="text-xs h-8 px-2"
+              title="Abrir Folio"
+            >
+              <FileText className="h-3 w-3" />
+            </Button>
+            <Button
+              onClick={() => navigate(`/operation/folio/${booking.id}#participants`)}
+              size="sm"
+              variant="outline"
+              className="text-xs h-8 px-2"
+              title="Ver Hóspedes"
+            >
+              <User className="h-3 w-3" />
+            </Button>
+            <Button
+              onClick={() => navigate(`/operation/folio/${booking.id}#precheckin`)}
+              size="sm"
+              variant="outline"
+              className="text-xs h-8 px-2"
+              title="Pré-check-in"
+            >
+              <Calendar className="h-3 w-3" />
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

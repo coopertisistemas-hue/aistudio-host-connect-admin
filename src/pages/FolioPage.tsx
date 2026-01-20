@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EntityDetailTemplate } from "@/components/EntityDetailTemplate";
@@ -41,6 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const FolioPage = () => {
     const { id } = useParams();
+    const location = useLocation();
     const { currentOrgId, isLoading: isOrgLoading } = useOrg(); // Get current org context
     const { userRole } = useAuth();
     const isViewer = userRole === 'viewer';
@@ -108,6 +109,20 @@ const FolioPage = () => {
         setIsPaymentDialogOpen(false);
         setNewPay({ amount: "", method: "cash" });
     };
+
+    // Hash-based scroll navigation for quick actions
+    useEffect(() => {
+        if (location.hash) {
+            const targetId = location.hash.substring(1); // Remove '#'
+            const element = document.getElementById(targetId);
+            if (element) {
+                // Delay to ensure DOM is fully rendered
+                setTimeout(() => {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 100);
+            }
+        }
+    }, [location.hash, bookingLoading, folioLoading]);
 
     // Loading state
     if (isOrgLoading || bookingLoading || folioLoading) {
@@ -233,10 +248,14 @@ const FolioPage = () => {
             </div>
 
             {/* Booking Participants */}
-            <BookingParticipants bookingId={id!} />
+            <div id="participants">
+                <BookingParticipants bookingId={id!} />
+            </div>
 
             {/* Pre-Check-in Sessions */}
-            <PreCheckinSessions bookingId={id!} />
+            <div id="precheckin">
+                <PreCheckinSessions bookingId={id!} />
+            </div>
 
             {/* Pre-Check-in Submissions */}
             <PreCheckinSubmissionsComponent bookingId={id!} />
