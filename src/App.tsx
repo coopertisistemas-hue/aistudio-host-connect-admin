@@ -78,6 +78,7 @@ import GoogleMarketingDetails from "./pages/GoogleMarketingDetails";
 import OTAMarketingDetails from "./pages/OTAMarketingDetails";
 import SocialInbox from "./pages/SocialInbox";
 import MobileHome from "./pages/mobile/MobileHome";
+import MobileHousekeepingPage from "./pages/mobile/MobileHousekeepingPage";
 import MobileProfile from "./pages/mobile/MobileProfile";
 import HousekeepingList from "./pages/mobile/HousekeepingList";
 import HousekeepingDetail from "./pages/mobile/HousekeepingDetail";
@@ -138,7 +139,7 @@ const App = () => (
                 {/* Mobile Routes protected by Guard & Frame & Session Lock - NOW REMOVED LOCK per instructions */}
                 <Route path="/m" element={<ProtectedRoute><MobileRouteGuard><MobileHome /></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/profile" element={<ProtectedRoute><MobileRouteGuard><MobileProfile /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/housekeeping" element={<ProtectedRoute><MobileRouteGuard><HousekeepingList /></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m/housekeeping" element={<ProtectedRoute><MobileRouteGuard><MobileHousekeepingPage /></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/housekeeping/task/:id" element={<ProtectedRoute><MobileRouteGuard><HousekeepingDetail /></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/maintenance" element={<ProtectedRoute><MobileRouteGuard><MaintenanceList /></MobileRouteGuard></ProtectedRoute>} />
                 <Route path="/m/maintenance/:id" element={<ProtectedRoute><MobileRouteGuard><MaintenanceDetail /></MobileRouteGuard></ProtectedRoute>} />
