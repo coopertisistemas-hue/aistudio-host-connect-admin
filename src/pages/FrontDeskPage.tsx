@@ -13,7 +13,9 @@ import { useAuth } from "@/hooks/useAuth";
 import { useOrg } from "@/hooks/useOrg";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
 import { Booking } from "@/hooks/useBookings";
-import { getBookingStatusLabel } from "@/lib/constants/statuses";
+import { BookingStatus, getBookingStatusLabel, canCheckIn, canCheckOut, canCancel, canMarkNoShow, normalizeLegacyStatus } from "@/lib/constants/statuses";
+import { useUpdateBookingStatus } from "@/hooks/useUpdateBookingStatus";
+import { useToast } from "@/hooks/use-toast";
 import {
   Loader2,
   Home,
@@ -25,7 +27,10 @@ import {
   FileText,
   Calendar,
   User,
-  BedDouble
+  BedDouble,
+  Check,
+  X,
+  Ban
 } from "lucide-react";
 import { format, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -433,6 +438,62 @@ interface BookingCardProps {
 
 const BookingCard = ({ booking, onOpenFolio }: BookingCardProps) => {
   const navigate = useNavigate();
+  const { userRole } = useAuth();
+  const { toast } = useToast();
+  const updateStatus = useUpdateBookingStatus();
+  const isViewer = userRole === 'viewer';
+
+  // Normalize legacy status for guard checks
+  const normalizedStatus = normalizeLegacyStatus(booking.status);
+
+  // Lifecycle action handlers with guard clauses
+  const handleCheckIn = () => {
+    if (!canCheckIn(normalizedStatus)) {
+      toast({
+        title: 'Ação indisponível',
+        description: 'Ação indisponível para o status atual.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CHECKED_IN });
+  };
+
+  const handleCheckOut = () => {
+    if (!canCheckOut(normalizedStatus)) {
+      toast({
+        title: 'Ação indisponível',
+        description: 'Ação indisponível para o status atual.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CHECKED_OUT });
+  };
+
+  const handleCancel = () => {
+    if (!canCancel(normalizedStatus)) {
+      toast({
+        title: 'Ação indisponível',
+        description: 'Ação indisponível para o status atual.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CANCELLED });
+  };
+
+  const handleNoShow = () => {
+    if (!canMarkNoShow(normalizedStatus)) {
+      toast({
+        title: 'Ação indisponível',
+        description: 'Ação indisponível para o status atual.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.NO_SHOW });
+  };
 
   return (
     <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-md">
@@ -488,6 +549,65 @@ const BookingCard = ({ booking, onOpenFolio }: BookingCardProps) => {
             >
               <Calendar className="h-3 w-3" />
             </Button>
+          </div>
+
+          {/* Lifecycle Actions */}
+          <div className="grid grid-cols-2 gap-1 pt-2 border-t">
+            {/* Check-in */}
+            {canCheckIn(normalizedStatus) && (
+              <Button
+                onClick={handleCheckIn}
+                disabled={isViewer || updateStatus.isPending}
+                size="sm"
+                variant="default"
+                className="text-xs h-8"
+              >
+                <Check className="h-3 w-3 mr-1" />
+                Check-in
+              </Button>
+            )}
+
+            {/* Check-out */}
+            {canCheckOut(normalizedStatus) && (
+              <Button
+                onClick={handleCheckOut}
+                disabled={isViewer || updateStatus.isPending}
+                size="sm"
+                variant="default"
+                className="text-xs h-8"
+              >
+                <LogOut className="h-3 w-3 mr-1" />
+                Check-out
+              </Button>
+            )}
+
+            {/* Cancel */}
+            {canCancel(normalizedStatus) && (
+              <Button
+                onClick={handleCancel}
+                disabled={isViewer || updateStatus.isPending}
+                size="sm"
+                variant="destructive"
+                className="text-xs h-8"
+              >
+                <X className="h-3 w-3 mr-1" />
+                Cancelar
+              </Button>
+            )}
+
+            {/* No-show */}
+            {canMarkNoShow(normalizedStatus) && (
+              <Button
+                onClick={handleNoShow}
+                disabled={isViewer || updateStatus.isPending}
+                size="sm"
+                variant="outline"
+                className="text-xs h-8"
+              >
+                <Ban className="h-3 w-3 mr-1" />
+                No-show
+              </Button>
+            )}
           </div>
         </div>
       </CardContent>
