@@ -30,7 +30,8 @@ import {
   BedDouble,
   Check,
   X,
-  Ban
+  Ban,
+  AlertCircle
 } from "lucide-react";
 import { format, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -128,6 +129,86 @@ const FrontDeskPage = () => {
   });
 
   const isLoading = arrivalsLoading || departuresLoading || inHouseLoading;
+
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Batched queries for operational alerts (pilot-safe, fail closed)
+  const allDisplayedBookingIds = useMemo(() => {
+    return [...arrivals, ...departures, ...inHouse].map(b => b.id);
+  }, [arrivals, departures, inHouse]);
+
+  const { data: precheckinSessions = [] } = useQuery({
+    queryKey: ['precheckin-sessions-batch', currentOrgId, selectedPropertyId, today, allDisplayedBookingIds.join(',')],
+    queryFn: async () => {
+      if (!currentOrgId || allDisplayedBookingIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('precheckin_sessions')
+        .select('booking_id, status')
+        .eq('org_id', currentOrgId)
+        .in('booking_id', allDisplayedBookingIds);
+
+      if (error) {
+        console.warn('[FrontDesk] Precheckin sessions query failed:', error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!currentOrgId && allDisplayedBookingIds.length > 0,
+  });
+
+  const { data: bookingGuests = [] } = useQuery({
+    queryKey: ['booking-guests-batch', currentOrgId, selectedPropertyId, today, allDisplayedBookingIds.join(',')],
+    queryFn: async () => {
+      if (!currentOrgId || allDisplayedBookingIds.length === 0) return [];
+
+      const { data, error } = await supabase
+        .from('booking_guests')
+        .select('booking_id, is_primary')
+        .eq('org_id', currentOrgId)
+        .in('booking_id', allDisplayedBookingIds);
+
+      if (error) {
+        console.warn('[FrontDesk] Booking guests query failed:', error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!currentOrgId && allDisplayedBookingIds.length > 0,
+  });
+
+  // Compute alert states (client-side)
+  const alertStates = useMemo(() => {
+    const states: Record<string, { precheckinPending: boolean; noPrimaryGuest: boolean; arrivalNoCheckin: boolean }> = {};
+
+    allDisplayedBookingIds.forEach(bookingId => {
+      const booking = [...arrivals, ...departures, ...inHouse].find(b => b.id === bookingId);
+      if (!booking) return;
+
+      const normalizedStatus = normalizeLegacyStatus(booking.status);
+
+      // Alert: Pré-check-in pendente
+      const sessions = precheckinSessions.filter(s => s.booking_id === bookingId);
+      const hasPendingPrecheckin = sessions.some(s => s.status === 'pending' || s.status === 'incomplete');
+
+      // Alert: Sem hóspede principal
+      const guests = bookingGuests.filter(g => g.booking_id === bookingId);
+      const hasPrimaryGuest = guests.some(g => g.is_primary === true);
+
+      // Alert: Chegada hoje sem check-in (client-side)
+      const isArrivalToday = booking.check_in === today;
+      const isPreArrival = normalizedStatus === 'reserved' || normalizedStatus === 'pre_checkin';
+      const arrivalNoCheckin = isArrivalToday && isPreArrival;
+
+      states[bookingId] = {
+        precheckinPending: hasPendingPrecheckin,
+        noPrimaryGuest: !hasPrimaryGuest && guests.length === 0,
+        arrivalNoCheckin,
+      };
+    });
+
+    return states;
+  }, [allDisplayedBookingIds, arrivals, departures, inHouse, precheckinSessions, bookingGuests, today]);
 
   // Client-side search filtering over DB-limited datasets
   const { filteredArrivals, filteredDepartures, filteredInHouse } = useMemo(() => {
@@ -329,6 +410,7 @@ const FrontDeskPage = () => {
               bookings={filteredArrivals}
               isLoading={arrivalsLoading}
               onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+              alertStates={alertStates}
             />
 
             {/* Departures Section */}
@@ -340,6 +422,7 @@ const FrontDeskPage = () => {
               bookings={filteredDepartures}
               isLoading={departuresLoading}
               onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+              alertStates={alertStates}
             />
 
             {/* In-House Section */}
@@ -351,6 +434,7 @@ const FrontDeskPage = () => {
               bookings={filteredInHouse}
               isLoading={inHouseLoading}
               onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+              alertStates={alertStates}
             />
           </div>
         </div>
@@ -367,9 +451,10 @@ interface BookingSectionProps {
   bookings: Booking[];
   isLoading: boolean;
   onOpenFolio: (bookingId: string) => void;
+  alertStates: Record<string, { precheckinPending: boolean; noPrimaryGuest: boolean; arrivalNoCheckin: boolean }>;
 }
 
-const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoading, onOpenFolio }: BookingSectionProps) => {
+const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoading, onOpenFolio, alertStates }: BookingSectionProps) => {
   if (isLoading) {
     return (
       <Card className="border-none shadow-lg rounded-2xl">
@@ -421,6 +506,7 @@ const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoa
                 key={booking.id}
                 booking={booking}
                 onOpenFolio={onOpenFolio}
+                alerts={alertStates[booking.id]}
               />
             ))}
           </div>
@@ -434,9 +520,10 @@ const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoa
 interface BookingCardProps {
   booking: Booking;
   onOpenFolio: (bookingId: string) => void;
+  alerts?: { precheckinPending: boolean; noPrimaryGuest: boolean; arrivalNoCheckin: boolean };
 }
 
-const BookingCard = ({ booking, onOpenFolio }: BookingCardProps) => {
+const BookingCard = ({ booking, onOpenFolio, alerts }: BookingCardProps) => {
   const navigate = useNavigate();
   const { userRole } = useAuth();
   const { toast } = useToast();
@@ -519,6 +606,30 @@ const BookingCard = ({ booking, onOpenFolio }: BookingCardProps) => {
               {format(parseISO(booking.check_in), 'dd/MM', { locale: ptBR })} - {format(parseISO(booking.check_out), 'dd/MM', { locale: ptBR })}
             </span>
           </div>
+
+          {/* Operational Alerts */}
+          {alerts && (alerts.precheckinPending || alerts.noPrimaryGuest || alerts.arrivalNoCheckin) && (
+            <div className="flex flex-wrap gap-1">
+              {alerts.precheckinPending && (
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Pré-check-in pendente
+                </Badge>
+              )}
+              {alerts.noPrimaryGuest && (
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Sem hóspede principal
+                </Badge>
+              )}
+              {alerts.arrivalNoCheckin && (
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-rose-50 text-rose-700 border-rose-200">
+                  <AlertCircle className="h-3 w-3 mr-1" />
+                  Chegada sem check-in
+                </Badge>
+              )}
+            </div>
+          )}
 
           {/* Quick Actions */}
           <div className="grid grid-cols-3 gap-1">
