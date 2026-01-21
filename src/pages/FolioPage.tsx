@@ -16,7 +16,11 @@ import {
     History,
     AlertCircle,
     CheckCircle2,
-    ShieldAlert
+    ShieldAlert,
+    Check,
+    X,
+    Ban,
+    LogOut
 } from "lucide-react";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
 import { format } from "date-fns";
@@ -26,6 +30,8 @@ import { useAuth } from "@/hooks/useAuth";
 import BookingParticipants from "@/components/BookingParticipants";
 import PreCheckinSessions from "@/components/PreCheckinSessions";
 import PreCheckinSubmissionsComponent from "@/components/PreCheckinSubmissionsComponent";
+import { BookingStatus, canCheckIn, canCheckOut, canCancel, canMarkNoShow, normalizeLegacyStatus, getBookingStatusLabel } from "@/lib/constants/statuses";
+import { useUpdateBookingStatus } from "@/hooks/useUpdateBookingStatus";
 
 import {
     Dialog,
@@ -45,6 +51,8 @@ const FolioPage = () => {
     const { currentOrgId, isLoading: isOrgLoading } = useOrg(); // Get current org context
     const { userRole } = useAuth();
     const isViewer = userRole === 'viewer';
+    const updateStatus = useUpdateBookingStatus();
+    const { toast } = useToast();
 
     const { data: booking, isLoading: bookingLoading, error: bookingError } = useQuery({
         queryKey: ['booking-folio', currentOrgId, id], // Include org_id in cache key
@@ -231,6 +239,52 @@ const FolioPage = () => {
                         >
                             <CheckCircle2 className="h-5 w-5" />
                             <span className="text-[10px] font-bold truncate">Fechar Conta</span>
+                        </Button>
+                    )}
+
+                    {/* Lifecycle Actions */}
+                    {normalizedStatus && canCheckIn(normalizedStatus) && (
+                        <Button
+                            variant="default"
+                            className="h-auto py-4 flex flex-col gap-1"
+                            onClick={handleCheckIn}
+                            disabled={isViewer || updateStatus.isPending}
+                        >
+                            <Check className="h-5 w-5" />
+                            <span className="text-[10px] font-bold">Check-in</span>
+                        </Button>
+                    )}
+                    {normalizedStatus && canCheckOut(normalizedStatus) && (
+                        <Button
+                            variant="default"
+                            className="h-auto py-4 flex flex-col gap-1"
+                            onClick={handleCheckOut}
+                            disabled={isViewer || updateStatus.isPending}
+                        >
+                            <LogOut className="h-5 w-5" />
+                            <span className="text-[10px] font-bold">Check-out</span>
+                        </Button>
+                    )}
+                    {normalizedStatus && canCancel(normalizedStatus) && (
+                        <Button
+                            variant="destructive"
+                            className="h-auto py-4 flex flex-col gap-1"
+                            onClick={handleCancel}
+                            disabled={isViewer || updateStatus.isPending}
+                        >
+                            <X className="h-5 w-5" />
+                            <span className="text-[10px] font-bold">Cancelar</span>
+                        </Button>
+                    )}
+                    {normalizedStatus && canMarkNoShow(normalizedStatus) && (
+                        <Button
+                            variant="outline"
+                            className="h-auto py-4 flex flex-col gap-1"
+                            onClick={handleNoShow}
+                            disabled={isViewer || updateStatus.isPending}
+                        >
+                            <Ban className="h-5 w-5" />
+                            <span className="text-[10px] font-bold">No-show</span>
                         </Button>
                     )}
                 </>
