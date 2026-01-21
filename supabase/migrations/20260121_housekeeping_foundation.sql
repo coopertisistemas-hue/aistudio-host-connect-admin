@@ -130,7 +130,10 @@ ON public.rooms(org_id, property_id, updated_at DESC);
 CREATE INDEX IF NOT EXISTS idx_rooms_property_status 
 ON public.rooms(property_id, status);
 
-RAISE NOTICE 'Created operational indexes for housekeeping queries';
+DO $$
+BEGIN
+  RAISE NOTICE 'Created operational indexes for housekeeping queries';
+END$$;
 
 -- ====================================
 -- PHASE 5: UPDATE RLS POLICIES
