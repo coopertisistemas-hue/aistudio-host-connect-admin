@@ -176,7 +176,10 @@ USING (
   org_id = (SELECT current_setting('app.current_org_id', TRUE)::UUID)
 );
 
-RAISE NOTICE 'Updated RLS policies to use org_id isolation';
+DO $$
+BEGIN
+  RAISE NOTICE 'Updated RLS policies to use org_id isolation';
+END$$;
 
 -- ====================================
 -- PHASE 6: VERIFICATION
