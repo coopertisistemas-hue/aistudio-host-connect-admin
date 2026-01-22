@@ -6,6 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { EmptyState } from "@/components/onboarding/EmptyState";
+import { useNavigate } from "react-router-dom";
+import { useProperties } from "@/hooks/useProperties";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -43,6 +46,8 @@ import DataTableSkeleton from "@/components/DataTableSkeleton";
 const Bookings = () => {
   const { userRole } = useAuth();
   const isViewer = userRole === 'viewer';
+  const navigate = useNavigate();
+  const { properties } = useProperties();
   const { bookings, isLoading, createBooking, updateBooking, deleteBooking } = useBookings();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -167,16 +172,42 @@ const Bookings = () => {
         {/* Bookings Content */}
         {isLoading ? (
           <DataTableSkeleton />
+        ) : properties.length === 0 ? (
+          <Card className="border-dashed">
+            <CardContent>
+              <EmptyState
+                icon={Building2}
+                title="Configuração inicial pendente"
+                description="Para começar, crie sua primeira propriedade e seus quartos."
+                primaryAction={!isViewer ? {
+                  label: "Ir para configuração inicial",
+                  onClick: () => navigate("/setup")
+                } : undefined}
+              />
+            </CardContent>
+          </Card>
+        ) : bookings.length === 0 && !searchQuery && statusFilter === "all" ? (
+          <Card className="border-dashed">
+            <CardContent>
+              <EmptyState
+                icon={CalendarIcon}
+                title="Nenhuma reserva encontrada"
+                description="Você pode criar uma reserva em poucos segundos."
+                primaryAction={!isViewer ? {
+                  label: "Criar reserva rápida",
+                  onClick: () => handleCreateBooking()
+                } : undefined}
+              />
+            </CardContent>
+          </Card>
         ) : filteredBookings.length === 0 && (searchQuery || statusFilter !== "all") ? (
           <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                Nenhuma reserva encontrada
-              </h3>
-              <p className="text-muted-foreground text-center max-w-md mb-4">
-                Tente ajustar seus filtros de busca
-              </p>
+            <CardContent>
+              <EmptyState
+                icon={Search}
+                title="Nenhum resultado"
+                description="Tente mudar o filtro."
+              />
             </CardContent>
           </Card>
         ) : (

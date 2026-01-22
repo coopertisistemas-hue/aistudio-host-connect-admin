@@ -16,6 +16,9 @@ import { OnboardingBanner } from '@/components/onboarding/OnboardingBanner';
 import { Sparkles, Loader2, AlertTriangle, Droplet, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { EmptyState } from '@/components/onboarding/EmptyState';
+import { Building2, Home, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const HousekeepingPage = () => {
     const { selectedPropertyId, setSelectedPropertyId } = useSelectedProperty();
@@ -23,6 +26,7 @@ const HousekeepingPage = () => {
     const { currentOrgId } = useOrg();
     const { userRole } = useAuth();
     const isViewer = userRole === 'viewer';
+    const navigate = useNavigate();
 
     const [activeTab, setActiveTab] = useState<RoomStatus | 'all'>('all');
 
@@ -87,82 +91,125 @@ const HousekeepingPage = () => {
                     </Select>
                 </div>
 
-                {/* KPI Indicators */}
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                    <KPICard
-                        label="Sujos"
-                        count={kpis.dirty}
-                        icon={<Droplet className="h-6 w-6" />}
-                        colorClass="from-rose-500/20 to-rose-600/10 border-rose-500/30 text-rose-600"
-                    />
-                    <KPICard
-                        label="Em limpeza"
-                        count={kpis.cleaning}
-                        icon={<Clock className="h-6 w-6" />}
-                        colorClass="from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-600"
-                    />
-                    <KPICard
-                        label="Prontos"
-                        count={kpis.clean}
-                        icon={<CheckCircle2 className="h-6 w-6" />}
-                        colorClass="from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-600"
-                    />
-                    <KPICard
-                        label="Inspecionados"
-                        count={kpis.inspected}
-                        icon={<Sparkles className="h-6 w-6" />}
-                        colorClass="from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-600"
-                    />
-                    <KPICard
-                        label="Fora de serviço"
-                        count={kpis.out_of_order}
-                        icon={<XCircle className="h-6 w-6" />}
-                        colorClass="from-gray-500/20 to-gray-600/10 border-gray-500/30 text-gray-600"
-                    />
-                </div>
+                {/* Main Content / Empty States */}
+                {properties.length === 0 ? (
+                    <Card className="border-dashed">
+                        <CardContent>
+                            <EmptyState
+                                icon={Building2}
+                                title="Configuração inicial pendente"
+                                description="Para começar, crie sua primeira propriedade e seus quartos."
+                                primaryAction={!isViewer ? {
+                                    label: "Ir para configuração inicial",
+                                    onClick: () => navigate("/setup")
+                                } : undefined}
+                            />
+                        </CardContent>
+                    </Card>
+                ) : !selectedPropertyId ? (
+                    <Card className="border-dashed">
+                        <CardContent className="flex flex-col items-center justify-center py-12">
+                            <Building2 className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+                            <h3 className="text-lg font-semibold mb-2">Selecione uma propriedade</h3>
+                            <p className="text-muted-foreground text-center max-w-sm">
+                                Escolha uma propriedade acima para visualizar o status da governança.
+                            </p>
+                        </CardContent>
+                    </Card>
+                ) : (
+                    <>
+                        {/* KPI Indicators */}
+                        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <KPICard
+                                label="Sujos"
+                                count={kpis.dirty}
+                                icon={<Droplet className="h-6 w-6" />}
+                                colorClass="from-rose-500/20 to-rose-600/10 border-rose-500/30 text-rose-600"
+                            />
+                            <KPICard
+                                label="Em limpeza"
+                                count={kpis.cleaning}
+                                icon={<Clock className="h-6 w-6" />}
+                                colorClass="from-blue-500/20 to-blue-600/10 border-blue-500/30 text-blue-600"
+                            />
+                            <KPICard
+                                label="Prontos"
+                                count={kpis.clean}
+                                icon={<CheckCircle2 className="h-6 w-6" />}
+                                colorClass="from-emerald-500/20 to-emerald-600/10 border-emerald-500/30 text-emerald-600"
+                            />
+                            <KPICard
+                                label="Inspecionados"
+                                count={kpis.inspected}
+                                icon={<Sparkles className="h-6 w-6" />}
+                                colorClass="from-purple-500/20 to-purple-600/10 border-purple-500/30 text-purple-600"
+                            />
+                            <KPICard
+                                label="Fora de serviço"
+                                count={kpis.out_of_order}
+                                icon={<XCircle className="h-6 w-6" />}
+                                colorClass="from-gray-500/20 to-gray-600/10 border-gray-500/30 text-gray-600"
+                            />
+                        </div>
 
-                {/* Status Tabs/Filters */}
-                <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as RoomStatus | 'all')}>
-                    <TabsList className="w-full justify-start">
-                        <TabsTrigger value="all">Todos ({rooms.length})</TabsTrigger>
-                        <TabsTrigger value="dirty">Sujos ({kpis.dirty})</TabsTrigger>
-                        <TabsTrigger value="cleaning">Em limpeza ({kpis.cleaning})</TabsTrigger>
-                        <TabsTrigger value="clean">Prontos ({kpis.clean})</TabsTrigger>
-                        <TabsTrigger value="inspected">Inspecionados ({kpis.inspected})</TabsTrigger>
-                        <TabsTrigger value="out_of_order">Fora de serviço ({kpis.out_of_order})</TabsTrigger>
-                    </TabsList>
+                        {/* Status Tabs/Filters */}
+                        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as RoomStatus | 'all')}>
+                            <TabsList className="w-full justify-start">
+                                <TabsTrigger value="all">Todos ({rooms.length})</TabsTrigger>
+                                <TabsTrigger value="dirty">Sujos ({kpis.dirty})</TabsTrigger>
+                                <TabsTrigger value="cleaning">Em limpeza ({kpis.cleaning})</TabsTrigger>
+                                <TabsTrigger value="clean">Prontos ({kpis.clean})</TabsTrigger>
+                                <TabsTrigger value="inspected">Inspecionados ({kpis.inspected})</TabsTrigger>
+                                <TabsTrigger value="out_of_order">Fora de serviço ({kpis.out_of_order})</TabsTrigger>
+                            </TabsList>
 
-                    <TabsContent value={activeTab} className="mt-6">
-                        {isLoading ? (
-                            <div className="flex flex-col items-center justify-center py-24">
-                                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                                <p className="mt-4 text-sm text-muted-foreground">Carregando quartos...</p>
-                            </div>
-                        ) : filteredRooms.length === 0 ? (
-                            <div className="flex flex-col items-center justify-center py-24 text-center">
-                                <div className="h-20 w-20 rounded-full bg-emerald-50 flex items-center justify-center mb-4">
-                                    <Sparkles className="h-10 w-10 text-emerald-600" />
-                                </div>
-                                <h3 className="text-xl font-bold mb-2">Nenhum quarto encontrado</h3>
-                                <p className="text-sm text-muted-foreground">
-                                    {activeTab !== 'all' ? 'Tudo em ordem por aqui' : 'Selecione uma propriedade'}
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                                {filteredRooms.map((room) => (
-                                    <RoomCard
-                                        key={room.id}
-                                        room={room}
-                                        isViewer={isViewer}
-                                        onStatusChange={handleStatusChange}
-                                        isPending={updateRoomStatus.isPending}
-                                    />
-                                ))}
-                            </div>
-                        )}
-                    </TabsContent>
-                </Tabs>
+                            <TabsContent value={activeTab} className="mt-6">
+                                {isLoading ? (
+                                    <div className="flex flex-col items-center justify-center py-24">
+                                        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+                                        <p className="mt-4 text-sm text-muted-foreground">Carregando quartos...</p>
+                                    </div>
+                                ) : rooms.length === 0 ? (
+                                    <Card className="border-dashed">
+                                        <CardContent>
+                                            <EmptyState
+                                                icon={Home}
+                                                title="Quartos ainda não cadastrados"
+                                                description="Crie seus quartos rapidamente usando modelos."
+                                                primaryAction={!isViewer ? {
+                                                    label: "Criar quartos rapidamente",
+                                                    onClick: () => navigate("/setup")
+                                                } : undefined}
+                                            />
+                                        </CardContent>
+                                    </Card>
+                                ) : filteredRooms.length === 0 ? (
+                                    <Card className="border-dashed">
+                                        <CardContent>
+                                            <EmptyState
+                                                icon={Search}
+                                                title="Nenhum resultado"
+                                                description="Tente mudar o filtro."
+                                            />
+                                        </CardContent>
+                                    </Card>
+                                ) : (
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                        {filteredRooms.map((room) => (
+                                            <RoomCard
+                                                key={room.id}
+                                                room={room}
+                                                isViewer={isViewer}
+                                                onStatusChange={handleStatusChange}
+                                                isPending={updateRoomStatus.isPending}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </TabsContent>
+                        </Tabs>
+                    </>
+                )}
             </div>
         </DashboardLayout>
     );

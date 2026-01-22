@@ -14,6 +14,9 @@ import { OnboardingBanner } from '@/components/onboarding/OnboardingBanner';
 import { Loader2, Home, Filter, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { EmptyState } from '@/components/onboarding/EmptyState';
+import { Building2, Search, PlusCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const MobileHousekeepingPage = () => {
     const { selectedPropertyId, setSelectedPropertyId } = useSelectedProperty();
@@ -21,6 +24,7 @@ const MobileHousekeepingPage = () => {
     const { currentOrgId } = useOrg();
     const { userRole } = useAuth();
     const isViewer = userRole === 'viewer';
+    const navigate = useNavigate();
 
     const [statusFilter, setStatusFilter] = useState<RoomStatus | 'all'>('all');
 
@@ -40,6 +44,23 @@ const MobileHousekeepingPage = () => {
             <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
                 <Loader2 className="h-12 w-12 animate-spin text-primary" />
                 <p className="mt-4 text-sm text-muted-foreground">Carregando...</p>
+            </div>
+        );
+    }
+
+    // No properties at all
+    if (properties.length === 0) {
+        return (
+            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
+                <EmptyState
+                    icon={Building2}
+                    title="Configuração inicial pendente"
+                    description="Para começar, crie sua primeira propriedade e seus quartos."
+                    primaryAction={!isViewer ? {
+                        label: "Ir para configuração inicial",
+                        onClick: () => navigate("/setup")
+                    } : undefined}
+                />
             </div>
         );
     }
@@ -136,28 +157,42 @@ const MobileHousekeepingPage = () => {
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         <p className="mt-2 text-sm text-muted-foreground">Carregando quartos...</p>
                     </div>
+                ) : rooms.length === 0 ? (
+                    <Card className="border-dashed">
+                        <CardContent className="pt-6">
+                            <EmptyState
+                                icon={Home}
+                                title="Quartos ainda não cadastrados"
+                                description="Crie seus quartos rapidamente usando modelos."
+                                primaryAction={!isViewer ? {
+                                    label: "Criar quartos rapidamente",
+                                    onClick: () => navigate("/setup")
+                                } : undefined}
+                            />
+                        </CardContent>
+                    </Card>
                 ) : filteredRooms.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <div className="h-16 w-16 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-                            <Filter className="h-8 w-8 text-gray-400" />
-                        </div>
-                        <p className="font-medium text-gray-700">Nenhum quarto encontrado</p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            {statusFilter !== 'all'
-                                ? 'Tente mudar o filtro.'
-                                : 'Tudo em ordem por aqui'}
-                        </p>
-                    </div>
+                    <Card className="border-dashed">
+                        <CardContent className="pt-6">
+                            <EmptyState
+                                icon={Search}
+                                title="Nenhum resultado"
+                                description="Tente mudar o filtro."
+                            />
+                        </CardContent>
+                    </Card>
                 ) : (
-                    filteredRooms.map((room) => (
-                        <RoomCard
-                            key={room.id}
-                            room={room}
-                            isViewer={isViewer}
-                            updateStatus={updateRoomStatus}
-                            propertyId={selectedPropertyId}
-                        />
-                    ))
+                    <div className="space-y-3">
+                        {filteredRooms.map((room) => (
+                            <RoomCard
+                                key={room.id}
+                                room={room}
+                                isViewer={isViewer}
+                                updateStatus={updateRoomStatus}
+                                propertyId={selectedPropertyId}
+                            />
+                        ))}
+                    </div>
                 )}
             </div>
         </div>

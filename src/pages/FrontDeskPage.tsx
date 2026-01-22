@@ -22,6 +22,7 @@ import { FrontDeskBookingCard } from "@/components/frontdesk/FrontDeskBookingCar
 import { QuickBookingDialog } from "@/components/bookings/QuickBookingDialog";
 import { GuidedCheckinPanel } from "@/components/frontdesk/GuidedCheckinPanel";
 import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
+import { EmptyState } from "@/components/onboarding/EmptyState";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -523,298 +524,325 @@ const FrontDeskPage = () => {
             </div>
           </div>
 
-          {/* Date Filter Chips - Peak Mode */}
-          <div className="flex gap-2">
-            {(['today', 'tomorrow', 'yesterday', 'all'] as const).map((filter) => (
-              <Button
-                key={filter}
-                variant={selectedDateFilter === filter ? 'default' : 'outline'}
-                size="sm"
-                onClick={() => setSelectedDateFilter(filter)}
-                className="h-8"
-              >
-                {filter === 'today' && 'Hoje'}
-                {filter === 'tomorrow' && 'Amanhã'}
-                {filter === 'yesterday' && 'Ontem'}
-                {filter === 'all' && 'Todos'}
-              </Button>
-            ))}
-          </div>
-
-          {/* Sprint 6.0: Onboarding Banner */}
-          <OnboardingBanner />
-
-          {/* KPIs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Arrivals Today */}
-            <Card className="border-none bg-gradient-to-br from-emerald-50 via-emerald-50/80 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 overflow-hidden shadow-md">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-                        Chegadas Hoje
-                      </p>
-                    </div>
-                    <p className="text-4xl font-black text-emerald-700 dark:text-emerald-300 tracking-tight">
-                      {filteredArrivals.length}
-                    </p>
-                    <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 font-medium">
-                      Reservas previstas
-                    </p>
-                  </div>
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                    <LogIn className="h-8 w-8 text-white drop-shadow-sm" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Departures Today */}
-            <Card className="border-none bg-gradient-to-br from-rose-50 via-rose-50/80 to-rose-100 dark:from-rose-950/50 dark:to-rose-900/50 overflow-hidden shadow-md">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
-                      <p className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
-                        Saídas Hoje
-                      </p>
-                    </div>
-                    <p className="text-4xl font-black text-rose-700 dark:text-rose-300 tracking-tight">
-                      {filteredDepartures.length}
-                    </p>
-                    <p className="text-xs text-rose-600/80 dark:text-rose-400/80 font-medium">
-                      Partidas previstas
-                    </p>
-                  </div>
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-lg shadow-rose-500/30">
-                    <LogOut className="h-8 w-8 text-white drop-shadow-sm" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* In-House */}
-            <Card className="border-none bg-gradient-to-br from-blue-50 via-blue-50/80 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 overflow-hidden shadow-md">
-              <CardContent className="p-6">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
-                      <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                        Em Casa
-                      </p>
-                    </div>
-                    <p className="text-4xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
-                      {filteredInHouse.length}
-                    </p>
-                    <p className="text-xs text-blue-600/80 dark:text-blue-400/80 font-medium">
-                      Hóspedes hospedados
-                    </p>
-                  </div>
-                  <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
-                    <BedDouble className="h-8 w-8 text-white drop-shadow-sm" />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* ===== SPRINT 5.5: ARRIVALS TODAY QUEUE ===== */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-2xl font-bold tracking-tight">Chegadas de Hoje</h2>
-                <p className="text-sm text-muted-foreground">Fila operacional - check-in previsto para hoje</p>
+          {/* Main Content Area / Empty Property State */}
+          {properties.length === 0 ? (
+            <div className="space-y-6">
+              <OnboardingBanner />
+              <Card className="border-dashed">
+                <CardContent className="p-12">
+                  <EmptyState
+                    icon={Building2}
+                    title="Configuração inicial pendente"
+                    description="Para começar, crie sua primeira propriedade e seus quartos."
+                    primaryAction={!isViewer ? {
+                      label: "Ir para configuração inicial",
+                      onClick: () => navigate("/setup")
+                    } : undefined}
+                  />
+                </CardContent>
+              </Card>
+            </div>
+          ) : (
+            <>
+              {/* Date Filter Chips - Peak Mode */}
+              <div className="flex gap-2">
+                {(['today', 'tomorrow', 'yesterday', 'all'] as const).map((filter) => (
+                  <Button
+                    key={filter}
+                    variant={selectedDateFilter === filter ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setSelectedDateFilter(filter)}
+                    className="h-8"
+                  >
+                    {filter === 'today' && 'Hoje'}
+                    {filter === 'tomorrow' && 'Amanhã'}
+                    {filter === 'yesterday' && 'Ontem'}
+                    {filter === 'all' && 'Todos'}
+                  </Button>
+                ))}
               </div>
-            </div>
 
-            {/* KPIs */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="border-none bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total de chegadas</p>
-                      <p className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-1">{arrivalsTodayKPIs.total}</p>
-                    </div>
-                    <Calendar className="h-10 w-10 text-slate-400" />
-                  </div>
-                </CardContent>
-              </Card>
+              {/* Sprint 6.0: Onboarding Banner */}
+              <OnboardingBanner />
 
-              <Card className="border-none bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Prontas para check-in</p>
-                      <p className="text-3xl font-black text-emerald-900 dark:text-emerald-100 mt-1">{arrivalsTodayKPIs.ready}</p>
-                    </div>
-                    <Check className="h-10 w-10 text-emerald-500" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-none bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30">
-                <CardContent className="p-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider">Com pendências</p>
-                      <p className="text-3xl font-black text-amber-900 dark:text-amber-100 mt-1">{arrivalsTodayKPIs.withIssues}</p>
-                    </div>
-                    <AlertCircle className="h-10 w-10 text-amber-500" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Arrivals List */}
-            {arrivalsTodayLoading ? (
-              <Card className="border-none shadow-lg rounded-2xl">
-                <CardContent className="p-8 flex items-center justify-center">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </CardContent>
-              </Card>
-            ) : arrivalsToday.length === 0 ? (
-              <Card className="border-none shadow-lg rounded-2xl">
-                <CardContent className="p-8">
-                  <div className="text-center space-y-2">
-                    <Calendar className="h-12 w-12 text-muted-foreground/50 mx-auto" />
-                    <p className="text-sm text-muted-foreground">Nenhuma chegada prevista para hoje</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card className="border-none shadow-lg rounded-2xl">
-                <CardHeader className="border-b bg-muted/30">
-                  <CardTitle className="text-lg font-bold flex items-center gap-2">
-                    <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                      <LogIn className="h-4 w-4 text-emerald-600" />
-                    </div>
-                    Fila de Chegadas ({arrivalsToday.length})
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="space-y-3 max-h-[600px] overflow-y-auto">
-                    {arrivalsToday.map((booking) => {
-                      const hasGroup = bookingGroups.some(g => g.booking_id === booking.id);
-                      const precheckinCount = precheckinSessions.filter(s => s.booking_id === booking.id).length;
-                      const participantCount = bookingGuests.filter(g => g.booking_id === booking.id).length;
-                      const readiness = arrivalsTodayReadiness[booking.id];
-
-                      // Helper: Get readiness badge variant and label
-                      const getReadinessBadge = (status: 'READY' | 'WARNING' | 'BLOCKED') => {
-                        switch (status) {
-                          case 'READY':
-                            return { variant: 'default' as const, label: 'Pronto', className: 'bg-emerald-500 text-white' };
-                          case 'WARNING':
-                            return { variant: 'secondary' as const, label: 'Pendência', className: 'bg-amber-500 text-white' };
-                          case 'BLOCKED':
-                            return { variant: 'destructive' as const, label: 'Bloqueado', className: 'bg-red-600 text-white' };
-                        }
-                      };
-
-                      // Helper: Get reason chip label
-                      const getReasonLabel = (reason: 'ROOM' | 'PRIMARY_GUEST' | 'PRECHECKIN') => {
-                        switch (reason) {
-                          case 'ROOM': return 'Sem quarto';
-                          case 'PRIMARY_GUEST': return 'Sem hóspede principal';
-                          case 'PRECHECKIN': return 'Pré-check-in pendente';
-                        }
-                      };
-
-                      const badge = readiness ? getReadinessBadge(readiness.status) : null;
-
-                      return (
-                        <div key={booking.id} className="space-y-2">
-                          {/* Readiness Badge + Reason Chips */}
-                          {readiness && (
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <Badge className={badge?.className}>
-                                {badge?.label}
-                              </Badge>
-                              {readiness.reasons.length > 0 && readiness.reasons.map((reason, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs">
-                                  {getReasonLabel(reason)}
-                                </Badge>
-                              ))}
-                            </div>
-                          )}
-
-                          {/* Booking Card */}
-                          <FrontDeskBookingCard
-                            booking={booking}
-                            onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-                            alerts={alertStates[booking.id]}
-                            hasGroup={hasGroup}
-                            precheckinCount={precheckinCount}
-                            participantCount={participantCount}
-                          />
-
-                          {/* Task 3: Guided Check-in Button */}
-                          {!isViewer && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => setSelectedCheckinBookingId(booking.id)}
-                              className="w-full"
-                            >
-                              <LogIn className="h-3 w-3 mr-2" />
-                              Ver check-in
-                            </Button>
-                          )}
+              {/* KPIs */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Arrivals Today */}
+                <Card className="border-none bg-gradient-to-br from-emerald-50 via-emerald-50/80 to-emerald-100 dark:from-emerald-950/50 dark:to-emerald-900/50 overflow-hidden shadow-md">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                            Chegadas Hoje
+                          </p>
                         </div>
-                      );
-                    })}
+                        <p className="text-4xl font-black text-emerald-700 dark:text-emerald-300 tracking-tight">
+                          {filteredArrivals.length}
+                        </p>
+                        <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 font-medium">
+                          Reservas previstas
+                        </p>
+                      </div>
+                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                        <LogIn className="h-8 w-8 text-white drop-shadow-sm" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Departures Today */}
+                <Card className="border-none bg-gradient-to-br from-rose-50 via-rose-50/80 to-rose-100 dark:from-rose-950/50 dark:to-rose-900/50 overflow-hidden shadow-md">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                          <p className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+                            Saídas Hoje
+                          </p>
+                        </div>
+                        <p className="text-4xl font-black text-rose-700 dark:text-rose-300 tracking-tight">
+                          {filteredDepartures.length}
+                        </p>
+                        <p className="text-xs text-rose-600/80 dark:text-rose-400/80 font-medium">
+                          Partidas previstas
+                        </p>
+                      </div>
+                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-600 flex items-center justify-center shadow-lg shadow-rose-500/30">
+                        <LogOut className="h-8 w-8 text-white drop-shadow-sm" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* In-House */}
+                <Card className="border-none bg-gradient-to-br from-blue-50 via-blue-50/80 to-blue-100 dark:from-blue-950/50 dark:to-blue-900/50 overflow-hidden shadow-md">
+                  <CardContent className="p-6">
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <div className="h-2 w-2 rounded-full bg-blue-500 animate-pulse" />
+                          <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                            Em Casa
+                          </p>
+                        </div>
+                        <p className="text-4xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
+                          {filteredInHouse.length}
+                        </p>
+                        <p className="text-xs text-blue-600/80 dark:text-blue-400/80 font-medium">
+                          Hóspedes hospedados
+                        </p>
+                      </div>
+                      <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+                        <BedDouble className="h-8 w-8 text-white drop-shadow-sm" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* ===== SPRINT 5.5: ARRIVALS TODAY QUEUE ===== */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Chegadas de Hoje</h2>
+                    <p className="text-sm text-muted-foreground">Fila operacional - check-in previsto para hoje</p>
                   </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                </div>
 
-          {/* Sections: Arrivals, Departures, In-House */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <BookingSection
-              title="Chegadas (Hoje)"
-              icon={LogIn}
-              iconColor="text-emerald-600"
-              bgColor="bg-emerald-50"
-              bookings={filteredArrivals}
-              isLoading={arrivalsLoading}
-              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-              alertStates={alertStates}
-            />
+                {/* KPIs */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Card className="border-none bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total de chegadas</p>
+                          <p className="text-3xl font-black text-slate-900 dark:text-slate-100 mt-1">{arrivalsTodayKPIs.total}</p>
+                        </div>
+                        <Calendar className="h-10 w-10 text-slate-400" />
+                      </div>
+                    </CardContent>
+                  </Card>
 
-            <BookingSection
-              title="Saídas (Hoje)"
-              icon={LogOut}
-              iconColor="text-rose-600"
-              bgColor="bg-rose-50"
-              bookings={filteredDepartures}
-              isLoading={departuresLoading}
-              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-              alertStates={alertStates}
-            />
+                  <Card className="border-none bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-300 uppercase tracking-wider">Prontas para check-in</p>
+                          <p className="text-3xl font-black text-emerald-900 dark:text-emerald-100 mt-1">{arrivalsTodayKPIs.ready}</p>
+                        </div>
+                        <Check className="h-10 w-10 text-emerald-500" />
+                      </div>
+                    </CardContent>
+                  </Card>
 
-            <BookingSection
-              title="Em Casa"
-              icon={BedDouble}
-              iconColor="text-blue-600"
-              bgColor="bg-blue-50"
-              bookings={filteredInHouse}
-              isLoading={inHouseLoading}
-              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-              alertStates={alertStates}
-            />
-          </div>
+                  <Card className="border-none bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-900/30 dark:to-amber-800/30">
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase tracking-wider">Com pendências</p>
+                          <p className="text-3xl font-black text-amber-900 dark:text-amber-100 mt-1">{arrivalsTodayKPIs.withIssues}</p>
+                        </div>
+                        <AlertCircle className="h-10 w-10 text-amber-500" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Arrivals List */}
+                {arrivalsTodayLoading ? (
+                  <Card className="border-none shadow-lg rounded-2xl">
+                    <CardContent className="p-8 flex items-center justify-center">
+                      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                ) : arrivalsToday.length === 0 ? (
+                  <Card className="border-none shadow-lg rounded-2xl border-dashed">
+                    <CardContent className="p-8">
+                      <EmptyState
+                        icon={Calendar}
+                        title="Nenhuma reserva encontrada"
+                        description="Para começar a operar, crie sua primeira reserva em poucos segundos."
+                        primaryAction={!isViewer ? {
+                          label: "Criar reserva rápida",
+                          onClick: () => setIsQuickBookingOpen(true)
+                        } : undefined}
+                      />
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <Card className="border-none shadow-lg rounded-2xl">
+                    <CardHeader className="border-b bg-muted/30">
+                      <CardTitle className="text-lg font-bold flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                          <LogIn className="h-4 w-4 text-emerald-600" />
+                        </div>
+                        Fila de Chegadas ({arrivalsToday.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-6">
+                      <div className="space-y-3 max-h-[600px] overflow-y-auto">
+                        {arrivalsToday.map((booking) => {
+                          const hasGroup = bookingGroups.some(g => g.booking_id === booking.id);
+                          const precheckinCount = precheckinSessions.filter(s => s.booking_id === booking.id).length;
+                          const participantCount = bookingGuests.filter(g => g.booking_id === booking.id).length;
+                          const readiness = arrivalsTodayReadiness[booking.id];
+
+                          // Helper: Get readiness badge variant and label
+                          const getReadinessBadge = (status: 'READY' | 'WARNING' | 'BLOCKED') => {
+                            switch (status) {
+                              case 'READY':
+                                return { variant: 'default' as const, label: 'Pronto', className: 'bg-emerald-500 text-white' };
+                              case 'WARNING':
+                                return { variant: 'secondary' as const, label: 'Pendência', className: 'bg-amber-500 text-white' };
+                              case 'BLOCKED':
+                                return { variant: 'destructive' as const, label: 'Bloqueado', className: 'bg-red-600 text-white' };
+                            }
+                          };
+
+                          // Helper: Get reason chip label
+                          const getReasonLabel = (reason: 'ROOM' | 'PRIMARY_GUEST' | 'PRECHECKIN') => {
+                            switch (reason) {
+                              case 'ROOM': return 'Sem quarto';
+                              case 'PRIMARY_GUEST': return 'Sem hóspede principal';
+                              case 'PRECHECKIN': return 'Pré-check-in pendente';
+                            }
+                          };
+
+                          const badge = readiness ? getReadinessBadge(readiness.status) : null;
+
+                          return (
+                            <div key={booking.id} className="space-y-2">
+                              {/* Readiness Badge + Reason Chips */}
+                              {readiness && (
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <Badge className={badge?.className}>
+                                    {badge?.label}
+                                  </Badge>
+                                  {readiness.reasons.length > 0 && readiness.reasons.map((reason, idx) => (
+                                    <Badge key={idx} variant="outline" className="text-xs">
+                                      {getReasonLabel(reason)}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              )}
+
+                              {/* Booking Card */}
+                              <FrontDeskBookingCard
+                                booking={booking}
+                                onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+                                alerts={alertStates[booking.id]}
+                                hasGroup={hasGroup}
+                                precheckinCount={precheckinCount}
+                                participantCount={participantCount}
+                              />
+
+                              {/* Task 3: Guided Check-in Button */}
+                              {!isViewer && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedCheckinBookingId(booking.id)}
+                                  className="w-full"
+                                >
+                                  <LogIn className="h-3 w-3 mr-2" />
+                                  Ver check-in
+                                </Button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+
+              {/* Sections: Arrivals, Departures, In-House */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <BookingSection
+                  title="Chegadas (Hoje)"
+                  icon={LogIn}
+                  iconColor="text-emerald-600"
+                  bgColor="bg-emerald-50"
+                  bookings={filteredArrivals}
+                  isLoading={arrivalsLoading}
+                  onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+                  alertStates={alertStates}
+                />
+
+                <BookingSection
+                  title="Saídas (Hoje)"
+                  icon={LogOut}
+                  iconColor="text-rose-600"
+                  bgColor="bg-rose-50"
+                  bookings={filteredDepartures}
+                  isLoading={departuresLoading}
+                  onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+                  alertStates={alertStates}
+                />
+
+                <BookingSection
+                  title="Em Casa"
+                  icon={BedDouble}
+                  iconColor="text-blue-600"
+                  bgColor="bg-blue-50"
+                  bookings={filteredInHouse}
+                  isLoading={inHouseLoading}
+                  onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+                  alertStates={alertStates}
+                />
+              </div>
+            </>
+          )}
         </div>
-      </div>
 
-      {/* Quick Booking Dialog */}
-      <QuickBookingDialog open={isQuickBookingOpen} onOpenChange={setIsQuickBookingOpen} />
-    </DashboardLayout >
+        {/* Quick Booking Dialog */}
+        <QuickBookingDialog open={isQuickBookingOpen} onOpenChange={setIsQuickBookingOpen} />
+      </div>
+    </DashboardLayout>
   );
 };
 
