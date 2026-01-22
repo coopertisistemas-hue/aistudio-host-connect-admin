@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { OnboardingBanner } from '@/components/onboarding/OnboardingBanner';
 import { Sparkles, Loader2, AlertTriangle, Droplet, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -56,6 +57,9 @@ const HousekeepingPage = () => {
     return (
         <DashboardLayout>
             <div className="max-w-7xl mx-auto space-y-6 p-6">
+                {/* Sprint 6.0: Onboarding Banner */}
+                <OnboardingBanner />
+
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">

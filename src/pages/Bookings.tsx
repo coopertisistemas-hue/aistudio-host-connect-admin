@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import BookingDialog from "@/components/BookingDialog";
+import { OnboardingBanner } from "@/components/onboarding/OnboardingBanner";
 import { useBookings, Booking, BookingInput } from "@/hooks/useBookings";
 import { useAuth } from "@/hooks/useAuth"; // Added useAuth
 import { getStatusBadge } from "@/lib/ui-helpers";
@@ -103,6 +104,9 @@ const Bookings = () => {
   return (
     <DashboardLayout>
       <div className="space-y-6">
+        {/* Sprint 6.0: Onboarding Banner */}
+        <OnboardingBanner />
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
