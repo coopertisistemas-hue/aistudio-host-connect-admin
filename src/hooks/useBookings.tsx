@@ -27,14 +27,14 @@ export const bookingSchema = z.object({
   guest_phone: z.string().optional().nullable(),
   check_in: z.date({ required_error: "A data de check-in é obrigatória." }),
   check_out: z.date({ required_error: "A data de check-out é obrigatória." }),
-  total_guests: z.number().min(1, "O número de hóspedes deve ser no mínimo 1."),
+  total_guests: z.number().min(1, "Informe ao menos um hóspede."),
   total_amount: z.number().min(0, "O valor total não pode ser negativo."),
   status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).default('pending'),
   notes: z.string().optional().nullable(),
   services_json: z.array(z.string()).optional().nullable(),
-  current_room_id: z.string().optional().nullable(), // Adicionado ao schema
+  current_room_id: z.string().optional().nullable(),
 }).refine((data) => data.check_out > data.check_in, {
-  message: "A data de check-out deve ser posterior à data de check-in.",
+  message: "A data de saída deve ser posterior à entrada.",
   path: ["check_out"],
 });
 
@@ -56,7 +56,7 @@ export const useBookings = (propertyId?: string) => {
 
       console.log('[useBookings] Fetching bookings...', { currentOrgId, propertyId });
 
-      let query = supabase
+      let query = (supabase
         .from('bookings')
         .select(`
           *,
@@ -67,7 +67,7 @@ export const useBookings = (propertyId?: string) => {
           room_types (
             name
           )
-        `)
+        `) as any)
         .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id first
 
       // Optional property-level filtering
@@ -93,7 +93,7 @@ export const useBookings = (propertyId?: string) => {
       console.log(`[useBookings] Successfully fetched ${data.length} bookings`);
 
       // Collect all unique service IDs to fetch them in a single query (batch)
-      const allServiceIds = Array.from(new Set(data.flatMap(b => b.services_json || [])));
+      const allServiceIds = Array.from(new Set(data.flatMap(b => b.services_json || []))) as string[];
 
       let servicesMap: Record<string, Service> = {};
 

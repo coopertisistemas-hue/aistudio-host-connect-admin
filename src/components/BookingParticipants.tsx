@@ -107,7 +107,7 @@ const BookingParticipants = ({ bookingId }: BookingParticipantsProps) => {
         }
     };
 
-    const handleRemove = async (participantId: string) => {
+    const handleRemove = async (participantId: string, wasPrimary: boolean) => {
         if (isViewer) {
             toast({
                 title: 'Acesso negado',
@@ -117,8 +117,17 @@ const BookingParticipants = ({ bookingId }: BookingParticipantsProps) => {
             return;
         }
 
+        if (wasPrimary && participants.length === 1) {
+            toast({
+                title: 'Ação bloqueada',
+                description: 'A reserva deve ter ao menos um hóspede principal.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         try {
-            await removeParticipant.mutateAsync(participantId);
+            await removeParticipant.mutateAsync({ participantId, wasPrimary });
         } catch (error) {
             // Toast is handled by the hook
         }
@@ -342,7 +351,7 @@ const BookingParticipants = ({ bookingId }: BookingParticipantsProps) => {
                                             <AlertDialogFooter>
                                                 <AlertDialogCancel>Cancelar</AlertDialogCancel>
                                                 <AlertDialogAction
-                                                    onClick={() => handleRemove(participant.id)}
+                                                    onClick={() => handleRemove(participant.id, !!participant.is_primary)}
                                                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                                                 >
                                                     Remover

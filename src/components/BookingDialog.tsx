@@ -17,7 +17,8 @@ import { useRoomTypes } from "@/hooks/useRoomTypes";
 import ServiceMultiSelect from "@/components/ServiceMultiSelect";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useBookingEngine } from "@/hooks/useBookingEngine"; // NEW IMPORT
+import { useBookingEngine } from "@/hooks/useBookingEngine";
+import { useRooms } from "@/hooks/useRooms";
 
 interface BookingDialogProps {
   open: boolean;
@@ -52,7 +53,11 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
   });
 
   const selectedPropertyId = form.watch("property_id");
+  const selectedRoomTypeId = form.watch("room_type_id");
   const { roomTypes: availableRoomTypes } = useRoomTypes(selectedPropertyId);
+  const { data: allRooms = [] } = useRooms(selectedPropertyId);
+
+  const filteredRooms = allRooms.filter(r => r.room_type_id === selectedRoomTypeId);
   const watchedFields = form.watch();
 
   useEffect(() => {
@@ -102,7 +107,7 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
       form.setError("total_amount", { message: "Preencha todos os campos de data, propriedade, tipo de quarto e hóspedes antes de calcular." });
       return;
     }
-    
+
     form.clearErrors("total_amount");
     setIsCalculating(true);
 
@@ -115,9 +120,9 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
         total_guests,
         selected_services_ids: services_json || [],
       };
-      
+
       const priceResponse = await calculatePrice.mutateAsync(priceData);
-      
+
       form.setValue("total_amount", priceResponse.total_amount, { shouldValidate: true });
     } catch (error: any) {
       form.setError("total_amount", { message: error.message || "Erro ao calcular preço." });
@@ -348,7 +353,7 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
                 id="total_guests"
                 type="number"
                 min="1"
-                {...form.register("total_guests", { 
+                {...form.register("total_guests", {
                   valueAsNumber: true,
                   onChange: () => form.setValue("total_amount", 0) // Reset amount on change
                 })}
@@ -372,10 +377,10 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
                   {...form.register("total_amount", { valueAsNumber: true })}
                   disabled={isLoading || isCalculating}
                 />
-                <Button 
-                  type="button" 
-                  variant="secondary" 
-                  size="icon" 
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
                   onClick={handleCalculatePrice}
                   disabled={!isPriceCalculationReady || isCalculating || isLoading}
                   title="Calcular Preço"
@@ -416,6 +421,38 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
               {form.formState.errors.status && (
                 <p className="text-destructive text-sm mt-1">
                   {form.formState.errors.status.message}
+                </p>
+              )}
+            </div>
+
+            <div className="col-span-2">
+              <Label htmlFor="current_room_id">Atribuição de Quarto</Label>
+              <Controller
+                name="current_room_id"
+                control={form.control}
+                render={({ field }) => (
+                  <Select
+                    value={field.value || "none"}
+                    onValueChange={(value) => field.onChange(value === "none" ? null : value)}
+                    disabled={isLoading || isCalculating || !selectedRoomTypeId}
+                  >
+                    <SelectTrigger className={cn(!field.value && "border-amber-500 bg-amber-50/50")}>
+                      <SelectValue placeholder="Selecione um quarto (opcional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Sem quarto definido</SelectItem>
+                      {filteredRooms.map((room) => (
+                        <SelectItem key={room.id} value={room.id}>
+                          Quarto {room.room_number} ({room.status})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+              {!form.watch("current_room_id") && (
+                <p className="text-amber-600 text-[10px] mt-1 font-medium italic">
+                  * Recomendado para check-in. Pode ser definido depois no Folio.
                 </p>
               )}
             </div>
@@ -470,7 +507,7 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isLoading || isCalculating}>
               Cancelar
             </Button>
-            <Button type="submit" variant="hero" disabled={isLoading || isCalculating}>
+            <Button type="submit" variant="hero" disabled={isLoading || isCalculating || !form.formState.isValid}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {booking ? "Atualizar" : "Criar"}
             </Button>

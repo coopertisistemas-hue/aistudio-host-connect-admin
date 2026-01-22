@@ -76,7 +76,7 @@ export const useBookingGuests = (bookingId: string | undefined) => {
     });
 
     const removeParticipant = useMutation({
-        mutationFn: async (participantId: string) => {
+        mutationFn: async ({ participantId, wasPrimary }: { participantId: string; wasPrimary: boolean }) => {
             if (!currentOrgId) throw new Error('Organization context required');
 
             const { error } = await supabase
@@ -86,6 +86,25 @@ export const useBookingGuests = (bookingId: string | undefined) => {
                 .eq('org_id', currentOrgId);
 
             if (error) throw error;
+
+            // Enforcement logic: If we removed the primary, and there are others, promote the first one
+            if (wasPrimary && bookingId) {
+                const { data: remaining } = await supabase
+                    .from('booking_guests')
+                    .select('id')
+                    .eq('booking_id', bookingId)
+                    .eq('org_id', currentOrgId)
+                    .order('created_at', { ascending: true })
+                    .limit(1);
+
+                if (remaining && remaining.length > 0) {
+                    await supabase
+                        .from('booking_guests')
+                        .update({ is_primary: true })
+                        .eq('id', remaining[0].id)
+                        .eq('org_id', currentOrgId);
+                }
+            }
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['booking_guests', currentOrgId, bookingId] });

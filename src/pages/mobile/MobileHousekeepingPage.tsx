@@ -8,8 +8,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useProperties } from '@/hooks/useProperties';
-import { Loader2, Home, Filter } from 'lucide-react';
+import { Loader2, Home, Filter, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
@@ -142,7 +143,7 @@ const MobileHousekeepingPage = () => {
                         <p className="font-medium text-gray-700">Nenhum quarto encontrado</p>
                         <p className="text-sm text-muted-foreground mt-1">
                             {statusFilter !== 'all'
-                                ? 'Tente outro filtro ou volte para "Todos"'
+                                ? 'Tente mudar o filtro.'
                                 : 'Tudo em ordem por aqui'}
                         </p>
                     </div>
@@ -234,44 +235,75 @@ const RoomCard = ({ room, isViewer, updateStatus, propertyId }: RoomCardProps) =
 
                 {/* Status Action Buttons */}
                 {!isViewer && (
-                    <div className="grid grid-cols-2 gap-2">
-                        <Button
-                            size="sm"
-                            variant={currentStatus === 'dirty' ? 'default' : 'outline'}
-                            onClick={() => handleStatusChange('dirty')}
-                            disabled={updateStatus.isPending || currentStatus === 'dirty'}
-                            className="text-xs h-9"
-                        >
-                            Sujo
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={currentStatus === 'cleaning' ? 'default' : 'outline'}
-                            onClick={() => handleStatusChange('cleaning')}
-                            disabled={updateStatus.isPending || currentStatus === 'cleaning'}
-                            className="text-xs h-9"
-                        >
-                            Em limpeza
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={currentStatus === 'clean' ? 'default' : 'outline'}
-                            onClick={() => handleStatusChange('clean')}
-                            disabled={updateStatus.isPending || currentStatus === 'clean'}
-                            className="text-xs h-9"
-                        >
-                            Limpo
-                        </Button>
-                        <Button
-                            size="sm"
-                            variant={currentStatus === 'inspected' ? 'default' : 'outline'}
-                            onClick={() => handleStatusChange('inspected')}
-                            disabled={updateStatus.isPending || currentStatus === 'inspected'}
-                            className="text-xs h-9"
-                        >
-                            Inspecionado
-                        </Button>
-                    </div>
+                    <>
+                        <div className="grid grid-cols-2 gap-2">
+                            <Button
+                                size="sm"
+                                variant={currentStatus === 'dirty' ? 'default' : 'outline'}
+                                onClick={() => handleStatusChange('dirty')}
+                                disabled={updateStatus.isPending || currentStatus === 'dirty'}
+                                className="text-xs h-9"
+                            >
+                                Sujo
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={currentStatus === 'cleaning' ? 'default' : 'outline'}
+                                onClick={() => handleStatusChange('cleaning')}
+                                disabled={updateStatus.isPending || currentStatus === 'cleaning'}
+                                className="text-xs h-9"
+                            >
+                                Em limpeza
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={currentStatus === 'clean' ? 'default' : 'outline'}
+                                onClick={() => handleStatusChange('clean')}
+                                disabled={updateStatus.isPending || currentStatus === 'clean'}
+                                className="text-xs h-9"
+                            >
+                                Limpo
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant={currentStatus === 'inspected' ? 'default' : 'outline'}
+                                onClick={() => handleStatusChange('inspected')}
+                                disabled={updateStatus.isPending || currentStatus === 'inspected'}
+                                className="text-xs h-9"
+                            >
+                                Inspecionado
+                            </Button>
+                        </div>
+
+                        {/* Out of Order (with confirmation) */}
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button
+                                    size="sm"
+                                    variant={currentStatus === 'out_of_order' ? 'destructive' : 'outline'}
+                                    disabled={updateStatus.isPending}
+                                    className="text-xs h-9 w-full"
+                                >
+                                    <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
+                                    Fora de serviço
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Marcar como fora de serviço?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        O quarto {room.room_number} será marcado como indisponível para uso.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleStatusChange('out_of_order')}>
+                                        Confirmar
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </>
                 )}
 
                 {/* Viewer Message */}

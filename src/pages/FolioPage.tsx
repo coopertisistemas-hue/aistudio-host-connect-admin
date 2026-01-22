@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useLocation } from "react-router-dom";
+import { useUpdateRoomStatus } from "@/hooks/useUpdateRoomStatus";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { EntityDetailTemplate } from "@/components/EntityDetailTemplate";
@@ -40,10 +41,24 @@ import {
     DialogTitle,
     DialogFooter,
 } from "@/components/ui/dialog";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useRooms } from "@/hooks/useRooms";
+import { useBookingRooms, useAssignRoomToBooking, useUnassignRoomFromBooking } from "@/hooks/useBookingRooms";
+import { useBookingGroup, useCreateBookingGroup, useUpdateBookingGroup, useDeleteBookingGroup } from "@/hooks/useBookingGroups";
+import { Users as UsersIcon } from "lucide-react";
 
 const FolioPage = () => {
     const { id } = useParams();
@@ -116,6 +131,187 @@ const FolioPage = () => {
         } as any);
         setIsPaymentDialogOpen(false);
         setNewPay({ amount: "", method: "cash" });
+    };
+
+    const { data: bookingRooms = [], isLoading: bookingRoomsLoading } = useBookingRooms(id, booking?.property_id);
+    const { data: allRooms = [] } = useRooms(booking?.property_id);
+    const assignRoom = useAssignRoomToBooking();
+    const unassignRoom = useUnassignRoomFromBooking(booking?.property_id!, id!);
+
+    const [isAssignDialogOpen, setIsAssignDialogOpen] = useState(false);
+    const primaryRoom = bookingRooms.find(br => br.is_primary);
+
+    const handleAssignRoom = async (roomId: string) => {
+        if (isViewer || !booking?.property_id) return;
+        await assignRoom.mutateAsync({
+            bookingId: id!,
+            roomId,
+            propertyId: booking.property_id
+        });
+        setIsAssignDialogOpen(false);
+    };
+
+    const handleUnassignRoom = async (bookingRoomId: string) => {
+        if (isViewer) return;
+        if (window.confirm("Deseja desvincular este quarto da reserva?")) {
+            await unassignRoom.mutateAsync(bookingRoomId);
+        }
+    };
+
+    // Group management state
+    const { group: bookingGroup, isLoading: groupLoading } = useBookingGroup(id, booking?.property_id);
+    const createGroup = useCreateBookingGroup();
+    const updateGroup = useUpdateBookingGroup();
+    const deleteGroup = useDeleteBookingGroup();
+    const [isGroupDialogOpen, setIsGroupDialogOpen] = useState(false);
+    const [groupForm, setGroupForm] = useState({
+        group_name: '',
+        leader_name: '',
+        leader_phone: '',
+        estimated_participants: '',
+        notes: '',
+    });
+
+    useEffect(() => {
+        if (bookingGroup) {
+            setGroupForm({
+                group_name: bookingGroup.group_name || '',
+                leader_name: bookingGroup.leader_name || '',
+                leader_phone: bookingGroup.leader_phone || '',
+                estimated_participants: bookingGroup.estimated_participants?.toString() || '',
+                notes: bookingGroup.notes || '',
+            });
+        } else {
+            setGroupForm({
+                group_name: '',
+                leader_name: '',
+                leader_phone: '',
+                estimated_participants: '',
+                notes: '',
+            });
+        }
+    }, [bookingGroup, isGroupDialogOpen]);
+
+    const handleSaveGroup = async () => {
+        if (isViewer || !booking?.property_id) return;
+
+        if (!groupForm.group_name.trim()) {
+            toast({
+                title: 'Campo obrigatório',
+                description: 'O nome do grupo é obrigatório.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        const groupData = {
+            property_id: booking.property_id,
+            booking_id: id!,
+            group_name: groupForm.group_name,
+            leader_name: groupForm.leader_name || null,
+            leader_phone: groupForm.leader_phone || null,
+            estimated_participants: groupForm.estimated_participants ? parseInt(groupForm.estimated_participants) : null,
+            notes: groupForm.notes || null,
+        };
+
+        if (bookingGroup) {
+            await updateGroup.mutateAsync({
+                groupId: bookingGroup.id,
+                propertyId: booking.property_id,
+                bookingId: id!,
+                updates: groupData,
+            });
+        } else {
+            await createGroup.mutateAsync(groupData);
+        }
+        setIsGroupDialogOpen(false);
+    };
+
+    const handleDeleteGroup = async () => {
+        if (isViewer || !bookingGroup || !booking?.property_id) return;
+        if (window.confirm("Deseja remover o grupo desta reserva?")) {
+            await deleteGroup.mutateAsync({
+                groupId: bookingGroup.id,
+                propertyId: booking.property_id,
+                bookingId: id!,
+            });
+        }
+    };
+
+    const normalizedStatus = booking ? normalizeLegacyStatus(booking.status as any) : null;
+    const updateRoomStatus = useUpdateRoomStatus();
+
+    const [isCheckoutSuggestionOpen, setIsCheckoutSuggestionOpen] = useState(false);
+
+    const handleCheckIn = () => {
+        if (!normalizedStatus || !canCheckIn(normalizedStatus)) {
+            toast({ title: 'Ação indisponível', description: 'Status não permite check-in.', variant: 'destructive' });
+            return;
+        }
+
+        if (!primaryRoom) {
+            toast({
+                title: 'Check-in bloqueado',
+                description: 'É necessário atribuir um quarto antes de realizar o check-in.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        const hasPrimaryGuest = participants.some(p => p.is_primary);
+        if (!hasPrimaryGuest) {
+            toast({
+                title: 'Check-in bloqueado',
+                description: 'A reserva deve ter ao menos um hóspede principal definido.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        updateStatus.mutate({ bookingId: id!, newStatus: BookingStatus.CHECKED_IN });
+    };
+
+    const handleCheckOut = () => {
+        if (!normalizedStatus || !canCheckOut(normalizedStatus)) {
+            toast({ title: 'Ação indisponível', description: 'Status não permite check-out.', variant: 'destructive' });
+            return;
+        }
+        updateStatus.mutate({
+            bookingId: id!,
+            newStatus: BookingStatus.CHECKED_OUT
+        }, {
+            onSuccess: () => {
+                if (primaryRoom && !isViewer) {
+                    setIsCheckoutSuggestionOpen(true);
+                }
+            }
+        });
+    };
+
+    const handleCancel = () => {
+        if (!normalizedStatus || !canCancel(normalizedStatus)) {
+            toast({ title: 'Ação indisponível', description: 'Status não permite cancelamento.', variant: 'destructive' });
+            return;
+        }
+        updateStatus.mutate({ bookingId: id!, newStatus: BookingStatus.CANCELLED });
+    };
+
+    const handleNoShow = () => {
+        if (!normalizedStatus || !canMarkNoShow(normalizedStatus)) {
+            toast({ title: 'Ação indisponível', description: 'Status não permite no-show.', variant: 'destructive' });
+            return;
+        }
+        updateStatus.mutate({ bookingId: id!, newStatus: BookingStatus.NO_SHOW });
+    };
+
+    const confirmMarkDirty = async () => {
+        if (!primaryRoom || !booking?.property_id) return;
+        await updateRoomStatus.mutateAsync({
+            roomId: primaryRoom.room_id,
+            newStatus: 'dirty',
+            propertyId: booking.property_id
+        });
+        setIsCheckoutSuggestionOpen(false);
     };
 
     // Hash-based scroll navigation for quick actions
@@ -295,11 +491,128 @@ const FolioPage = () => {
                 <KpiCard label="Total Lançado" value={`R$ ${totals.totalCharges.toFixed(2)}`} />
                 <KpiCard label="Total Pago" value={`R$ ${totals.totalPaid.toFixed(2)}`} variant="emerald" />
                 <KpiCard
-                    label="Saldo"
-                    value={`R$ ${totals.balance.toFixed(2)}`}
                     variant={totals.balance > 0 ? "rose" : "default"}
                 />
             </div>
+
+            {/* Room Assignment Section */}
+            <Card className="border-none shadow-sm overflow-hidden">
+                <CardHeader className="py-3 px-6 border-b bg-card flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <BedDouble className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-base text-card-foreground">Quarto</CardTitle>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                    {primaryRoom ? (
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center font-bold text-primary">
+                                    {primaryRoom.room?.room_number}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold">Quarto {primaryRoom.room?.room_number}</p>
+                                    <p className="text-xs text-muted-foreground uppercase">{primaryRoom.room?.status}</p>
+                                </div>
+                            </div>
+                            {!isViewer && (
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8"
+                                    onClick={() => handleUnassignRoom(primaryRoom.id)}
+                                >
+                                    Remover
+                                </Button>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4 space-y-3">
+                            <p className="text-sm text-muted-foreground">Nenhum quarto atribuído a esta reserva.</p>
+                            {!isViewer && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsAssignDialogOpen(true)}
+                                    className="gap-2"
+                                >
+                                    <Plus className="h-4 w-4" /> Atribuir Quarto
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Group Section */}
+            <Card className="border-none shadow-sm overflow-hidden">
+                <CardHeader className="py-3 px-6 border-b bg-card flex flex-row items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <UsersIcon className="h-4 w-4 text-primary" />
+                        <CardTitle className="text-base text-card-foreground">Grupo</CardTitle>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-4">
+                    {bookingGroup ? (
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <div className="flex-1">
+                                    <p className="text-sm font-bold">{bookingGroup.group_name}</p>
+                                    {bookingGroup.leader_name && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Responsável: {bookingGroup.leader_name}
+                                        </p>
+                                    )}
+                                    {bookingGroup.estimated_participants && (
+                                        <p className="text-xs text-muted-foreground">
+                                            Participantes estimados: {bookingGroup.estimated_participants}
+                                        </p>
+                                    )}
+                                </div>
+                                {!isViewer && (
+                                    <div className="flex gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setIsGroupDialogOpen(true)}
+                                            className="h-8"
+                                        >
+                                            Editar
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8"
+                                            onClick={handleDeleteGroup}
+                                        >
+                                            Remover
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                            {bookingGroup.notes && (
+                                <div className="pt-2 border-t">
+                                    <p className="text-xs text-muted-foreground">{bookingGroup.notes}</p>
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="text-center py-4 space-y-3">
+                            <p className="text-sm text-muted-foreground">Sem grupo definido para esta reserva.</p>
+                            {!isViewer && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setIsGroupDialogOpen(true)}
+                                    className="gap-2"
+                                >
+                                    <Plus className="h-4 w-4" /> Criar Grupo
+                                </Button>
+                            )}
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Booking Participants */}
             <div id="participants">
@@ -473,6 +786,124 @@ const FolioPage = () => {
                     <DialogFooter>
                         <Button onClick={handleAddPayment} disabled={addPayment.isPending} className="bg-success hover:bg-success/90">
                             {addPayment.isPending ? "Processando..." : "Confirmar Pagamento"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Room Assignment Dialog */}
+            <Dialog open={isAssignDialogOpen} onOpenChange={setIsAssignDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                        <DialogTitle>Selecionar Quarto</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4 max-h-[400px] overflow-y-auto">
+                        {allRooms.length === 0 ? (
+                            <p className="text-center text-muted-foreground py-4">Nenhum quarto cadastrado.</p>
+                        ) : (
+                            <div className="grid grid-cols-2 gap-2">
+                                {allRooms.map((room) => (
+                                    <Button
+                                        key={room.id}
+                                        variant="outline"
+                                        className="h-16 flex flex-col items-center justify-center gap-1 border-primary/20 hover:border-primary hover:bg-primary/5"
+                                        onClick={() => handleAssignRoom(room.id)}
+                                        disabled={assignRoom.isPending}
+                                    >
+                                        <span className="text-lg font-bold">{room.room_number}</span>
+                                        <span className="text-[10px] text-muted-foreground uppercase">{room.status}</span>
+                                    </Button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Checkout Housekeeping Suggestion */}
+            <AlertDialog open={isCheckoutSuggestionOpen} onOpenChange={setIsCheckoutSuggestionOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Atualizar status do quarto?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Deseja marcar o quarto {primaryRoom?.room?.room_number} como sujo?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Agora não</AlertDialogCancel>
+                        <AlertDialogAction onClick={confirmMarkDirty} className="bg-destructive hover:bg-destructive/90">
+                            Sim, marcar como sujo
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            {/* Group Dialog */}
+            <Dialog open={isGroupDialogOpen} onOpenChange={setIsGroupDialogOpen}>
+                <DialogContent className="sm:max-w-[500px]">
+                    <DialogHeader>
+                        <DialogTitle>{bookingGroup ? 'Editar Grupo' : 'Criar Grupo'}</DialogTitle>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="group-name">Nome do Grupo *</Label>
+                            <Input
+                                id="group-name"
+                                value={groupForm.group_name}
+                                onChange={e => setGroupForm({ ...groupForm, group_name: e.target.value })}
+                                placeholder="Ex: Excursão Semana Santa 2026"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="leader-name">Nome do Responsável</Label>
+                            <Input
+                                id="leader-name"
+                                value={groupForm.leader_name}
+                                onChange={e => setGroupForm({ ...groupForm, leader_name: e.target.value })}
+                                placeholder="Ex: João Silva"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="leader-phone">Telefone do Responsável</Label>
+                            <Input
+                                id="leader-phone"
+                                value={groupForm.leader_phone}
+                                onChange={e => setGroupForm({ ...groupForm, leader_phone: e.target.value })}
+                                placeholder="Ex: (11) 98765-4321"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="estimated-participants">Participantes Estimados</Label>
+                            <Input
+                                id="estimated-participants"
+                                type="number"
+                                value={groupForm.estimated_participants}
+                                onChange={e => setGroupForm({ ...groupForm, estimated_participants: e.target.value })}
+                                placeholder="Ex: 25"
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="notes">Observações</Label>
+                            <Input
+                                id="notes"
+                                value={groupForm.notes}
+                                onChange={e => setGroupForm({ ...groupForm, notes: e.target.value })}
+                                placeholder="Informações adicionais sobre o grupo"
+                            />
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsGroupDialogOpen(false)}
+                        >
+                            Cancelar
+                        </Button>
+                        <Button
+                            onClick={handleSaveGroup}
+                            disabled={createGroup.isPending || updateGroup.isPending}
+                        >
+                            {createGroup.isPending || updateGroup.isPending ? 'Salvando...' : 'Salvar'}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

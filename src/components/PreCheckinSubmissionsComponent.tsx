@@ -18,7 +18,7 @@ import {
     AlertDialogTitle,
     AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { CheckCircle, XCircle, FileText } from 'lucide-react';
+import { CheckCircle, XCircle, FileText, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -31,7 +31,8 @@ interface Submission {
     id: string;
     session_id: string;
     status: string;
-    payload: Record<string, string>;
+    mode?: string; // 'individual' or 'group'
+    payload: Record<string, any>; // Changed from string to any to support group payloads
     created_at: string;
 }
 
@@ -90,33 +91,172 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
             if (!currentOrgId) throw new Error('Organization context required');
             if (isViewer) throw new Error('Viewer cannot apply submissions');
 
-            const payload = submission.payload;
+            const mode = submission.mode || 'individual';
 
-            // Step 1: Upsert guest master
-            let guestId: string | null = null;
+            if (mode === 'group') {
+                // Group mode: process multiple participants
+                const participants = submission.payload.participants || [];
+                if (participants.length === 0) throw new Error('No participants in group submission');
 
-            // Try to find existing guest by document or email
-            if (payload.document || payload.email) {
-                const { data: existingGuests } = await supabase
-                    .from('guests')
+                let processedCount = 0;
+                let failedCount = 0;
+
+                // Check if booking already has a primary participant
+                const { data: existingPrimary } = await (supabase as any)
+                    .from('booking_guests')
                     .select('id')
                     .eq('org_id', currentOrgId)
-                    .or(
-                        payload.document
-                            ? `document.eq.${payload.document}`
-                            : payload.email
-                                ? `email.eq.${payload.email}`
-                                : 'id.eq.00000000-0000-0000-0000-000000000000' // Never matches
-                    )
+                    .eq('booking_id', bookingId)
+                    .eq('is_primary', true)
                     .limit(1);
 
-                if (existingGuests && existingGuests.length > 0) {
-                    guestId = existingGuests[0].id;
+                let hasPrimary = existingPrimary && existingPrimary.length > 0;
 
-                    // Update existing guest
-                    await supabase
+                for (const [index, participant] of participants.entries()) {
+                    try {
+                        // Step 1: Upsert guest master
+                        let guestId: string | null = null;
+
+                        // Try to find existing guest by document or email
+                        if (participant.document || participant.email) {
+                            const { data: existingGuests } = await (supabase as any)
+                                .from('guests')
+                                .select('id')
+                                .eq('org_id', currentOrgId)
+                                .or(
+                                    participant.document
+                                        ? `document.eq.${participant.document}`
+                                        : participant.email
+                                            ? `email.eq.${participant.email}`
+                                            : 'id.eq.00000000-0000-0000-0000-000000000000'
+                                )
+                                .limit(1);
+
+                            if (existingGuests && existingGuests.length > 0) {
+                                guestId = existingGuests[0].id;
+
+                                // Update existing guest
+                                await (supabase as any)
+                                    .from('guests')
+                                    .update({
+                                        first_name: participant.full_name.split(' ')[0] || participant.full_name,
+                                        last_name: participant.full_name.split(' ').slice(1).join(' ') || '',
+                                        document: participant.document || null,
+                                        email: participant.email || null,
+                                        phone: participant.phone || null,
+                                    })
+                                    .eq('id', guestId)
+                                    .eq('org_id', currentOrgId);
+                            }
+                        }
+
+                        // If no existing guest, create new
+                        if (!guestId) {
+                            const { data: newGuest, error: guestError } = await (supabase as any)
+                                .from('guests')
+                                .insert({
+                                    org_id: currentOrgId,
+                                    first_name: participant.full_name.split(' ')[0] || participant.full_name,
+                                    last_name: participant.full_name.split(' ').slice(1).join(' ') || '',
+                                    document: participant.document || null,
+                                    email: participant.email || null,
+                                    phone: participant.phone || null,
+                                })
+                                .select('id')
+                                .single();
+
+                            if (guestError) throw guestError;
+                            guestId = newGuest.id;
+                        }
+
+                        // Insert booking_guests - first participant becomes primary if none exists
+                        const shouldBePrimary = !hasPrimary && index === 0;
+
+                        const { error: bookingGuestError } = await (supabase as any)
+                            .from('booking_guests')
+                            .insert({
+                                org_id: currentOrgId,
+                                booking_id: bookingId,
+                                guest_id: guestId,
+                                full_name: participant.full_name,
+                                document: participant.document || null,
+                                is_primary: shouldBePrimary,
+                            });
+
+                        if (bookingGuestError) throw bookingGuestError;
+
+                        if (shouldBePrimary) hasPrimary = true;
+                        processedCount++;
+                    } catch (err) {
+                        console.error('Failed to process participant:', participant, err);
+                        failedCount++;
+                    }
+                }
+
+                // Update submission status
+                const { error: statusError } = await (supabase as any)
+                    .from('pre_checkin_submissions')
+                    .update({ status: 'applied' })
+                    .eq('id', submission.id)
+                    .eq('org_id', currentOrgId);
+
+                if (statusError) throw statusError;
+
+                // Show summary
+                if (failedCount > 0) {
+                    toast({
+                        title: 'Aplicação Parcial',
+                        description: `${processedCount} participante(s) adicionado(s). ${failedCount} falharam.`,
+                        variant: 'destructive',
+                    });
+                }
+            } else {
+                // Individual mode: original logic
+                const payload = submission.payload;
+
+                // Step 1: Upsert guest master
+                let guestId: string | null = null;
+
+                // Try to find existing guest by document or email
+                if (payload.document || payload.email) {
+                    const { data: existingGuests } = await (supabase as any)
                         .from('guests')
-                        .update({
+                        .select('id')
+                        .eq('org_id', currentOrgId)
+                        .or(
+                            payload.document
+                                ? `document.eq.${payload.document}`
+                                : payload.email
+                                    ? `email.eq.${payload.email}`
+                                    : 'id.eq.00000000-0000-0000-0000-000000000000'
+                        )
+                        .limit(1);
+
+                    if (existingGuests && existingGuests.length > 0) {
+                        guestId = existingGuests[0].id;
+
+                        // Update existing guest
+                        await (supabase as any)
+                            .from('guests')
+                            .update({
+                                first_name: payload.full_name.split(' ')[0] || payload.full_name,
+                                last_name: payload.full_name.split(' ').slice(1).join(' ') || '',
+                                document: payload.document || null,
+                                email: payload.email || null,
+                                phone: payload.phone || null,
+                                birthdate: payload.birthdate || null,
+                            })
+                            .eq('id', guestId)
+                            .eq('org_id', currentOrgId);
+                    }
+                }
+
+                // If no existing guest, create new
+                if (!guestId) {
+                    const { data: newGuest, error: guestError } = await (supabase as any)
+                        .from('guests')
+                        .insert({
+                            org_id: currentOrgId,
                             first_name: payload.full_name.split(' ')[0] || payload.full_name,
                             last_name: payload.full_name.split(' ').slice(1).join(' ') || '',
                             document: payload.document || null,
@@ -124,64 +264,47 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                             phone: payload.phone || null,
                             birthdate: payload.birthdate || null,
                         })
-                        .eq('id', guestId)
-                        .eq('org_id', currentOrgId);
-                }
-            }
+                        .select('id')
+                        .single();
 
-            // If no existing guest, create new
-            if (!guestId) {
-                const { data: newGuest, error: guestError } = await supabase
-                    .from('guests')
+                    if (guestError) throw guestError;
+                    guestId = newGuest.id;
+                }
+
+                // Step 2: Check if booking already has a primary participant
+                const { data: existingPrimary } = await (supabase as any)
+                    .from('booking_guests')
+                    .select('id')
+                    .eq('org_id', currentOrgId)
+                    .eq('booking_id', bookingId)
+                    .eq('is_primary', true)
+                    .limit(1);
+
+                const shouldBePrimary = !existingPrimary || existingPrimary.length === 0;
+
+                // Step 3: Insert booking_guests
+                const { error: bookingGuestError } = await (supabase as any)
+                    .from('booking_guests')
                     .insert({
                         org_id: currentOrgId,
-                        first_name: payload.full_name.split(' ')[0] || payload.full_name,
-                        last_name: payload.full_name.split(' ').slice(1).join(' ') || '',
+                        booking_id: bookingId,
+                        guest_id: guestId,
+                        full_name: payload.full_name,
                         document: payload.document || null,
-                        email: payload.email || null,
-                        phone: payload.phone || null,
-                        birthdate: payload.birthdate || null,
-                    })
-                    .select('id')
-                    .single();
+                        is_primary: shouldBePrimary,
+                    });
 
-                if (guestError) throw guestError;
-                guestId = newGuest.id;
+                if (bookingGuestError) throw bookingGuestError;
+
+                // Step 3: Update submission status
+                const { error: statusError } = await (supabase as any)
+                    .from('pre_checkin_submissions')
+                    .update({ status: 'applied' })
+                    .eq('id', submission.id)
+                    .eq('org_id', currentOrgId);
+
+                if (statusError) throw statusError;
             }
-
-            // Step 2: Check if booking already has a primary participant
-            const { data: existingPrimary } = await supabase
-                .from('booking_guests')
-                .select('id')
-                .eq('org_id', currentOrgId)
-                .eq('booking_id', bookingId)
-                .eq('is_primary', true)
-                .limit(1);
-
-            const shouldBePrimary = !existingPrimary || existingPrimary.length === 0;
-
-            // Step 3: Insert booking_guests
-            const { error: bookingGuestError } = await supabase
-                .from('booking_guests')
-                .insert({
-                    org_id: currentOrgId,
-                    booking_id: bookingId,
-                    guest_id: guestId,
-                    full_name: payload.full_name,
-                    document: payload.document || null,
-                    is_primary: shouldBePrimary, // Auto-set primary if none exists
-                });
-
-            if (bookingGuestError) throw bookingGuestError;
-
-            // Step 3: Update submission status
-            const { error: statusError } = await supabase
-                .from('pre_checkin_submissions')
-                .update({ status: 'applied' })
-                .eq('id', submission.id)
-                .eq('org_id', currentOrgId);
-
-            if (statusError) throw statusError;
         },
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['pre_checkin_submissions', currentOrgId] });
@@ -475,24 +598,53 @@ const PreCheckinSubmissionsComponent = ({ bookingId }: PreCheckinSubmissionsProp
                             <div className="flex-1">
                                 <div className="flex items-center gap-2 mb-2">
                                     {getStatusBadge(submission.status)}
+                                    {submission.mode === 'group' && (
+                                        <Badge variant="outline" className="gap-1">
+                                            <Users className="h-3 w-3" />
+                                            Grupo ({payload.participants?.length || 0} participantes)
+                                        </Badge>
+                                    )}
                                     <span className="text-sm text-muted-foreground">
                                         Recebido em {format(new Date(submission.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                                     </span>
                                 </div>
 
-                                <div className="space-y-1">
-                                    <p className="font-medium">{payload.full_name}</p>
-                                    <div className="text-sm text-muted-foreground space-y-0.5">
-                                        {payload.document && <div>CPF: {payload.document}</div>}
-                                        {payload.email && <div>E-mail: {payload.email}</div>}
-                                        {payload.phone && <div>Telefone: {payload.phone}</div>}
-                                        {payload.birthdate && (
-                                            <div>
-                                                Nascimento: {format(new Date(payload.birthdate), 'dd/MM/yyyy', { locale: ptBR })}
-                                            </div>
-                                        )}
+                                {submission.mode === 'group' ? (
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            Participantes do grupo:
+                                        </p>
+                                        <div className="space-y-1.5 max-h-48 overflow-y-auto">
+                                            {(payload.participants || []).map((participant: any, idx: number) => (
+                                                <div
+                                                    key={idx}
+                                                    className="p-2 bg-muted/30 rounded border border-muted text-sm"
+                                                >
+                                                    <p className="font-medium">{participant.full_name}</p>
+                                                    <div className="text-xs text-muted-foreground space-y-0.5 mt-0.5">
+                                                        {participant.document && <div>CPF: {participant.document}</div>}
+                                                        {participant.email && <div>E-mail: {participant.email}</div>}
+                                                        {participant.phone && <div>Telefone: {participant.phone}</div>}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="space-y-1">
+                                        <p className="font-medium">{payload.full_name}</p>
+                                        <div className="text-sm text-muted-foreground space-y-0.5">
+                                            {payload.document && <div>CPF: {payload.document}</div>}
+                                            {payload.email && <div>E-mail: {payload.email}</div>}
+                                            {payload.phone && <div>Telefone: {payload.phone}</div>}
+                                            {payload.birthdate && (
+                                                <div>
+                                                    Nascimento: {format(new Date(payload.birthdate), 'dd/MM/yyyy', { locale: ptBR })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             {!isViewer && isPending && (
