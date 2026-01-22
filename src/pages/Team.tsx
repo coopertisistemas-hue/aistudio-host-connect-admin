@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 import { useOrg } from '@/hooks/useOrg';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,14 +13,16 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from '@/hooks/use-toast';
 import { Copy, Users, UserPlus } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
+import { getRoleDisplayName } from '@/lib/constants/roles';
 
 export default function TeamPage() {
-    const { currentOrgId, role, isLoading: isOrgLoading } = useOrg();
+    const { currentOrgId, isLoading: isOrgLoading } = useOrg();
+    const { userRole, loading: authLoading } = useAuth();
     const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteRole, setInviteRole] = useState('member');
+    const [inviteRole, setInviteRole] = useState('manager'); // Changed default to manager as per new roles
     const queryClient = useQueryClient();
 
-    const isAdmin = role === 'owner' || role === 'admin';
+    const isAdmin = userRole === 'owner' || userRole === 'admin';
 
     // Fetch Members
     const { data: members, isLoading: isMembersLoading } = useQuery({
@@ -97,7 +100,7 @@ export default function TeamPage() {
         toast({ title: "Link copiado!", description: "Envie para o usuário." });
     };
 
-    if (isOrgLoading) return <div>Carregando...</div>;
+    if (isOrgLoading || authLoading) return <div>Carregando...</div>;
 
     return (
         <DashboardLayout>
@@ -132,11 +135,11 @@ export default function TeamPage() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="admin">Administrador</SelectItem>
+                                        <SelectItem value="admin">Dono</SelectItem>
                                         <SelectItem value="manager">Gerente</SelectItem>
-                                        <SelectItem value="staff">Staff</SelectItem>
+                                        <SelectItem value="staff_frontdesk">Recepção</SelectItem>
+                                        <SelectItem value="staff_housekeeping">Limpeza</SelectItem>
                                         <SelectItem value="viewer">Visualizador</SelectItem>
-                                        <SelectItem value="member">Membro</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -175,7 +178,7 @@ export default function TeamPage() {
                                             {member.profiles?.email}
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline" className="uppercase">{member.role}</Badge>
+                                            <Badge variant="outline" className="uppercase">{getRoleDisplayName(member.role)}</Badge>
                                         </TableCell>
                                         <TableCell>{new Date(member.created_at).toLocaleDateString()}</TableCell>
                                         <TableCell className="text-right">

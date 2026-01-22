@@ -62,6 +62,8 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import { useOnboardingState } from "@/hooks/useOnboardingState";
+import { getRoleDisplayName } from "@/lib/constants/roles";
 import logoIcon from "@/assets/logo-icon.png";
 
 const AppSidebar = () => {
@@ -69,27 +71,35 @@ const AppSidebar = () => {
   const location = useLocation();
   const { user, signOut, userRole, userPlan, loading: authLoading } = useAuth();
   const { isAdmin, loading: isAdminLoading } = useIsAdmin();
+  const { onboarding, isLoading: onboardingLoading } = useOnboardingState();
+  const currentMode = onboarding?.mode || 'standard';
 
   const isActive = (path: string) => location.pathname === path;
   const isCollapsed = state === "collapsed";
 
-  if (authLoading || isAdminLoading) return null;
+  if (authLoading || isAdminLoading || onboardingLoading) return null;
 
   // Entitlement Gates
   const { canAccess } = useEntitlements();
+
+  // Mode Gating Helper
+  const isModeEligible = (itemModes?: string[]) => {
+    if (!itemModes) return true;
+    return itemModes.includes(currentMode);
+  };
 
   const menuGroups = [
     {
       label: "Operacional",
       icon: Briefcase,
       items: [
-        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, modes: ['standard', 'hotel'] },
         { title: "Front Desk", url: "/front-desk", icon: Monitor },
         { title: "Quadro de Quartos", url: "/operation/rooms", icon: BedDouble },
         { title: "Governança", url: "/operation/housekeeping", icon: Brush },
-        { title: "Manutenção", url: "/operation/demands", icon: Construction },
-        { title: "Estoque da Copa", url: "/ops/pantry-stock", icon: Utensils },
-        { title: "Compra Rápida", url: "/pdv", icon: ShoppingCart },
+        { title: "Manutenção", url: "/operation/demands", icon: Construction, modes: ['standard', 'hotel'] },
+        { title: "Estoque da Copa", url: "/ops/pantry-stock", icon: Utensils, modes: ['hotel'] },
+        { title: "Compra Rápida", url: "/pdv", icon: ShoppingCart, modes: ['standard', 'hotel'] },
         { title: "Tarefas", url: "/tasks", icon: ListTodo },
       ]
     },
@@ -97,16 +107,17 @@ const AppSidebar = () => {
       label: "Vendas & Reservas",
       icon: TrendingUp,
       items: [
-        { title: "Funil (Pipeline)", url: "/reservations/pipeline", icon: TrendingUp },
+        { title: "Funil (Pipeline)", url: "/reservations/pipeline", icon: TrendingUp, modes: ['standard', 'hotel'] },
         { title: "Reservas", url: "/bookings", icon: Calendar },
         { title: "Chegadas", url: "/arrivals", icon: LogIn },
         { title: "Partidas", url: "/departures", icon: LogOut },
-        { title: "Motor de Reservas", url: "/bookings", icon: Globe },
+        { title: "Motor de Reservas", url: "/bookings", icon: Globe, modes: ['standard', 'hotel'] },
       ]
     },
     {
       label: "Marketing & Canais",
       icon: Zap,
+      modes: ['standard', 'hotel'],
       items: [
         { title: "Inbox Unificada", url: "/marketing/inbox", icon: Hash },
         { title: "Overview", url: "/marketing/overview", icon: BarChart3 },
@@ -119,12 +130,12 @@ const AppSidebar = () => {
       icon: Home,
       items: [
         { title: "Propriedades", url: "/properties", icon: Building2 },
-        { title: "Categorias de Acomodação", url: "/room-categories", icon: Tag },
+        { title: "Categorias de Acomodação", url: "/room-categories", icon: Tag, modes: ['standard', 'hotel'] },
         { title: "Tipos de Acomodação", url: "/room-types", icon: BedDouble },
         { title: "Quartos", url: "/rooms", icon: Bed },
-        { title: "Comodidades", url: "/amenities", icon: ListChecks },
-        { title: "Inventário de Acomodação", url: "/inventory", icon: Package },
-        { title: "Serviços", url: "/services", icon: ConciergeBell },
+        { title: "Comodidades", url: "/amenities", icon: ListChecks, modes: ['standard', 'hotel'] },
+        { title: "Inventário de Acomodação", url: "/inventory", icon: Package, modes: ['hotel'] },
+        { title: "Serviços", url: "/services", icon: ConciergeBell, modes: ['standard', 'hotel'] },
         { title: "Gerenciador de Canais", url: "/channel-manager", icon: Globe, gated: !canAccess('otas') },
       ]
     },
@@ -133,8 +144,8 @@ const AppSidebar = () => {
       icon: BarChart3,
       items: [
         { title: "Financeiro", url: "/financial", icon: DollarSign },
-        { title: "Despesas", url: "/expenses", icon: Wallet },
-        { title: "Regras de Precificação", url: "/pricing-rules", icon: Tag },
+        { title: "Despesas", url: "/expenses", icon: Wallet, modes: ['standard', 'hotel'] },
+        { title: "Regras de Precificação", url: "/pricing-rules", icon: Tag, modes: ['standard', 'hotel'] },
         { title: "Hóspedes", url: "/guests", icon: Users },
       ]
     },
@@ -142,9 +153,9 @@ const AppSidebar = () => {
       label: "Gestão & Admin",
       icon: Settings,
       items: [
-        { title: "Plantões (Shifts)", url: "/ops/shifts", icon: CalendarClock },
-        { title: "Meus Plantões", url: "/me/shifts", icon: Calendar },
-        { title: "Colaboradores", url: "/ops/staff", icon: Users },
+        { title: "Plantões (Shifts)", url: "/ops/shifts", icon: CalendarClock, modes: ['hotel'] },
+        { title: "Meus Plantões", url: "/me/shifts", icon: Calendar, modes: ['standard', 'hotel'] },
+        { title: "Colaboradores", url: "/ops/staff", icon: Users, modes: ['standard', 'hotel'] },
         { title: "Configurações", url: "/settings", icon: User },
         { title: "Website", url: "/website-settings", icon: Globe, gated: !canAccess('site_bonus') },
         { title: "Painel Admin", url: "/admin-panel", icon: ShieldCheck, roles: ['admin'] },
@@ -174,9 +185,12 @@ const AppSidebar = () => {
 
       <SidebarContent>
         {menuGroups.map((group, gIndex) => {
+          if (group.modes && !isModeEligible(group.modes)) return null;
+
           const filteredItems = group.items.filter(item =>
             (!item.roles || (userRole && item.roles.includes(userRole))) &&
-            !item.gated
+            !item.gated &&
+            isModeEligible(item.modes)
           );
 
           if (filteredItems.length === 0) return null;
@@ -238,7 +252,7 @@ const AppSidebar = () => {
             <div className="flex flex-col gap-1 px-2">
               <span className="text-xs font-bold truncate text-foreground/80">{user?.user_metadata?.full_name || user?.email}</span>
               <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">{userRole}</span>
+                <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase">{getRoleDisplayName(userRole)}</span>
                 <span className="text-[9px] bg-accent/10 text-accent-foreground px-1.5 py-0.5 rounded font-bold uppercase">{userPlan}</span>
               </div>
             </div>

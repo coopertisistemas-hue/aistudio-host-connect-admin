@@ -278,7 +278,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       });
 
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/post-login', { replace: true });
       }, 1000);
     } catch (error) {
       console.error('Sign up error:', error);

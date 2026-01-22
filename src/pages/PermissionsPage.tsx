@@ -10,6 +10,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { Shield, User, Loader2, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { getRoleDisplayName } from '@/lib/constants/roles';
 import {
     Select,
     SelectContent,
@@ -254,7 +255,7 @@ const PermissionsPage = () => {
                                                 <User className="h-4 w-4" />
                                                 <span>{member.profiles?.full_name || member.profiles?.email || 'Sem nome'}</span>
                                                 <Badge variant="outline" className="ml-2">
-                                                    {member.role}
+                                                    {getRoleDisplayName(member.role)}
                                                 </Badge>
                                             </div>
                                         </SelectItem>

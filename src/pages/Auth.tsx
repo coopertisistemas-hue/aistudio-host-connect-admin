@@ -37,10 +37,9 @@ const Auth = () => {
     },
   });
 
-  // Redirect if already logged in
   useEffect(() => {
     if (user && !loading) {
-      navigate('/dashboard');
+      navigate('/post-login', { replace: true });
     }
   }, [user, loading, navigate]);
 

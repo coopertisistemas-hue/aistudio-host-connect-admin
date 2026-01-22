@@ -253,8 +253,9 @@ const SetupWizardPage = () => {
                             >
                                 <Home className="h-12 w-12" />
                                 <div className="text-center">
-                                    <div className="font-bold">Pousada Simples</div>
-                                    <div className="text-xs text-muted-foreground">1-5 quartos</div>
+                                    <div className="font-bold">SIMPLIFIED</div>
+                                    <div className="text-xs text-muted-foreground uppercase font-semibold">1-5 quartos</div>
+                                    <div className="text-[10px] mt-1 text-muted-foreground leading-tight">Ideal para pousadas operadas pelo dono.</div>
                                 </div>
                             </Button>
 
@@ -265,8 +266,9 @@ const SetupWizardPage = () => {
                             >
                                 <Building2 className="h-12 w-12" />
                                 <div className="text-center">
-                                    <div className="font-bold">Pousada Padrão</div>
-                                    <div className="text-xs text-muted-foreground">6-30 quartos</div>
+                                    <div className="font-bold">STANDARD</div>
+                                    <div className="text-xs text-muted-foreground uppercase font-semibold">6-30 quartos</div>
+                                    <div className="text-[10px] mt-1 text-muted-foreground leading-tight">Para pequenas pousadas com equipe reduzida.</div>
                                 </div>
                             </Button>
 
@@ -277,8 +279,9 @@ const SetupWizardPage = () => {
                             >
                                 <Hotel className="h-12 w-12" />
                                 <div className="text-center">
-                                    <div className="font-bold">Hotel</div>
-                                    <div className="text-xs text-muted-foreground">30+ quartos</div>
+                                    <div className="font-bold">FULL</div>
+                                    <div className="text-xs text-muted-foreground uppercase font-semibold">30+ quartos</div>
+                                    <div className="text-[10px] mt-1 text-muted-foreground leading-tight">Operação completa para hotéis de médio porte.</div>
                                 </div>
                             </Button>
                         </div>

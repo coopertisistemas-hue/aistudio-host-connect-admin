@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Users, Plus, Phone, Mail, Shield } from "lucide-react";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
+import { getRoleDisplayName } from "@/lib/constants/roles";
 
 const StaffManagementPage = () => {
     const { selectedPropertyId } = useSelectedProperty();
@@ -37,7 +38,7 @@ const StaffManagementPage = () => {
                                     <div>
                                         <h3 className="font-bold text-sm">{member.name}</h3>
                                         <Badge variant="outline" className="text-[8px] uppercase font-bold py-0 h-4">
-                                            {member.role}
+                                            {getRoleDisplayName(member.role)}
                                         </Badge>
                                     </div>
                                 </div>
