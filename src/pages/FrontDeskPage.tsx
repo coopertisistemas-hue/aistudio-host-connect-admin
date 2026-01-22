@@ -15,7 +15,21 @@ import { useSelectedProperty } from "@/hooks/useSelectedProperty";
 import { Booking } from "@/hooks/useBookings";
 import { BookingStatus, getBookingStatusLabel, canCheckIn, canCheckOut, canCancel, canMarkNoShow, normalizeLegacyStatus } from "@/lib/constants/statuses";
 import { useUpdateBookingStatus } from "@/hooks/useUpdateBookingStatus";
+import { useUpdateRoomStatus } from "@/hooks/useUpdateRoomStatus";
+import { useBookingRooms } from "@/hooks/useBookingRooms";
 import { useToast } from "@/hooks/use-toast";
+import { FrontDeskBookingCard } from "@/components/frontdesk/FrontDeskBookingCard";
+import { QuickBookingDialog } from "@/components/bookings/QuickBookingDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Loader2,
   Home,
@@ -31,10 +45,13 @@ import {
   Check,
   X,
   Ban,
-  AlertCircle
+  AlertCircle,
+  Users,
+  Plus
 } from "lucide-react";
-import { format, startOfDay, parseISO } from "date-fns";
+import { format, startOfDay, parseISO, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const FrontDeskPage = () => {
   const { properties, isLoading: propertiesLoading } = useProperties();
@@ -44,11 +61,28 @@ const FrontDeskPage = () => {
   const isViewer = userRole === 'viewer';
   const navigate = useNavigate();
 
+  // Date filter state for peak mode
+  type DateFilter = 'today' | 'tomorrow' | 'yesterday' | 'all';
+  const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilter>('today');
+
   const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
-  // Arrivals Query: check_in today, pre-arrival statuses, limit 50, ordered ASC
+  const selectedDateValue = useMemo(() => {
+    const base = startOfDay(new Date());
+    switch (selectedDateFilter) {
+      case 'yesterday': return format(addDays(base, -1), 'yyyy-MM-dd');
+      case 'tomorrow': return format(addDays(base, 1), 'yyyy-MM-dd');
+      case 'all': return null;
+      default: return today;
+    }
+  }, [selectedDateFilter, today]);
+
+  // Quick booking dialog state
+  const [isQuickBookingOpen, setIsQuickBookingOpen] = useState(false);
+
+  // Arrivals Query: check_in based on selected date, pre-arrival statuses, limit 50, ordered ASC
   const { data: arrivals = [], isLoading: arrivalsLoading } = useQuery({
-    queryKey: ['frontdesk-arrivals', currentOrgId, selectedPropertyId, today],
+    queryKey: ['frontdesk-arrivals', currentOrgId, selectedPropertyId, selectedDateValue],
     queryFn: async () => {
       if (!currentOrgId) return [];
 
@@ -56,8 +90,6 @@ const FrontDeskPage = () => {
         .from('bookings')
         .select('*')
         .eq('org_id', currentOrgId)
-        .gte('check_in', today)
-        .lte('check_in', today)
         .in('status', ['reserved', 'pre_checkin', 'pending', 'confirmed'])
         .order('check_in', { ascending: true })
         .order('created_at', { ascending: true })
@@ -67,6 +99,10 @@ const FrontDeskPage = () => {
         query = query.eq('property_id', selectedPropertyId);
       }
 
+      if (selectedDateValue) {
+        query = query.gte('check_in', selectedDateValue).lte('check_in', selectedDateValue);
+      }
+
       const { data, error } = await query;
       if (error) throw error;
       return data || [];
@@ -74,9 +110,9 @@ const FrontDeskPage = () => {
     enabled: !!currentOrgId && !!selectedPropertyId,
   });
 
-  // Departures Query: check_out today, active statuses, limit 50, ordered ASC
+  // Departures Query: check_out based on selected date, active statuses, limit 50, ordered ASC
   const { data: departures = [], isLoading: departuresLoading } = useQuery({
-    queryKey: ['frontdesk-departures', currentOrgId, selectedPropertyId, today],
+    queryKey: ['frontdesk-departures', currentOrgId, selectedPropertyId, selectedDateValue],
     queryFn: async () => {
       if (!currentOrgId) return [];
 
@@ -84,8 +120,6 @@ const FrontDeskPage = () => {
         .from('bookings')
         .select('*')
         .eq('org_id', currentOrgId)
-        .gte('check_out', today)
-        .lte('check_out', today)
         .in('status', ['checked_in', 'in_house', 'confirmed'])
         .order('check_out', { ascending: true })
         .order('created_at', { ascending: true })
@@ -93,6 +127,10 @@ const FrontDeskPage = () => {
 
       if (selectedPropertyId) {
         query = query.eq('property_id', selectedPropertyId);
+      }
+
+      if (selectedDateValue) {
+        query = query.gte('check_out', selectedDateValue).lte('check_out', selectedDateValue);
       }
 
       const { data, error } = await query;
@@ -170,6 +208,27 @@ const FrontDeskPage = () => {
 
       if (error) {
         console.warn('[FrontDesk] Booking guests query failed:', error);
+        return [];
+      }
+      return data || [];
+    },
+    enabled: !!currentOrgId && allDisplayedBookingIds.length > 0,
+  });
+
+  // Batched booking groups query for group tag display
+  const { data: bookingGroups = [] } = useQuery({
+    queryKey: ['booking-groups-batch', currentOrgId, selectedPropertyId, today, allDisplayedBookingIds.join(',')],
+    queryFn: async () => {
+      if (!currentOrgId || allDisplayedBookingIds.length === 0) return [];
+
+      const { data, error } = await (supabase as any)
+        .from('booking_groups')
+        .select('booking_id, group_name')
+        .eq('org_id', currentOrgId)
+        .in('booking_id', allDisplayedBookingIds);
+
+      if (error) {
+        console.warn('[FrontDesk] Booking groups query failed:', error);
         return [];
       }
       return data || [];
@@ -291,6 +350,18 @@ const FrontDeskPage = () => {
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Quick Booking Button - Non-viewer only */}
+              {!isViewer && (
+                <Button
+                  onClick={() => setIsQuickBookingOpen(true)}
+                  size="default"
+                  className="h-12 rounded-xl shadow-sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Reserva Rápida
+                </Button>
+              )}
+
               {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -319,6 +390,24 @@ const FrontDeskPage = () => {
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          {/* Date Filter Chips - Peak Mode */}
+          <div className="flex gap-2">
+            {(['today', 'tomorrow', 'yesterday', 'all'] as const).map((filter) => (
+              <Button
+                key={filter}
+                variant={selectedDateFilter === filter ? 'default' : 'outline'}
+                size="sm"
+                onClick={() => setSelectedDateFilter(filter)}
+                className="h-8"
+              >
+                {filter === 'today' && 'Hoje'}
+                {filter === 'tomorrow' && 'Amanhã'}
+                {filter === 'yesterday' && 'Ontem'}
+                {filter === 'all' && 'Todos'}
+              </Button>
+            ))}
           </div>
 
           {/* KPIs */}
@@ -401,7 +490,6 @@ const FrontDeskPage = () => {
 
           {/* Sections: Arrivals, Departures, In-House */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Arrivals Section */}
             <BookingSection
               title="Chegadas (Hoje)"
               icon={LogIn}
@@ -413,7 +501,6 @@ const FrontDeskPage = () => {
               alertStates={alertStates}
             />
 
-            {/* Departures Section */}
             <BookingSection
               title="Saídas (Hoje)"
               icon={LogOut}
@@ -425,7 +512,6 @@ const FrontDeskPage = () => {
               alertStates={alertStates}
             />
 
-            {/* In-House Section */}
             <BookingSection
               title="Em Casa"
               icon={BedDouble}
@@ -438,6 +524,10 @@ const FrontDeskPage = () => {
             />
           </div>
         </div>
+      </div>
+
+      {/* Quick Booking Dialog */}
+      <QuickBookingDialog open={isQuickBookingOpen} onOpenChange={setIsQuickBookingOpen} />
     </DashboardLayout>
   );
 };
@@ -501,226 +591,25 @@ const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoa
           </div>
         ) : (
           <div className="space-y-3 max-h-[600px] overflow-y-auto">
-            {bookings.map((booking) => (
-              <BookingCard
-                key={booking.id}
-                booking={booking}
-                onOpenFolio={onOpenFolio}
-                alerts={alertStates[booking.id]}
-              />
-            ))}
+            {bookings.map((booking) => {
+              const hasGroup = bookingGroups.some(g => g.booking_id === booking.id);
+              const precheckinCount = precheckinSessions.filter(s => s.booking_id === booking.id).length;
+              const participantCount = bookingGuests.filter(g => g.booking_id === booking.id).length;
+
+              return (
+                <FrontDeskBookingCard
+                  key={booking.id}
+                  booking={booking}
+                  onOpenFolio={onOpenFolio}
+                  alerts={alertStates[booking.id]}
+                  hasGroup={hasGroup}
+                  precheckinCount={precheckinCount}
+                  participantCount={participantCount}
+                />
+              );
+            })}
           </div>
         )}
-      </CardContent>
-    </Card>
-  );
-};
-
-// Booking Card Component
-interface BookingCardProps {
-  booking: Booking;
-  onOpenFolio: (bookingId: string) => void;
-  alerts?: { precheckinPending: boolean; noPrimaryGuest: boolean; arrivalNoCheckin: boolean };
-}
-
-const BookingCard = ({ booking, onOpenFolio, alerts }: BookingCardProps) => {
-  const navigate = useNavigate();
-  const { userRole } = useAuth();
-  const { toast } = useToast();
-  const updateStatus = useUpdateBookingStatus();
-  const isViewer = userRole === 'viewer';
-
-  // Normalize legacy status for guard checks
-  const normalizedStatus = normalizeLegacyStatus(booking.status);
-
-  // Lifecycle action handlers with guard clauses
-  const handleCheckIn = () => {
-    if (!canCheckIn(normalizedStatus)) {
-      toast({
-        title: 'Ação indisponível',
-        description: 'Ação indisponível para o status atual.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CHECKED_IN });
-  };
-
-  const handleCheckOut = () => {
-    if (!canCheckOut(normalizedStatus)) {
-      toast({
-        title: 'Ação indisponível',
-        description: 'Ação indisponível para o status atual.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CHECKED_OUT });
-  };
-
-  const handleCancel = () => {
-    if (!canCancel(normalizedStatus)) {
-      toast({
-        title: 'Ação indisponível',
-        description: 'Ação indisponível para o status atual.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CANCELLED });
-  };
-
-  const handleNoShow = () => {
-    if (!canMarkNoShow(normalizedStatus)) {
-      toast({
-        title: 'Ação indisponível',
-        description: 'Ação indisponível para o status atual.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.NO_SHOW });
-  };
-
-  return (
-    <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-md">
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {/* Guest Name & Status */}
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex items-center gap-2 flex-1 min-w-0">
-              <User className="h-4 w-4 text-muted-foreground shrink-0" />
-              <span className="font-semibold text-sm truncate">
-                {booking.guest_name || 'Hóspede'}
-              </span>
-            </div>
-            <Badge variant="secondary" className="text-xs shrink-0">
-              {getBookingStatusLabel(booking.status)}
-            </Badge>
-          </div>
-
-          {/* Dates */}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="h-3 w-3" />
-            <span>
-              {format(parseISO(booking.check_in), 'dd/MM', { locale: ptBR })} - {format(parseISO(booking.check_out), 'dd/MM', { locale: ptBR })}
-            </span>
-          </div>
-
-          {/* Operational Alerts */}
-          {alerts && (alerts.precheckinPending || alerts.noPrimaryGuest || alerts.arrivalNoCheckin) && (
-            <div className="flex flex-wrap gap-1">
-              {alerts.precheckinPending && (
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-amber-50 text-amber-700 border-amber-200">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  Pré-check-in pendente
-                </Badge>
-              )}
-              {alerts.noPrimaryGuest && (
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-blue-50 text-blue-700 border-blue-200">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  Sem hóspede principal
-                </Badge>
-              )}
-              {alerts.arrivalNoCheckin && (
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 bg-rose-50 text-rose-700 border-rose-200">
-                  <AlertCircle className="h-3 w-3 mr-1" />
-                  Chegada sem check-in
-                </Badge>
-              )}
-            </div>
-          )}
-
-          {/* Quick Actions */}
-          <div className="grid grid-cols-3 gap-1">
-            <Button
-              onClick={() => navigate(`/operation/folio/${booking.id}`)}
-              size="sm"
-              variant="outline"
-              className="text-xs h-8 px-2"
-              title="Abrir Folio"
-            >
-              <FileText className="h-3 w-3" />
-            </Button>
-            <Button
-              onClick={() => navigate(`/operation/folio/${booking.id}#participants`)}
-              size="sm"
-              variant="outline"
-              className="text-xs h-8 px-2"
-              title="Ver Hóspedes"
-            >
-              <User className="h-3 w-3" />
-            </Button>
-            <Button
-              onClick={() => navigate(`/operation/folio/${booking.id}#precheckin`)}
-              size="sm"
-              variant="outline"
-              className="text-xs h-8 px-2"
-              title="Pré-check-in"
-            >
-              <Calendar className="h-3 w-3" />
-            </Button>
-          </div>
-
-          {/* Lifecycle Actions */}
-          <div className="grid grid-cols-2 gap-1 pt-2 border-t">
-            {/* Check-in */}
-            {canCheckIn(normalizedStatus) && (
-              <Button
-                onClick={handleCheckIn}
-                disabled={isViewer || updateStatus.isPending}
-                size="sm"
-                variant="default"
-                className="text-xs h-8"
-              >
-                <Check className="h-3 w-3 mr-1" />
-                Check-in
-              </Button>
-            )}
-
-            {/* Check-out */}
-            {canCheckOut(normalizedStatus) && (
-              <Button
-                onClick={handleCheckOut}
-                disabled={isViewer || updateStatus.isPending}
-                size="sm"
-                variant="default"
-                className="text-xs h-8"
-              >
-                <LogOut className="h-3 w-3 mr-1" />
-                Check-out
-              </Button>
-            )}
-
-            {/* Cancel */}
-            {canCancel(normalizedStatus) && (
-              <Button
-                onClick={handleCancel}
-                disabled={isViewer || updateStatus.isPending}
-                size="sm"
-                variant="destructive"
-                className="text-xs h-8"
-              >
-                <X className="h-3 w-3 mr-1" />
-                Cancelar
-              </Button>
-            )}
-
-            {/* No-show */}
-            {canMarkNoShow(normalizedStatus) && (
-              <Button
-                onClick={handleNoShow}
-                disabled={isViewer || updateStatus.isPending}
-                size="sm"
-                variant="outline"
-                className="text-xs h-8"
-              >
-                <Ban className="h-3 w-3 mr-1" />
-                No-show
-              </Button>
-            )}
-          </div>
-        </div>
       </CardContent>
     </Card>
   );
