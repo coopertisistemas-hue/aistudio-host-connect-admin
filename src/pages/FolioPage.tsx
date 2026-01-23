@@ -99,8 +99,8 @@ const FolioPage = () => {
         enabled: !isOrgLoading && !!currentOrgId && !!id, // Enable only when org is loaded
     });
 
+
     const { items, payments, totals, isLoading: folioLoading, addItem, addPayment, closeFolio } = useFolio(id, currentOrgId);
-    const { toast } = useToast();
 
     const [isItemDialogOpen, setIsItemDialogOpen] = useState(false);
     const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
