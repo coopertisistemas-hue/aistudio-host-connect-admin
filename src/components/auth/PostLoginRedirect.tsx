@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
  * Ensures no flash of wrong content and prevents redirect loops.
  */
 const PostLoginRedirect = () => {
-    const { user, userRole, onboardingCompleted, loading } = useAuth();
+    const { user, userRole, isSuperAdmin, onboardingCompleted, loading } = useAuth();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -23,6 +23,16 @@ const PostLoginRedirect = () => {
         }
 
         // --- Deterministic Redirection Logic ---
+
+        // 0. SUPER ADMIN: Skip onboarding, go straight to dashboard
+        // Super admins are Connect team members, they don't need to set up organizations
+        if (isSuperAdmin) {
+            console.log('[PostLoginRedirect] Super admin detected, routing to /dashboard');
+            if (window.location.pathname !== '/dashboard') {
+                navigate('/dashboard', { replace: true });
+            }
+            return;
+        }
 
         // 1. If onboarding is incomplete => redirect to /setup
         // We use the tri-state onboardingCompleted from useAuth for speed
@@ -56,7 +66,7 @@ const PostLoginRedirect = () => {
         if (window.location.pathname !== destination) {
             navigate(destination, { replace: true });
         }
-    }, [user, userRole, onboardingCompleted, loading, navigate]);
+    }, [user, userRole, isSuperAdmin, onboardingCompleted, loading, navigate]);
 
     // Minimal loading state to avoid flicker
     return (
