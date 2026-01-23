@@ -14,6 +14,7 @@ interface AuthContextType {
   loading: boolean;
   userRole: string | null;
   userPlan: string | null;
+  isSuperAdmin: boolean; // ✅ Super admin flag
   onboardingCompleted: boolean | null; // Changed to boolean | null (tri-state)
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string, phone?: string | null, plan?: string) => Promise<void>;
@@ -30,6 +31,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   const [loading, setLoading] = useState(true);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userPlan, setUserPlan] = useState<string | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false); // ✅ Super admin state
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null); // Initialized as null (unknown)
   const navigate = useNavigate();
 
@@ -79,7 +81,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
 
       const { data, error } = await supabase
         .from('profiles')
-        .select('role, plan, onboarding_completed')
+        .select('role, plan, onboarding_completed, is_super_admin')
         .eq('id', userId)
         .abortSignal(signal)
         .single();
@@ -100,6 +102,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       } else {
         setUserRole(data?.role || 'user');
         setUserPlan(data?.plan || 'free');
+        setIsSuperAdmin(!!data?.is_super_admin); // ✅ Set super admin flag
         const isCompleted = !!data?.onboarding_completed;
         setOnboardingCompleted(isCompleted);
       }
@@ -141,6 +144,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         } else {
           setUserRole(null);
           setUserPlan(null);
+          setIsSuperAdmin(false);
           setOnboardingCompleted(null);
           setLoading(false);
         }
@@ -295,6 +299,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       setSession(null);
       setUserRole(null);
       setUserPlan(null);
+      setIsSuperAdmin(false);
       setOnboardingCompleted(null);
 
       // Clear localStorage items manually just in case
@@ -376,7 +381,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, userRole, userPlan, onboardingCompleted, signIn, signUp, signOut, signInWithGoogle, signInWithFacebook }}>
+    <AuthContext.Provider value={{ user, session, loading, userRole, userPlan, isSuperAdmin, onboardingCompleted, signIn, signUp, signOut, signInWithGoogle, signInWithFacebook }}>
       {children}
     </AuthContext.Provider>
   );

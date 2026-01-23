@@ -2,13 +2,43 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './useAuth';
 import { Tables } from '@/integrations/supabase/types';
+import { useState, useEffect } from 'react';
 
 export type Organization = Tables<'organizations'>;
 
 export const useOrg = () => {
-    const { user, loading: authLoading } = useAuth();
+    const { user, isSuperAdmin, loading: authLoading } = useAuth();
+    const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
 
-    const { data: organization, isLoading: isQueryLoading, error, refetch } = useQuery<Organization | null>({
+    // ============================================================================
+    // SUPER ADMIN: Fetch ALL organizations
+    // ============================================================================
+    const { data: allOrganizations, isLoading: allOrgsLoading } = useQuery<Organization[]>({
+        queryKey: ['all-organizations'],
+        queryFn: async () => {
+            console.log('[useOrg] 🔑 Super admin mode: Fetching ALL organizations');
+
+            const { data, error } = await supabase
+                .from('organizations')
+                .select('*')
+                .order('name');
+
+            if (error) {
+                console.error('[useOrg] ❌ Error fetching all organizations:', error);
+                throw error;
+            }
+
+            console.log(`[useOrg] ✅ Fetched ${data?.length || 0} organizations for super admin`);
+            return data || [];
+        },
+        enabled: isSuperAdmin && !!user?.id && !authLoading,
+        staleTime: 2 * 60 * 1000, // 2 minutes
+    });
+
+    // ============================================================================
+    // REGULAR USER: Fetch user's organization
+    // ============================================================================
+    const { data: userOrganization, isLoading: userOrgLoading, error, refetch } = useQuery<Organization | null>({
         queryKey: ['organization', user?.id],
         queryFn: async () => {
             const startTime = performance.now();
@@ -122,37 +152,63 @@ export const useOrg = () => {
                 throw err;
             }
         },
-        enabled: !!user?.id && !authLoading,
-        retry: 1, // Reduzido para falhar rápido
+        enabled: !isSuperAdmin && !!user?.id && !authLoading,
+        retry: 1,
         retryDelay: 1000,
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
-        // Adicionar timeout de 15s
         meta: {
             errorMessage: 'Falha ao carregar organização'
         }
     });
 
-    const isLoading = authLoading || (!!user && isQueryLoading);
+    // ============================================================================
+    // DETERMINE CURRENT ORGANIZATION
+    // ============================================================================
+
+    // Super admin: use selected org or first available
+    // Regular user: use their organization
+    const currentOrganization = isSuperAdmin
+        ? (selectedOrgId
+            ? allOrganizations?.find(o => o.id === selectedOrgId)
+            : allOrganizations?.[0])
+        : userOrganization;
+
+    // Auto-select first org for super admin if none selected
+    useEffect(() => {
+        if (isSuperAdmin && allOrganizations && allOrganizations.length > 0 && !selectedOrgId) {
+            console.log('[useOrg] 🎯 Auto-selecting first org for super admin:', allOrganizations[0].name);
+            setSelectedOrgId(allOrganizations[0].id);
+        }
+    }, [isSuperAdmin, allOrganizations, selectedOrgId]);
+
+    const isLoading = authLoading || (isSuperAdmin ? allOrgsLoading : (!!user && userOrgLoading));
 
     // Log consolidado do estado
     console.log('[useOrg] 📊 Hook State:', {
         authLoading,
         hasUser: !!user,
         userId: user?.id,
-        isQueryLoading,
-        hasOrg: !!organization,
-        orgId: organization?.id,
+        isSuperAdmin,
+        selectedOrgId,
+        allOrgsCount: allOrganizations?.length,
         isLoading,
+        hasOrg: !!currentOrganization,
+        orgId: currentOrganization?.id,
+        orgName: currentOrganization?.name,
         hasError: !!error
     });
 
     return {
-        organization,
-        currentOrgId: organization?.id || null,
+        organization: currentOrganization || null,
+        currentOrgId: currentOrganization?.id || null,
         isLoading,
         error,
-        hasOrg: !!organization,
+        hasOrg: !!currentOrganization,
+        isSuperAdmin,
+        allOrganizations: allOrganizations || [],
+        selectedOrgId,
+        setSelectedOrgId,
         refetch,
     };
 };

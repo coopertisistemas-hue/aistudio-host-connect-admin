@@ -5,6 +5,7 @@ export const ROLE_DISPLAY_NAMES: Record<string, string> = {
     staff_housekeeping: "Limpeza",
     viewer: "Visualizador",
     user: "Usuário", // Fallback for default 'user' role
+    super_admin: "Suporte Connect", // ✅ Super admin role
 };
 
 export type RoleKey = keyof typeof ROLE_DISPLAY_NAMES;

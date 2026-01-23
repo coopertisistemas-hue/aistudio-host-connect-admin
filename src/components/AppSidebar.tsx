@@ -64,6 +64,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { useOnboardingState } from "@/hooks/useOnboardingState";
 import { getRoleDisplayName } from "@/lib/constants/roles";
+import { OrgSwitcher } from "@/components/OrgSwitcher";
 import logoIcon from "@/assets/logo-icon.png";
 
 const AppSidebar = () => {
@@ -182,6 +183,13 @@ const AppSidebar = () => {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
+
+      {/* Super Admin Org Switcher - Shows only for super admins */}
+      {!isCollapsed && (
+        <div className="px-4 py-3 border-b border-sidebar-border">
+          <OrgSwitcher />
+        </div>
+      )}
 
       <SidebarContent>
         {menuGroups.map((group, gIndex) => {
