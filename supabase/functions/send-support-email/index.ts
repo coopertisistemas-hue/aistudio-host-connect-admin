@@ -29,21 +29,23 @@ const handler = async (req: Request): Promise<Response> => {
         const { name, email, type, subject, message, url } = supportRequest;
 
         if (!name || !email || !type || !subject || !message) {
-            throw new Error("Missing required fields");
+            throw new Error("Campos obrigatórios ausentes");
         }
 
         if (!RESEND_API_KEY) {
-            console.error("RESEND_API_KEY is not set");
+            console.error("ERRO: RESEND_API_KEY não está configurada");
             // For development purposes, if no key is set, we just log it and return success
             console.log("Mock Email Send:", supportRequest);
             return new Response(
-                JSON.stringify({ message: "Email logged (Mock mode - No API Key)" }),
+                JSON.stringify({ message: "E-mail registrado (Modo Mock - Sem Chave de API)" }),
                 {
                     headers: { ...corsHeaders, "Content-Type": "application/json" },
                     status: 200,
                 }
             );
         }
+
+        console.log(`Tentando enviar e-mail via Resend para: ${email}`);
 
         const res = await fetch("https://api.resend.com/emails", {
             method: "POST",
@@ -57,13 +59,13 @@ const handler = async (req: Request): Promise<Response> => {
                 reply_to: email,
                 subject: `[${type.toUpperCase()}] ${subject}`,
                 html: `
-          <h1>New Support Request</h1>
-          <p><strong>Type:</strong> ${type}</p>
-          <p><strong>From:</strong> ${name} (${email})</p>
-          <p><strong>Subject:</strong> ${subject}</p>
+          <h1>Novo Pedido de Suporte</h1>
+          <p><strong>Tipo:</strong> ${type}</p>
+          <p><strong>De:</strong> ${name} (${email})</p>
+          <p><strong>Assunto:</strong> ${subject}</p>
           ${url ? `<p><strong>URL:</strong> ${url}</p>` : ""}
           <hr />
-          <h3>Message:</h3>
+          <h3>Mensagem:</h3>
           <p>${message.replace(/\n/g, "<br>")}</p>
         `,
             }),
@@ -72,20 +74,22 @@ const handler = async (req: Request): Promise<Response> => {
         const data = await res.json();
 
         if (res.ok) {
+            console.log("E-mail enviado com sucesso:", data.id);
             return new Response(JSON.stringify(data), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
                 status: 200,
             });
         } else {
-            console.error("Resend API Error:", data);
-            return new Response(JSON.stringify({ error: "Failed to send email" }), {
+            console.error("Erro na API do Resend:", data);
+            const errorMessage = data.message || "Falha ao enviar e-mail";
+            return new Response(JSON.stringify({ error: errorMessage }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
                 status: 400,
             });
         }
     } catch (error: any) {
-        console.error("Error in send-support-email function:", error);
-        return new Response(JSON.stringify({ error: error.message }), {
+        console.error("Erro na função send-support-email:", error);
+        return new Response(JSON.stringify({ error: error.message || "Erro interno ao processar e-mail" }), {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
             status: 500,
         });

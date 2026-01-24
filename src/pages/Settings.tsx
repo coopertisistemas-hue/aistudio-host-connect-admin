@@ -16,6 +16,9 @@ const Settings = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const [profileData, setProfileData] = useState({
     full_name: '',
@@ -31,7 +34,7 @@ const Settings = () => {
         .select('*')
         .eq('id', user?.id)
         .single();
-      
+
       if (error) throw error;
       return data;
     },
@@ -54,7 +57,7 @@ const Settings = () => {
         .from('profiles')
         .update(data)
         .eq('id', user?.id);
-      
+
       if (error) throw error;
     },
     onSuccess: () => {
@@ -82,25 +85,70 @@ const Settings = () => {
 
   const handlePasswordReset = async () => {
     if (!user?.email) return;
-    
+
     setIsLoading(true);
-    const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-      redirectTo: `${window.location.origin}/auth`,
-    });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
+        redirectTo: `${window.location.origin}/auth`,
+      });
 
-    setIsLoading(false);
+      if (error) throw error;
 
-    if (error) {
+      toast({
+        title: "E-mail enviado",
+        description: "Verifique seu e-mail para redefinir sua senha.",
+      });
+    } catch (error: any) {
       toast({
         title: "Erro",
         description: error.message,
         variant: "destructive",
       });
-    } else {
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDirectPasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPassword || newPassword.length < 6) {
       toast({
-        title: "Email enviado",
-        description: "Verifique seu email para redefinir sua senha.",
+        title: "Erro",
+        description: "A senha deve ter pelo menos 6 caracteres.",
+        variant: "destructive",
       });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Erro",
+        description: "As senhas não coincidem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso!",
+        description: "Sua senha foi atualizada com sucesso.",
+      });
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: any) {
+      toast({
+        title: "Erro ao atualizar senha",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -184,17 +232,55 @@ const Settings = () => {
           <TabsContent value="security" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Senha</CardTitle>
+                <CardTitle>Alterar Senha</CardTitle>
                 <CardDescription>
-                  Gerencie sua senha de acesso
+                  Defina uma nova senha para sua conta
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handleDirectPasswordUpdate} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="new-password">Nova Senha</Label>
+                    <Input
+                      id="new-password"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Pelo menos 6 caracteres"
+                      disabled={isUpdatingPassword}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password">Confirmar Nova Senha</Label>
+                    <Input
+                      id="confirm-password"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Repita a nova senha"
+                      disabled={isUpdatingPassword}
+                    />
+                  </div>
+                  <Button type="submit" disabled={isUpdatingPassword}>
+                    {isUpdatingPassword ? 'Atualizando...' : 'Atualizar Senha'}
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Recuperação por E-mail</CardTitle>
+                <CardDescription>
+                  Se você esqueceu sua senha ou prefere redefinir via link
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <p className="text-sm text-muted-foreground">
-                  Para redefinir sua senha, enviaremos um link de redefinição para seu email cadastrado.
+                  Enviaremos um link de redefinição para seu email cadastrado ({user?.email}).
                 </p>
-                <Button onClick={handlePasswordReset} disabled={isLoading}>
-                  {isLoading ? 'Enviando...' : 'Redefinir Senha'}
+                <Button variant="outline" onClick={handlePasswordReset} disabled={isLoading}>
+                  {isLoading ? 'Enviando...' : 'Enviar Link de Redefinição'}
                 </Button>
               </CardContent>
             </Card>

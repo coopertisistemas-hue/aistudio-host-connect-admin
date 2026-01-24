@@ -9,15 +9,17 @@ import logoIcon from "@/assets/logo-icon.png";
 import { ArrowLeft, Loader2, Chrome, Facebook } from "lucide-react"; // Import Chrome and Facebook
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { loginSchema, signupSchema, LoginInput, SignupInput } from "@/lib/auth-schemas";
+import { loginSchema, signupSchema, forgotPasswordSchema, resetPasswordSchema, LoginInput, SignupInput, ForgotPasswordInput, ResetPasswordInput } from "@/lib/auth-schemas";
 
 const Auth = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const selectedPlan = searchParams.get('plan') || 'basic'; // Get plan from URL or default to basic
-  const { user, signIn, signUp, signInWithGoogle, signInWithFacebook, onboardingCompleted, loading } = useAuth(); // Add signInWithFacebook
+  const isResetMode = searchParams.get('reset') === 'true'; // Detect reset mode from URL
+  const { user, signIn, signUp, signInWithGoogle, signInWithFacebook, resetPassword, updatePassword, onboardingCompleted, loading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [isSigningUp, setIsSigningUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
 
   const loginForm = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -37,11 +39,26 @@ const Auth = () => {
     },
   });
 
+  const forgotPasswordForm = useForm<ForgotPasswordInput>({
+    resolver: zodResolver(forgotPasswordSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
+
+  const resetPasswordForm = useForm<ResetPasswordInput>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && !isResetMode) {
       navigate('/post-login', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [user, loading, navigate, isResetMode]);
 
   const handleLogin = async (data: LoginInput) => {
     setIsLoading(true);
@@ -87,6 +104,33 @@ const Auth = () => {
     }
   };
 
+  const handleForgotPassword = async (data: ForgotPasswordInput) => {
+    setIsLoading(true);
+    try {
+      await resetPassword(data.email);
+      // After successful email send, go back to login
+      setTimeout(() => {
+        setIsForgotPassword(false);
+        forgotPasswordForm.reset();
+      }, 2000);
+    } catch (error) {
+      // Error handling is done in useAuth
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (data: ResetPasswordInput) => {
+    setIsLoading(true);
+    try {
+      await updatePassword(data.password);
+    } catch (error) {
+      // Error handling is done in useAuth
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const formatPhoneNumber = (value: string) => {
     if (!value) return value;
     const phoneNumber = value.replace(/\D/g, ''); // Remove tudo que não for dígito
@@ -125,12 +169,99 @@ const Auth = () => {
                 Bem-vindo ao <span className="bg-gradient-hero bg-clip-text text-transparent">HostConnect</span>
               </CardTitle>
               <CardDescription>
-                {isSigningUp ? "Crie sua conta para começar" : "Acesse sua conta"}
+                {isResetMode
+                  ? "Defina sua nova senha"
+                  : isForgotPassword
+                    ? "Recupere sua senha"
+                    : isSigningUp
+                      ? "Crie sua conta para começar"
+                      : "Acesse sua conta"}
               </CardDescription>
             </div>
           </CardHeader>
           <CardContent>
-            {!isSigningUp ? (
+            {isResetMode ? (
+              <form onSubmit={resetPasswordForm.handleSubmit(handleResetPassword)} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="reset-password">Nova Senha</Label>
+                  <Input
+                    id="reset-password"
+                    type="password"
+                    placeholder="••••••••"
+                    {...resetPasswordForm.register("password")}
+                    disabled={isLoading}
+                  />
+                  {resetPasswordForm.formState.errors.password && (
+                    <p className="text-destructive text-sm mt-1">
+                      {resetPasswordForm.formState.errors.password.message}
+                    </p>
+                  )}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="reset-confirm-password">Confirmar Nova Senha</Label>
+                  <Input
+                    id="reset-confirm-password"
+                    type="password"
+                    placeholder="••••••••"
+                    {...resetPasswordForm.register("confirmPassword")}
+                    disabled={isLoading}
+                  />
+                  {resetPasswordForm.formState.errors.confirmPassword && (
+                    <p className="text-destructive text-sm mt-1">
+                      {resetPasswordForm.formState.errors.confirmPassword.message}
+                    </p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full" variant="hero" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Redefinir Senha"}
+                </Button>
+                <p className="text-center text-sm text-muted-foreground mt-4">
+                  <button
+                    type="button"
+                    onClick={() => navigate('/auth', { replace: true })}
+                    className="text-primary hover:underline font-medium"
+                    disabled={isLoading}
+                  >
+                    Voltar para o login
+                  </button>
+                </p>
+              </form>
+            ) : isForgotPassword ? (
+              <form onSubmit={forgotPasswordForm.handleSubmit(handleForgotPassword)} className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Digite seu email e enviaremos um link para redefinir sua senha.
+                </p>
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email">Email</Label>
+                  <Input
+                    id="forgot-email"
+                    type="email"
+                    placeholder="seu@email.com"
+                    {...forgotPasswordForm.register("email")}
+                    disabled={isLoading}
+                  />
+                  {forgotPasswordForm.formState.errors.email && (
+                    <p className="text-destructive text-sm mt-1">
+                      {forgotPasswordForm.formState.errors.email.message}
+                    </p>
+                  )}
+                </div>
+                <Button type="submit" className="w-full" variant="hero" disabled={isLoading}>
+                  {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Enviar link de recuperação"}
+                </Button>
+                <p className="text-center text-sm text-muted-foreground mt-4">
+                  Lembrou sua senha?{" "}
+                  <button
+                    type="button"
+                    onClick={() => setIsForgotPassword(false)}
+                    className="text-primary hover:underline font-medium"
+                    disabled={isLoading}
+                  >
+                    Fazer login
+                  </button>
+                </p>
+              </form>
+            ) : !isSigningUp ? (
               <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="login-email">Email</Label>
@@ -148,7 +279,17 @@ const Auth = () => {
                   )}
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="login-password">Senha</Label>
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="login-password">Senha</Label>
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-sm text-primary hover:underline"
+                      disabled={isLoading}
+                    >
+                      Esqueci minha senha
+                    </button>
+                  </div>
                   <Input
                     id="login-password"
                     type="password"
@@ -207,7 +348,10 @@ const Auth = () => {
                   Não tem uma conta?{" "}
                   <button
                     type="button"
-                    onClick={() => setIsSigningUp(true)}
+                    onClick={() => {
+                      setIsSigningUp(true);
+                      setIsForgotPassword(false);
+                    }}
                     className="text-primary hover:underline font-medium"
                     disabled={isLoading}
                   >
@@ -338,7 +482,10 @@ const Auth = () => {
                   Já tem uma conta?{" "}
                   <button
                     type="button"
-                    onClick={() => setIsSigningUp(false)}
+                    onClick={() => {
+                      setIsSigningUp(false);
+                      setIsForgotPassword(false);
+                    }}
                     className="text-primary hover:underline font-medium"
                     disabled={isLoading}
                   >

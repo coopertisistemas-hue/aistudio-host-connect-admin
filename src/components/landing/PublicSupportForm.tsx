@@ -74,11 +74,18 @@ export default function PublicSupportForm() {
             });
 
             form.reset();
-        } catch (error) {
+        } catch (error: any) {
             console.error("Error sending message:", error);
+
+            // Try to extract a specific error message if available
+            let errorMessage = "Houve um problema ao enviar sua mensagem. Tente novamente.";
+            if (error && typeof error === 'object' && error.message) {
+                errorMessage = error.message;
+            }
+
             toast({
                 title: "Erro ao enviar",
-                description: "Houve um problema ao enviar sua mensagem. Tente novamente.",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {

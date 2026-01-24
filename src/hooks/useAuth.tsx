@@ -21,6 +21,8 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>; // New: Google sign-in
   signInWithFacebook: () => Promise<void>; // New: Facebook sign-in
+  resetPassword: (email: string) => Promise<void>; // New: Password reset
+  updatePassword: (password: string) => Promise<void>; // New: Update password
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -98,6 +100,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         }
         setUserRole(null);
         setUserPlan(null);
+        setIsSuperAdmin(false);
         setOnboardingCompleted(null);
       } else {
         setUserRole(data?.role || 'user');
@@ -380,8 +383,56 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth?reset=true`,
+      });
+
+      if (error) {
+        toast({
+          title: "Erro ao enviar email",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      toast({
+        title: "Email enviado!",
+        description: "Verifique sua caixa de entrada para redefinir sua senha.",
+      });
+    } catch (error) {
+      console.error('Password reset error:', error);
+      throw error;
+    }
+  };
+
+  const updatePassword = async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        toast({
+          title: "Erro ao atualizar senha",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      toast({
+        title: "Senha atualizada!",
+        description: "Sua senha foi alterada com sucesso.",
+      });
+      navigate('/auth', { replace: true });
+    } catch (error) {
+      console.error('Password update error:', error);
+      throw error;
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, userRole, userPlan, isSuperAdmin, onboardingCompleted, signIn, signUp, signOut, signInWithGoogle, signInWithFacebook }}>
+    <AuthContext.Provider value={{ user, session, loading, userRole, userPlan, isSuperAdmin, onboardingCompleted, signIn, signUp, signOut, signInWithGoogle, signInWithFacebook, resetPassword, updatePassword }}>
       {children}
     </AuthContext.Provider>
   );
