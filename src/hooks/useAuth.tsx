@@ -390,20 +390,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       });
 
       if (error) {
+        let errorMessage = error.message;
+        if (errorMessage.includes("Error sending recovery email")) {
+          errorMessage = "Erro ao enviar e-mail de recuperação. Isso geralmente ocorre devido a limites do Supabase ou falta de configuração de SMTP no Dashboard.";
+        }
+
         toast({
-          title: "Erro ao enviar email",
-          description: error.message,
+          title: "Erro ao enviar e-mail",
+          description: errorMessage,
           variant: "destructive",
         });
         throw error;
       }
 
       toast({
-        title: "Email enviado!",
+        title: "E-mail enviado!",
         description: "Verifique sua caixa de entrada para redefinir sua senha.",
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Password reset error:', error);
+      // If toast wasn't already shown by the check above
+      if (error.message && !error.message.includes("Error sending recovery email")) {
+        toast({
+          title: "Erro",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
       throw error;
     }
   };
