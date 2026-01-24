@@ -1,0 +1,2 @@
+# Paste remote versions here (one per line) from SQL Editor:
+# select version from supabase_migrations.schema_migrations order by version;
