@@ -1,0 +1,2 @@
+-- noop placeholder to align migration history with remote
+-- remote already has this version recorded in supabase_migrations.schema_migrations
