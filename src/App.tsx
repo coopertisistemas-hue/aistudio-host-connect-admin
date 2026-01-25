@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
+import { OrgProvider } from "@/hooks/useOrg";
 import { SelectedPropertyProvider } from "@/hooks/useSelectedProperty";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
@@ -121,10 +122,11 @@ const App = () => (
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <PageTracker />
           <AuthProvider>
-            <SelectedPropertyProvider>
-              <DebugOverlay />
-              {/* DebugOverlay removed */}
-              <Routes>
+            <OrgProvider>
+              <SelectedPropertyProvider>
+                <DebugOverlay />
+                {/* DebugOverlay removed */}
+                <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
@@ -552,8 +554,9 @@ const App = () => (
                 <Route path="/support/admin/ideas/:id" element={<AdminRoute><AdminIdeaDetail /></AdminRoute>} />
 
                 <Route path="*" element={<NotFound />} />
-              </Routes>
-            </SelectedPropertyProvider>
+                </Routes>
+              </SelectedPropertyProvider>
+            </OrgProvider>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

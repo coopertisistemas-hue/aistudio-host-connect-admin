@@ -86,6 +86,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         .abortSignal(signal)
         .single();
 
+      const profile = data as Profile | null;
+      const isSuperAdminValue = (data as any)?.is_super_admin;
+
       clearTimeout(timeoutId);
 
       if (error) {
@@ -100,10 +103,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         setUserPlan(null);
         setOnboardingCompleted(null);
       } else {
-        setUserRole(data?.role || 'user');
-        setUserPlan(data?.plan || 'free');
-        setIsSuperAdmin(!!data?.is_super_admin); // ✅ Set super admin flag
-        const isCompleted = !!data?.onboarding_completed;
+        setUserRole(profile?.role || 'user');
+        setUserPlan(profile?.plan || 'free');
+        setIsSuperAdmin(!!isSuperAdminValue); // ✅ Set super admin flag
+        const isCompleted = !!profile?.onboarding_completed;
         setOnboardingCompleted(isCompleted);
       }
     } catch (e: any) {
@@ -123,29 +126,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   useEffect(() => {
     const authListener = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
+        try {
+          setSession(session);
+          setUser(session?.user ?? null);
 
-        console.log('[useAuth] Auth Event:', event);
+          console.log('[useAuth] Auth Event:', event);
 
-        if (session?.user) {
-          // Only fetch profile on specific events to prevent excessive reloading
-          if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-            // Reset Session Lock state on every fresh sign-in or session restoration
-            if (event === 'SIGNED_IN') {
-              console.log('[useAuth] Resetting Session Lock state');
-              localStorage.removeItem('hc_session_locked');
-              localStorage.setItem('hc_last_active', Date.now().toString());
+          if (session?.user) {
+            // Only fetch profile on specific events to prevent excessive reloading
+            if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
+              // Reset Session Lock state on every fresh sign-in or session restoration
+              if (event === 'SIGNED_IN') {
+                console.log('[useAuth] Resetting Session Lock state');
+                localStorage.removeItem('hc_session_locked');
+                localStorage.setItem('hc_last_active', Date.now().toString());
+              }
+              await fetchUserProfile(session.user.id);
+            } else {
+              setLoading(false);
             }
-            await fetchUserProfile(session.user.id);
           } else {
+            setUserRole(null);
+            setUserPlan(null);
+            setIsSuperAdmin(false);
+            setOnboardingCompleted(null);
             setLoading(false);
           }
-        } else {
-          setUserRole(null);
-          setUserPlan(null);
-          setIsSuperAdmin(false);
-          setOnboardingCompleted(null);
+        } catch (err: any) {
+          if (err?.name === 'AbortError') {
+            console.warn('[useAuth] Auth state handler aborted');
+          } else {
+            console.error('[useAuth] Auth state handler error:', err);
+          }
           setLoading(false);
         }
       }
@@ -172,8 +184,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
           console.log('[useAuth] No session found in initAuth');
           setLoading(false);
         }
-      } catch (err) {
-        console.error('[useAuth] Unexpected initAuth error:', err);
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          console.warn('[useAuth] initAuth aborted');
+        } else {
+          console.error('[useAuth] Unexpected initAuth error:', err);
+        }
         setLoading(false);
       }
     };
