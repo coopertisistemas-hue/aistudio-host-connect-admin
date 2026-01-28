@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -25,6 +25,7 @@ import {
     Ban,
     AlertCircle,
     Users,
+    Loader2,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -43,6 +44,7 @@ interface FrontDeskBookingCardProps {
     hasGroup?: boolean;
     precheckinCount?: number;
     participantCount?: number;
+    today: string;
 }
 
 export const FrontDeskBookingCard = ({
@@ -52,6 +54,7 @@ export const FrontDeskBookingCard = ({
     hasGroup = false,
     precheckinCount = 0,
     participantCount = 0,
+    today,
 }: FrontDeskBookingCardProps) => {
     const navigate = useNavigate();
     const { userRole } = useAuth();
@@ -64,6 +67,10 @@ export const FrontDeskBookingCard = ({
     const isViewer = userRole === 'viewer';
 
     const normalizedStatus = normalizeLegacyStatus(booking.status);
+    const isArrivalToday = booking.check_in === today;
+    const isDepartureToday = booking.check_out === today;
+    const isInHouse = normalizedStatus === BookingStatus.CHECKED_IN || normalizedStatus === BookingStatus.IN_HOUSE;
+    const isCancelled = normalizedStatus === BookingStatus.CANCELLED || normalizedStatus === BookingStatus.NO_SHOW;
 
     // Compute blockers for this booking
     const blockers = useMemo(() => {
@@ -85,6 +92,10 @@ export const FrontDeskBookingCard = ({
     }, [primaryRoom, alerts]);
 
     const hasBlockers = blockers.filter(b => b.type === 'error').length > 0;
+
+    const [actionInFlight, setActionInFlight] = useState<string | null>(null);
+
+    const resolveActionState = (action: string) => actionInFlight === action || updateStatus.isPending;
 
     const handleCheckIn = () => {
         if (!canCheckIn(normalizedStatus)) {
@@ -114,7 +125,10 @@ export const FrontDeskBookingCard = ({
             return;
         }
 
-        updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CHECKED_IN });
+        setActionInFlight('checkin');
+        updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CHECKED_IN }, {
+            onSettled: () => setActionInFlight(null),
+        });
     };
 
     const handleCheckOut = () => {
@@ -126,6 +140,7 @@ export const FrontDeskBookingCard = ({
             });
             return;
         }
+        setActionInFlight('checkout');
         updateStatus.mutate({
             bookingId: booking.id,
             newStatus: BookingStatus.CHECKED_OUT
@@ -134,7 +149,8 @@ export const FrontDeskBookingCard = ({
                 if (primaryRoom && !isViewer) {
                     setIsCheckoutSuggestionOpen(true);
                 }
-            }
+            },
+            onSettled: () => setActionInFlight(null),
         });
     };
 
@@ -157,7 +173,10 @@ export const FrontDeskBookingCard = ({
             });
             return;
         }
-        updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CANCELLED });
+        setActionInFlight('cancel');
+        updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.CANCELLED }, {
+            onSettled: () => setActionInFlight(null),
+        });
     };
 
     const handleNoShow = () => {
@@ -169,8 +188,36 @@ export const FrontDeskBookingCard = ({
             });
             return;
         }
-        updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.NO_SHOW });
+        setActionInFlight('noshow');
+        updateStatus.mutate({ bookingId: booking.id, newStatus: BookingStatus.NO_SHOW }, {
+            onSettled: () => setActionInFlight(null),
+        });
     };
+
+    const lifecycleBadge = useMemo(() => {
+        if (isCancelled) {
+            return { label: 'Cancelado', className: 'bg-slate-200 text-slate-700' };
+        }
+        if (isDepartureToday && isInHouse) {
+            return { label: 'Saída hoje', className: 'bg-rose-100 text-rose-700' };
+        }
+        if (isArrivalToday && !isInHouse) {
+            return { label: 'Chegada hoje', className: 'bg-emerald-100 text-emerald-700' };
+        }
+        if (isInHouse) {
+            return { label: 'Hospedado', className: 'bg-blue-100 text-blue-700' };
+        }
+        return { label: 'Pendente', className: 'bg-amber-100 text-amber-700' };
+    }, [isArrivalToday, isDepartureToday, isInHouse, isCancelled]);
+
+    const canAssignRoom = !primaryRoom;
+    const checkinDisabledReason = isViewer
+        ? 'Ação indisponível para perfil de visualização.'
+        : hasBlockers
+            ? 'Atribua quarto e hóspede principal antes do check-in.'
+            : '';
+
+    const actionHint = checkinDisabledReason;
 
     return (
         <Card className="border-2 hover:border-primary/50 transition-all hover:shadow-md">
@@ -225,6 +272,9 @@ export const FrontDeskBookingCard = ({
                             <Badge variant="secondary" className="text-xs h-6 shrink-0">
                                 {getBookingStatusLabel(booking.status)}
                             </Badge>
+                            <Badge className={`text-xs h-6 shrink-0 ${lifecycleBadge.className}`}>
+                                {lifecycleBadge.label}
+                            </Badge>
                         </div>
                     </div>
 
@@ -257,91 +307,119 @@ export const FrontDeskBookingCard = ({
                         )}
                     </div>
 
-                    {/* Peak Actions Row */}
-                    <div className="flex flex-wrap gap-1 pt-1 border-t">
-                        {/* Quick Access Shortcuts */}
-                        <Button
-                            onClick={() => onOpenFolio(booking.id)}
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7 px-2"
-                        >
-                            <FileText className="h-3 w-3 mr-1" />
-                            Folio
-                        </Button>
+                    {/* Contextual Actions */}
+                    <div className="flex flex-col gap-2 pt-2 border-t">
+                        <div className="flex flex-wrap gap-2">
+                            {isArrivalToday && !isInHouse && (
+                                <>
+                                    <Button
+                                        onClick={handleCheckIn}
+                                        disabled={isViewer || resolveActionState('checkin') || hasBlockers}
+                                        size="sm"
+                                        className="text-xs h-8 px-3"
+                                        title={checkinDisabledReason || 'Fazer check-in'}
+                                    >
+                                        {resolveActionState('checkin') ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <LogIn className="h-3 w-3 mr-1" />}
+                                        Fazer check-in
+                                    </Button>
+                                    <Button
+                                        onClick={() => navigate(`/operation/folio/${booking.id}#room`)}
+                                        disabled={isViewer}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs h-8 px-3"
+                                    >
+                                        <BedDouble className="h-3 w-3 mr-1" />
+                                        Atribuir quarto
+                                    </Button>
+                                </>
+                            )}
 
-                        <Button
-                            onClick={() => navigate(`/operation/folio/${booking.id}#participants`)}
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7 px-2"
-                        >
-                            <User className="h-3 w-3 mr-1" />
-                            Hóspedes {participantCount > 0 && `(${participantCount})`}
-                        </Button>
+                            {isInHouse && !isDepartureToday && (
+                                <>
+                                    <Button
+                                        onClick={() => navigate(`/operation/folio/${booking.id}#charges`)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs h-8 px-3"
+                                        disabled={isViewer}
+                                    >
+                                        <FileText className="h-3 w-3 mr-1" />
+                                        Registrar consumo
+                                    </Button>
+                                    <Button
+                                        onClick={() => navigate(`/operation/folio/${booking.id}#participants`)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs h-8 px-3"
+                                        disabled={isViewer}
+                                    >
+                                        <User className="h-3 w-3 mr-1" />
+                                        Adicionar hóspede
+                                    </Button>
+                                    <Button
+                                        onClick={() => onOpenFolio(booking.id)}
+                                        size="sm"
+                                        className="text-xs h-8 px-3"
+                                    >
+                                        <FileText className="h-3 w-3 mr-1" />
+                                        Ver folio
+                                    </Button>
+                                </>
+                            )}
 
-                        <Button
-                            onClick={() => navigate(`/operation/folio/${booking.id}#precheckin`)}
-                            size="sm"
-                            variant="outline"
-                            className="text-xs h-7 px-2"
-                        >
-                            <Calendar className="h-3 w-3 mr-1" />
-                            Pré-checkin {precheckinCount > 0 && `(${precheckinCount})`}
-                        </Button>
+                            {isDepartureToday && isInHouse && (
+                                <>
+                                    <Button
+                                        onClick={handleCheckOut}
+                                        disabled={isViewer || resolveActionState('checkout')}
+                                        size="sm"
+                                        className="text-xs h-8 px-3"
+                                    >
+                                        {resolveActionState('checkout') ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <LogOut className="h-3 w-3 mr-1" />}
+                                        Fazer check-out
+                                    </Button>
+                                    <Button
+                                        onClick={() => onOpenFolio(booking.id)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs h-8 px-3"
+                                    >
+                                        <FileText className="h-3 w-3 mr-1" />
+                                        Ver folio
+                                    </Button>
+                                </>
+                            )}
 
-                        {/* Lifecycle Actions */}
-                        {canCheckIn(normalizedStatus) && (
-                            <Button
-                                onClick={handleCheckIn}
-                                disabled={isViewer || updateStatus.isPending || hasBlockers}
-                                size="sm"
-                                variant="default"
-                                className="text-xs h-7 px-2"
-                                title={hasBlockers ? 'Check-in bloqueado por pendências' : 'Realizar check-in'}
-                            >
-                                <LogIn className="h-3 w-3 mr-1" />
-                                Check-in
-                            </Button>
-                        )}
+                            {!isArrivalToday && !isDepartureToday && !isInHouse && (
+                                <>
+                                    <Button
+                                        onClick={() => onOpenFolio(booking.id)}
+                                        size="sm"
+                                        variant="outline"
+                                        className="text-xs h-8 px-3"
+                                    >
+                                        <FileText className="h-3 w-3 mr-1" />
+                                        Ver folio
+                                    </Button>
+                                    {canCancel(normalizedStatus) && (
+                                        <Button
+                                            onClick={handleCancel}
+                                            disabled={isViewer || resolveActionState('cancel')}
+                                            size="sm"
+                                            variant="destructive"
+                                            className="text-xs h-8 px-3"
+                                        >
+                                            {resolveActionState('cancel') ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <X className="h-3 w-3 mr-1" />}
+                                            Cancelar
+                                        </Button>
+                                    )}
+                                </>
+                            )}
+                        </div>
 
-                        {canCheckOut(normalizedStatus) && (
-                            <Button
-                                onClick={handleCheckOut}
-                                disabled={isViewer || updateStatus.isPending}
-                                size="sm"
-                                variant="default"
-                                className="text-xs h-7 px-2"
-                            >
-                                <LogOut className="h-3 w-3 mr-1" />
-                                Check-out
-                            </Button>
-                        )}
-
-                        {canCancel(normalizedStatus) && (
-                            <Button
-                                onClick={handleCancel}
-                                disabled={isViewer || updateStatus.isPending}
-                                size="sm"
-                                variant="destructive"
-                                className="text-xs h-7 px-2"
-                            >
-                                <X className="h-3 w-3 mr-1" />
-                                Cancelar
-                            </Button>
-                        )}
-
-                        {canMarkNoShow(normalizedStatus) && (
-                            <Button
-                                onClick={handleNoShow}
-                                disabled={isViewer || updateStatus.isPending}
-                                size="sm"
-                                variant="outline"
-                                className="text-xs h-7 px-2"
-                            >
-                                <Ban className="h-3 w-3 mr-1" />
-                                No-show
-                            </Button>
+                        {actionHint && (isViewer || hasBlockers) && (
+                            <p className="text-[11px] text-muted-foreground">{actionHint}</p>
                         )}
                     </div>
                 </div>

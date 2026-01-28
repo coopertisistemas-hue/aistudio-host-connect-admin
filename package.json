@@ -6,6 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "pnpm -s perf:check",
+    "perf:check": "node scripts/bundle-watchdog.mjs",
+    "safety:check": "pnpm -s tsc --noEmit && pnpm -s perf:check",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"

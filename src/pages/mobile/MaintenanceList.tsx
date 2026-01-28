@@ -27,6 +27,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useQueryClient } from "@tanstack/react-query";
 
 // Segmented Control Component
 const SegmentedControl = ({
@@ -63,7 +64,8 @@ const SegmentedControl = ({
 const MaintenanceList: React.FC = () => {
     const navigate = useNavigate();
     const { selectedPropertyId } = useSelectedProperty();
-    const { tasks, isLoading } = useMaintenance(selectedPropertyId);
+    const { tasks, isLoading, error } = useMaintenance(selectedPropertyId);
+    const queryClient = useQueryClient();
 
     const [activeFilter, setActiveFilter] = useState<string>("open");
     const [searchQuery, setSearchQuery] = useState("");
@@ -145,11 +147,24 @@ const MaintenanceList: React.FC = () => {
 
                 {/* Task List */}
                 <div className="px-5 mt-4 space-y-3 pb-[calc(env(safe-area-inset-bottom,0px)+100px)]">
+                    {!isLoading && error && (
+                        <div className="bg-white border border-dashed border-neutral-200 rounded-2xl p-6 text-center space-y-3">
+                            <p className="text-sm font-semibold text-neutral-700">Não foi possível carregar os chamados.</p>
+                            <p className="text-xs text-neutral-500">Tente novamente em alguns instantes.</p>
+                            <Button
+                                variant="outline"
+                                className="w-full h-11"
+                                onClick={() => queryClient.invalidateQueries({ queryKey: ['maintenance-tasks', selectedPropertyId] })}
+                            >
+                                Tentar novamente
+                            </Button>
+                        </div>
+                    )}
                     {isLoading ? (
                         Array.from({ length: 4 }).map((_, i) => (
                             <PremiumSkeleton key={i} className="h-32 w-full rounded-2xl bg-white/50" />
                         ))
-                    ) : filteredTasks.length > 0 ? (
+                    ) : error ? null : filteredTasks.length > 0 ? (
                         filteredTasks.map((task) => {
                             const statusConfig = getStatusConfig(task.status);
                             const StatusIcon = statusConfig.icon;
@@ -176,9 +191,6 @@ const MaintenanceList: React.FC = () => {
                                                     )}>
                                                         {task.priority === 'high' ? 'Alta' : task.priority === 'medium' ? 'Média' : 'Baixa'}
                                                     </span>
-                                                    <span className="text-[10px] text-neutral-400 font-medium">
-                                                        #{task.id.slice(0, 4)}
-                                                    </span>
                                                 </div>
                                                 <h3 className="font-bold text-neutral-800 text-sm line-clamp-1">{task.title}</h3>
                                             </div>
@@ -203,13 +215,8 @@ const MaintenanceList: React.FC = () => {
 
                                             {/* Assignee Avatar */}
                                             {task.assignee ? (
-                                                <div className="flex items-center gap-1.5 bg-neutral-100 pl-1 pr-2 py-0.5 rounded-full">
-                                                    <div className="h-4 w-4 rounded-full bg-neutral-300 flex items-center justify-center text-[8px] font-bold text-neutral-600">
-                                                        {task.assignee.full_name?.charAt(0)}
-                                                    </div>
-                                                    <span className="text-[10px] font-bold text-neutral-600 truncate max-w-[60px]">
-                                                        {task.assignee.full_name?.split(' ')[0]}
-                                                    </span>
+                                                <div className="flex items-center gap-1.5 bg-neutral-100 px-2 py-0.5 rounded-full">
+                                                    <span className="text-[10px] font-bold text-neutral-600">Equipe</span>
                                                 </div>
                                             ) : (
                                                 <div className="flex items-center gap-1 opacity-50">

@@ -3,8 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Tables, TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
+import { safeLogger } from '@/lib/logging/safeLogger';
 
-import { useOrg } from './useOrg'; // Multi-tenant context
+import { useOrg } from '@/hooks/useOrg'; // Multi-tenant context
 
 // Definindo o tipo de retorno da query de rooms com joins
 type RoomRow = Tables<'rooms'>;
@@ -28,16 +29,15 @@ export const useRooms = (propertyId?: string) => {
   const queryClient = useQueryClient();
   const { currentOrgId, isLoading: isOrgLoading } = useOrg();
 
-  const { data: rooms, isLoading, error } = useQuery({
+  const { data: rooms, isLoading, error, refetch } = useQuery({
     queryKey: ['rooms', currentOrgId, propertyId],
     queryFn: async () => {
-      console.log('[useRooms] Fetching rooms...', { currentOrgId, propertyId });
       if (!currentOrgId) {
-        console.warn('[useRooms] Abortando fetch: currentOrgId indefinido.');
+        safeLogger.warn('rooms.fetch.no_org');
         return [];
       }
       if (!propertyId) {
-        console.warn('[useRooms] No propertyId provided');
+        safeLogger.warn('rooms.fetch.no_property');
         return [];
       }
       const { data, error } = await (supabase as any)
@@ -53,18 +53,17 @@ export const useRooms = (propertyId?: string) => {
         .order('room_number', { ascending: true });
 
       if (error) {
-        console.error('[useRooms] Error fetching rooms:', error);
+        safeLogger.error('rooms.fetch.error', { message: error.message });
         throw error;
       }
-      console.log(`[useRooms] Successfully fetched ${data?.length || 0} rooms`);
       return data as Room[];
     },
     enabled: !isOrgLoading && !!currentOrgId && !!propertyId,
   });
 
-  const createRoom = useMutation({
+  const createRoom = useMutation<unknown, Error, RoomInput>({
     mutationFn: async (room: RoomInput) => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('rooms')
         .insert([{
           ...room,
@@ -84,7 +83,7 @@ export const useRooms = (propertyId?: string) => {
       });
     },
     onError: (error: Error) => {
-      console.error('Error creating room:', error);
+      safeLogger.error('rooms.create.error', { message: error.message });
       toast({
         title: "Erro",
         description: "Erro ao criar quarto: " + error.message,
@@ -93,11 +92,11 @@ export const useRooms = (propertyId?: string) => {
     },
   });
 
-  const updateRoom = useMutation({
-    mutationFn: async ({ id, room }: { id: string; room: Partial<RoomInput & { last_booking_id?: string | null }> }) => {
-      const { data, error } = await supabase
+  const updateRoom = useMutation<unknown, Error, { id: string; room: any }>({
+    mutationFn: async ({ id, room }: { id: string; room: any }) => {
+      const { data, error } = await (supabase as any)
         .from('rooms')
-        .update(room)
+        .update(room as any)
         .eq('id', id)
         .eq('org_id', currentOrgId) // 🔐 ALWAYS filter by org_id
         .select()
@@ -114,7 +113,7 @@ export const useRooms = (propertyId?: string) => {
       });
     },
     onError: (error: Error) => {
-      console.error('Error updating room:', error);
+      safeLogger.error('rooms.update.error', { message: error.message });
       toast({
         title: "Erro",
         description: "Erro ao atualizar quarto: " + error.message,
@@ -123,9 +122,9 @@ export const useRooms = (propertyId?: string) => {
     },
   });
 
-  const deleteRoom = useMutation({
+  const deleteRoom = useMutation<unknown, Error, string>({
     mutationFn: async (id: string) => {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('rooms')
         .delete()
         .eq('id', id)
@@ -141,7 +140,7 @@ export const useRooms = (propertyId?: string) => {
       });
     },
     onError: (error: Error) => {
-      console.error('Error deleting room:', error);
+      safeLogger.error('rooms.delete.error', { message: error.message });
       toast({
         title: "Erro",
         description: "Erro ao remover quarto: " + error.message,
@@ -154,6 +153,7 @@ export const useRooms = (propertyId?: string) => {
     rooms: rooms || [],
     isLoading,
     error,
+    refetch, // Expose refetch
     createRoom,
     updateRoom,
     deleteRoom,

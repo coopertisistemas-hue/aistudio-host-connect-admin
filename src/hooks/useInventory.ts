@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { useOrg } from './useOrg';
+import { useOrg } from '@/hooks/useOrg';
 
 export const inventoryItemSchema = z.object({
     name: z.string().min(1, "O nome do item é obrigatório."),

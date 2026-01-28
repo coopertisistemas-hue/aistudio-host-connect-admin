@@ -3,7 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './useAuth';
 import { useRoomOperation } from './useRoomOperation';
-import { useOrg } from './useOrg'; // Multi-tenant context
+import { useOrg } from '@/hooks/useOrg'; // Multi-tenant context
+import { safeLogger } from '@/lib/logging/safeLogger';
 
 export type DemandStatus = 'todo' | 'in-progress' | 'waiting' | 'done';
 export type DemandPriority = 'low' | 'medium' | 'high' | 'critical';
@@ -36,15 +37,15 @@ export const useDemands = (propertyId?: string) => {
     const { currentOrgId } = useOrg();
     const { updateStatus: updateRoomStatus } = useRoomOperation(propertyId);
 
-    const { data: demands, isLoading } = useQuery({
+    const { data: demands, isLoading } = useQuery<MaintenanceDemand[]>({
         queryKey: ['maintenance-demands', currentOrgId, propertyId],
-        queryFn: async () => {
+        queryFn: async (): Promise<MaintenanceDemand[]> => {
             if (!currentOrgId) {
-                console.warn('[useDemands] Abortando fetch: currentOrgId indefinido.');
+                safeLogger.warn('demands.fetch.no_org');
                 return [];
             }
             if (!propertyId) return [];
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('tasks')
                 .select(`
           *,
@@ -61,14 +62,14 @@ export const useDemands = (propertyId?: string) => {
                 .order('created_at', { ascending: false });
 
             if (error) throw error;
-            return data as MaintenanceDemand[];
+            return data as unknown as MaintenanceDemand[];
         },
         enabled: !!propertyId,
     });
 
-    const createDemand = useMutation({
+    const createDemand = useMutation<unknown, Error, any>({
         mutationFn: async (demand: any) => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('tasks')
                 .insert([{
                     ...demand,
@@ -99,11 +100,11 @@ export const useDemands = (propertyId?: string) => {
         }
     });
 
-    const updateDemandStatus = useMutation({
+    const updateDemandStatus = useMutation<unknown, Error, { id: string; status: DemandStatus; roomId?: string; impact_operation?: boolean }>({
         mutationFn: async ({ id, status, roomId, impact_operation }: { id: string; status: DemandStatus; roomId?: string; impact_operation?: boolean }) => {
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('tasks')
-                .update({ status })
+                .update({ status } as any)
                 .eq('id', id)
                 .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 

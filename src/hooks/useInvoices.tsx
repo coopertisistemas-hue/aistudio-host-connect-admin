@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrg } from "./useOrg"; // Multi-tenant context
+import { useOrg } from "@/hooks/useOrg"; // Multi-tenant context
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { Tables, TablesInsert } from '@/integrations/supabase/types';

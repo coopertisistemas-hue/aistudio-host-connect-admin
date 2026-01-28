@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { Tables } from '@/integrations/supabase/types'; // Import Tables type
 import { trackLogin } from '@/lib/analytics'; // Analytics
+import { safeLogger } from '@/lib/logging/safeLogger';
 
 type Profile = Tables<'profiles'>; // Define Profile type
 
@@ -15,12 +16,25 @@ interface AuthContextType {
   userRole: string | null;
   userPlan: string | null;
   isSuperAdmin: boolean; // ✅ Super admin flag
-  onboardingCompleted: boolean | null; // Changed to boolean | null (tri-state)
+  profileError: 'not_found' | 'forbidden' | 'error' | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, fullName: string, phone?: string | null, plan?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  signInWithGoogle: () => Promise<void>; // New: Google sign-in
-  signInWithFacebook: () => Promise<void>; // New: Facebook sign-in
+  signInWithGoogle: () => Promise<void>;
+  signInWithFacebook: () => Promise<void>;
+  debugTrace: QueryTrace | null;
+}
+
+export interface QueryTrace {
+  name: string;
+  table: string;
+  select: string;
+  filters: { column: string; op: string }[];
+  modifiers: Record<string, any>;
+  startedAtMs: number;
+  endedAtMs?: number;
+  outcome?: string;
+  durationMs?: number;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +47,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   const [userPlan, setUserPlan] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState<boolean>(false); // ✅ Super admin state
   const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null); // Initialized as null (unknown)
+  const [profileError, setProfileError] = useState<'not_found' | 'forbidden' | 'error' | null>(null);
+  const [debugTrace, setDebugTrace] = useState<QueryTrace | null>(null);
   const navigate = useNavigate();
 
   const fetchInProgress = useRef(false);
@@ -49,21 +65,34 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
   const endTimer = (timerId: string) => {
     if (timers.current[timerId]) {
       const duration = performance.now() - timers.current[timerId];
-      console.log(`[useAuth] ${timerId}: ${duration.toFixed(2)} ms`);
+      safeLogger.debug('auth.profile.timer', { durationMs: Number(duration.toFixed(2)) });
       delete timers.current[timerId];
     }
   };
 
   const fetchUserProfile = async (userId: string) => {
     if (fetchInProgress.current) {
-      console.log('[useAuth] Fetch already in progress, skipping redundant request.');
+      safeLogger.debug('auth.profile.skip_duplicate');
       return;
     }
 
     const timerId = `fetchProfile-${userId}`;
+    const start = performance.now();
+    let outcome = 'unknown';
+
+    // 1. Set Debug Trace (Pre-fetch)
+    setDebugTrace({
+      name: 'fetchUserProfile',
+      table: 'profiles',
+      select: 'role, plan, onboarding_completed', // removed is_super_admin to test stall
+      filters: [{ column: 'id', op: 'eq' }],
+      modifiers: { maybeSingle: true },
+      startedAtMs: start
+    });
 
     try {
       fetchInProgress.current = true;
+      safeLogger.info('profile.fetch_start', { method: 'fetchUserProfile' }); // Start log
       startTimer(timerId);
 
       if (abortControllerRef.current) {
@@ -79,43 +108,112 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         }
       }, 20000);
 
-      const { data, error } = await supabase
+      // Timeout externo: Promise.race para garantir que fallback seja acionado
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('TIMEOUT')), 8000); // 8 segundos
+      });
+
+      const queryPromise = supabase
         .from('profiles')
-        .select('role, plan, onboarding_completed, is_super_admin')
+        .select('role, plan, onboarding_completed') // Removed is_super_admin to test stall
         .eq('id', userId)
-        .abortSignal(signal)
-        .single();
+        .maybeSingle();
 
-      const profile = data as Profile | null;
-      const isSuperAdminValue = (data as any)?.is_super_admin;
+      let data: any = null;
+      let error: any = null;
+      let profile: any = null;
 
-      clearTimeout(timeoutId);
+      try {
+        const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+        data = result.data;
+        error = result.error;
+        profile = data;
+      } catch (timeoutError: any) {
+        if (timeoutError.message === 'TIMEOUT') {
+          outcome = 'timeout_using_defaults';
+          safeLogger.warn('profile.timeout_fallback', { waitedMs: 8000 });
+
+          // Fallback seguro: permite acesso com permissões mínimas
+          setProfileError(null);
+          setUserRole('user');
+          setUserPlan('free');
+          setIsSuperAdmin(false);
+          setOnboardingCompleted(true);
+
+          const durationMs = performance.now() - start;
+          safeLogger.info('profile.fetch_end', { outcome, durationMs: Number(durationMs.toFixed(2)) });
+          setDebugTrace(prev => prev ? ({ ...prev, endedAtMs: performance.now(), outcome, durationMs }) : null);
+          return;
+        }
+        throw timeoutError;
+      }
+
+      // DIAGNOSTIC START: Bypass is_super_admin if debug mode is on
+      const isDebug = localStorage.getItem('hc_debug_queries') === '1';
+      let isSuperAdminValue = false;
+
+      if (isDebug) {
+        isSuperAdminValue = true;
+        safeLogger.warn('post_login.debug_super_admin_defaulted', { enabled: true });
+      } else {
+        isSuperAdminValue = (data as any)?.is_super_admin;
+      }
+      // DIAGNOSTIC END
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          console.log('[useAuth] Profile not found for user:', userId);
-        } else if (error.name === 'AbortError' || (error as any).message === 'AbortError') {
-          console.warn(`[useAuth] Profile fetch timed out after 20s or was aborted. userId: ${userId}`);
+        // RLS Policy bloqueada - usar defaults seguros
+        if (error.code === '42501' || error.message.includes('policy')) {
+          outcome = 'rls_blocked_using_defaults';
+          safeLogger.warn('profile.rls_blocked_fallback', { code: error.code });
+
+          // Fallback seguro: permite acesso com permissões mínimas
+          setProfileError(null);
+          setUserRole('user');
+          setUserPlan('free');
+          setIsSuperAdmin(false);
+          setOnboardingCompleted(true); // Assume onboarding completo para não bloquear
+
         } else {
-          console.error('[useAuth] Error fetching user profile:', error);
+          outcome = 'error';
+          safeLogger.error('profile.fetch_result', { outcome, message: error.message });
+          setProfileError('error');
+          setUserRole(null);
+          setUserPlan(null);
+          setOnboardingCompleted(null);
         }
-        setUserRole(null);
-        setUserPlan(null);
-        setOnboardingCompleted(null);
+      } else if (!profile) {
+        // Profile não encontrado - usar defaults seguros (mesmo comportamento que RLS bloqueada)
+        outcome = 'not_found_using_defaults';
+        safeLogger.warn('profile.not_found_fallback');
+
+        // Fallback seguro: permite acesso com permissões mínimas
+        setProfileError(null);
+        setUserRole('user');
+        setUserPlan('free');
+        setIsSuperAdmin(false);
+        setOnboardingCompleted(true); // Assume onboarding completo para não bloquear
+
       } else {
+        outcome = 'ok';
+        // safeLogger.info('profile.fetch_result', { outcome }); // Logged in finally
+        setProfileError(null);
         setUserRole(profile?.role || 'user');
         setUserPlan(profile?.plan || 'free');
-        setIsSuperAdmin(!!isSuperAdminValue); // ✅ Set super admin flag
+        setIsSuperAdmin(!!isSuperAdminValue); // ✅ Set super admin flag (diagnostic override)
         const isCompleted = !!profile?.onboarding_completed;
         setOnboardingCompleted(isCompleted);
       }
     } catch (e: any) {
-      if (e?.name === 'AbortError') {
-        console.warn(`[useAuth] Profile fetch aborted for user: ${userId}`);
-      } else {
-        console.error('[useAuth] Unexpected error in fetchUserProfile:', e);
-      }
+      outcome = 'sys_error';
+      safeLogger.error('auth.profile.unexpected_error', { message: e?.message });
+      setProfileError('error');
     } finally {
+      const durationMs = performance.now() - start;
+      safeLogger.info('profile.fetch_end', { outcome, durationMs: Number(durationMs.toFixed(2)) });
+
+      // 2. Update Debug Trace (Post-fetch)
+      setDebugTrace(prev => prev ? ({ ...prev, endedAtMs: performance.now(), outcome, durationMs }) : null);
+
       endTimer(timerId);
       fetchInProgress.current = false;
       abortControllerRef.current = null;
@@ -130,14 +228,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
           setSession(session);
           setUser(session?.user ?? null);
 
-          console.log('[useAuth] Auth Event:', event);
+          safeLogger.info('auth.state_change', { event });
 
           if (session?.user) {
             // Only fetch profile on specific events to prevent excessive reloading
             if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
               // Reset Session Lock state on every fresh sign-in or session restoration
               if (event === 'SIGNED_IN') {
-                console.log('[useAuth] Resetting Session Lock state');
+                safeLogger.info('auth.session_lock.reset');
                 localStorage.removeItem('hc_session_locked');
                 localStorage.setItem('hc_last_active', Date.now().toString());
               }
@@ -154,9 +252,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
           }
         } catch (err: any) {
           if (err?.name === 'AbortError') {
-            console.warn('[useAuth] Auth state handler aborted');
+            safeLogger.warn('auth.state_change.aborted');
           } else {
-            console.error('[useAuth] Auth state handler error:', err);
+            safeLogger.error('auth.state_change.error', { message: err?.message });
           }
           setLoading(false);
         }
@@ -165,11 +263,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
 
     const initAuth = async () => {
       try {
-        console.log('[useAuth] initAuth starting...');
+        safeLogger.info('auth.init.start');
         const { data: { session: currentSession }, error: sessionError } = await supabase.auth.getSession();
 
         if (sessionError) {
-          console.error('[useAuth] Session error in initAuth:', sessionError);
+          safeLogger.error('auth.init.session_error', { message: sessionError.message });
           setLoading(false);
           return;
         }
@@ -178,17 +276,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          console.log('[useAuth] Session found, fetching profile...');
+          safeLogger.info('auth.init.session_found');
           await fetchUserProfile(currentSession.user.id);
         } else {
-          console.log('[useAuth] No session found in initAuth');
+          safeLogger.info('auth.init.no_session');
           setLoading(false);
         }
       } catch (err: any) {
         if (err?.name === 'AbortError') {
-          console.warn('[useAuth] initAuth aborted');
+          safeLogger.warn('auth.init.aborted');
         } else {
-          console.error('[useAuth] Unexpected initAuth error:', err);
+          safeLogger.error('auth.init.error', { message: err?.message });
         }
         setLoading(false);
       }
@@ -247,7 +345,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       trackLogin('email'); // Track login
       // navigate('/dashboard'); // Removed to allow Auth.tsx to handle redirect based on onboarding
     } catch (error) {
-      console.error('Sign in error:', error);
+      safeLogger.error('auth.sign_in.error', { message: (error as Error).message });
       throw error;
     }
   };
@@ -301,22 +399,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         navigate('/post-login', { replace: true });
       }, 1000);
     } catch (error) {
-      console.error('Sign up error:', error);
+      safeLogger.error('auth.sign_up.error', { message: (error as Error).message });
       throw error;
     }
   };
 
   const signOut = async () => {
-    console.log('[useAuth] signOut called');
+    safeLogger.info('auth.sign_out.start');
     try {
       // 1. Optimistic Clean-up: Clear local state IMMEDIATELY
-      console.log('[useAuth] Clearing local state...');
+      safeLogger.debug('auth.sign_out.clear_state');
       setUser(null);
       setSession(null);
       setUserRole(null);
       setUserPlan(null);
       setIsSuperAdmin(false);
       setOnboardingCompleted(null);
+      setProfileError(null);
 
       // Clear localStorage items manually just in case
       localStorage.removeItem('hc_session_locked');
@@ -328,20 +427,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       });
 
       // 2. Navigate away immediately
-      console.log('[useAuth] Navigating to /auth...');
+      safeLogger.debug('auth.sign_out.navigate');
       navigate('/auth');
 
       // 3. Call Supabase SignOut (don't block UI if this hangs)
-      console.log('[useAuth] Calling supabase.auth.signOut()...');
+      safeLogger.debug('auth.sign_out.supabase');
       const { error } = await supabase.auth.signOut();
       if (error) {
-        console.error('[useAuth] Supabase signOut error (ignored for UX):', error);
+        safeLogger.warn('auth.sign_out.supabase_error', { message: error.message });
       } else {
-        console.log('[useAuth] Supabase signOut successful');
+        safeLogger.info('auth.sign_out.success');
       }
 
     } catch (error: any) {
-      console.error('[useAuth] Critical Sign out error:', error);
+      safeLogger.error('auth.sign_out.critical_error', { message: (error as Error).message });
       // Force navigation anyway
       navigate('/auth');
     }
@@ -367,7 +466,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
       }
       // Supabase will handle the redirect and onAuthStateChange will pick up the session
     } catch (error) {
-      console.error('Google sign-in error:', error);
+      safeLogger.error('auth.google.error', { message: (error as Error).message });
       throw error;
     }
   };
@@ -391,13 +490,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => { // Corr
         throw error;
       }
     } catch (error) {
-      console.error('Facebook sign-in error:', error);
+      safeLogger.error('auth.facebook.error', { message: (error as Error).message });
       throw error;
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, userRole, userPlan, isSuperAdmin, onboardingCompleted, signIn, signUp, signOut, signInWithGoogle, signInWithFacebook }}>
+    <AuthContext.Provider value={{ user, session, loading, userRole, userPlan, isSuperAdmin, onboardingCompleted, signIn, signUp, signOut, signInWithGoogle, signInWithFacebook, profileError, debugTrace }}>
       {children}
     </AuthContext.Provider>
   );

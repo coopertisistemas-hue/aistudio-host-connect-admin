@@ -25,7 +25,7 @@ export interface MaintenanceTask {
 export const useMaintenance = (propertyId?: string) => {
     const queryClient = useQueryClient();
 
-    const { data: tasks = [], isLoading } = useQuery({
+    const { data: tasks = [], isLoading, error } = useQuery<MaintenanceTask[]>({
         queryKey: ['maintenance-tasks', propertyId],
         queryFn: async () => {
             if (!propertyId) return [];
@@ -112,6 +112,7 @@ export const useMaintenance = (propertyId?: string) => {
     return {
         tasks,
         isLoading,
+        error,
         createTicket,
         updateStatus,
         assignToMe

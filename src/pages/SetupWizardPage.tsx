@@ -17,7 +17,7 @@ import { Loader2, Check, Building2, Home, Hotel, ChevronRight, ChevronLeft } fro
 const SetupWizardPage = () => {
     const navigate = useNavigate();
     const { currentOrgId } = useOrg();
-    const { userRole } = useAuth();
+    const { user, userRole } = useAuth();
     const { onboarding, isLoading: onboardingLoading } = useOnboardingState();
     const { mutate: updateOnboarding, isPending: isUpdating } = useUpdateOnboarding();
     const { properties } = useProperties();
@@ -75,11 +75,21 @@ const SetupWizardPage = () => {
             return;
         }
 
+        if (!user?.id) {
+            toast({
+                title: 'Erro de autenticação',
+                description: 'Usuário não identificado.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         try {
             const { data, error } = await supabase
                 .from('properties')
                 .insert({
                     org_id: currentOrgId,
+                    user_id: user.id,
                     name: propertyName,
                     city: propertyCity,
                     state: propertyState,
@@ -159,7 +169,7 @@ const SetupWizardPage = () => {
                         property_id: selectedPropertyId,
                         name: 'Quarto Standard',
                         capacity: 2,
-                        daily_rate: 0,
+                        base_price: 0, // Correct field name
                     })
                     .select()
                     .single();

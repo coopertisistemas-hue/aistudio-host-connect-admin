@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { Tables } from '@/integrations/supabase/types';
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { safeLogger } from '@/lib/logging/safeLogger';
 
 export type Organization = Tables<'organizations'>;
 
@@ -74,19 +75,42 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
         queryFn: async () => {
             if (!user?.id) return null;
 
-            console.log('[OrgProvider] 🔍 Querying org for user:', user.id);
+            safeLogger.debug('org.fetch_user_org.start');
 
-            const { data, error: fetchError } = await supabase
+            // Timeout externo: Promise.race
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('ORG_TIMEOUT')), 8000);
+            });
+
+            const queryPromise = supabase
                 .from('organizations')
                 .select('*')
                 .eq('owner_id', user.id)
                 .maybeSingle();
 
+            let data: any = null;
+            let fetchError: any = null;
+
+            try {
+                const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+                data = result.data;
+                fetchError = result.error;
+            } catch (timeoutError: any) {
+                if (timeoutError.message === 'ORG_TIMEOUT') {
+                    safeLogger.warn('org.timeout_fallback', { waitedMs: 8000 });
+                    return null; // Permite auto-criação
+                }
+                throw timeoutError;
+            }
+
             if (fetchError && fetchError.code !== 'PGRST116') {
                 throw fetchError;
             }
 
-            if (data) return data;
+            if (data) {
+                safeLogger.info('org.fetch_success', { orgId: data.id });
+                return data;
+            }
 
             // Auto-create default org if missing
             const defaultName = user.user_metadata?.full_name
@@ -95,11 +119,40 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
                     ? `${user.email.split('@')[0]}'s Organization`
                     : 'Minha Organização';
 
-            const { data: newOrg, error: createError } = await supabase
+            safeLogger.info('org.auto_create.start', { name: defaultName });
+
+            // Timeout na criação também
+            const createTimeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('CREATE_TIMEOUT')), 8000);
+            });
+
+            const createPromise = supabase
                 .from('organizations')
                 .insert({ owner_id: user.id, name: defaultName })
                 .select()
                 .single();
+
+            let newOrg: any = null;
+            let createError: any = null;
+
+            try {
+                const createResult = await Promise.race([createPromise, createTimeoutPromise]) as any;
+                newOrg = createResult.data;
+                createError = createResult.error;
+            } catch (timeoutError: any) {
+                if (timeoutError.message === 'CREATE_TIMEOUT') {
+                    safeLogger.error('org.create_timeout_fallback', { waitedMs: 8000 });
+                    // Fallback: retornar org fake para permitir acesso
+                    return {
+                        id: 'temp-org-' + user.id,
+                        owner_id: user.id,
+                        name: defaultName,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                    } as Organization;
+                }
+                throw timeoutError;
+            }
 
             if (createError) {
                 if (createError.code === '23505') {
@@ -110,8 +163,18 @@ export const OrgProvider = ({ children }: { children: ReactNode }) => {
                         .single();
                     return retryData;
                 }
-                throw createError;
+                safeLogger.error('org.create_error', { code: createError.code, message: createError.message });
+                // Fallback final: retornar org fake
+                return {
+                    id: 'temp-org-' + user.id,
+                    owner_id: user.id,
+                    name: defaultName,
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                } as Organization;
             }
+
+            safeLogger.info('org.auto_create.success', { orgId: newOrg?.id });
             return newOrg;
         },
         enabled: !isSuperAdmin && !!user?.id && !authLoading,

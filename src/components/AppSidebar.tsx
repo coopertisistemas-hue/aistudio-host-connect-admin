@@ -1,4 +1,4 @@
-import React from "react";
+import * as React from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   Building2,
@@ -65,7 +65,10 @@ import { useEntitlements } from "@/hooks/useEntitlements";
 import { useOnboardingState } from "@/hooks/useOnboardingState";
 import { getRoleDisplayName } from "@/lib/constants/roles";
 import { OrgSwitcher } from "@/components/OrgSwitcher";
+import { getVisibleNavSections, type NavGroup } from "@/lib/navigation/visibility";
+import { prefetchRoute } from "@/lib/navigation/routeLoaders";
 import logoIcon from "@/assets/logo-icon.png";
+
 
 const AppSidebar = () => {
   const { state } = useSidebar();
@@ -78,18 +81,12 @@ const AppSidebar = () => {
   const isActive = (path: string) => location.pathname === path;
   const isCollapsed = state === "collapsed";
 
-  if (authLoading || isAdminLoading || onboardingLoading) return null;
-
-  // Entitlement Gates
+  // Entitlement Gates (DEVE vir antes de qualquer early return)
   const { canAccess } = useEntitlements();
 
-  // Mode Gating Helper
-  const isModeEligible = (itemModes?: string[]) => {
-    if (!itemModes) return true;
-    return itemModes.includes(currentMode);
-  };
+  if (authLoading || isAdminLoading || onboardingLoading) return null;
 
-  const menuGroups = [
+  const menuGroups: NavGroup[] = [
     {
       label: "Operacional",
       icon: Briefcase,
@@ -169,6 +166,11 @@ const AppSidebar = () => {
     },
   ];
 
+  const visibleGroups = getVisibleNavSections(userRole, currentMode, menuGroups).map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.gated),
+  }));
+
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
@@ -192,19 +194,11 @@ const AppSidebar = () => {
       )}
 
       <SidebarContent>
-        {menuGroups.map((group, gIndex) => {
-          if (group.modes && !isModeEligible(group.modes)) return null;
-
-          const filteredItems = group.items.filter(item =>
-            (!item.roles || (userRole && item.roles.includes(userRole))) &&
-            !item.gated &&
-            isModeEligible(item.modes)
-          );
-
-          if (filteredItems.length === 0) return null;
+        {visibleGroups.map((group, gIndex) => {
+          if (group.items.length === 0) return null;
 
           const GroupIcon = group.icon;
-          const isSomeItemActive = filteredItems.some(item => isActive(item.url));
+          const isSomeItemActive = group.items.some(item => isActive(item.url));
 
           return (
             <Collapsible
@@ -232,12 +226,17 @@ const AppSidebar = () => {
                 <CollapsibleContent>
                   <SidebarGroupContent>
                     <SidebarMenu>
-                      {filteredItems.map((item) => {
+                      {group.items.map((item) => {
                         const ItemIcon = item.icon;
                         return (
                           <SidebarMenuItem key={item.title}>
                             <SidebarMenuButton asChild isActive={isActive(item.url)} tooltip={isCollapsed ? item.title : undefined}>
-                              <Link to={item.url} className="flex items-center gap-3">
+                              <Link
+                                to={item.url}
+                                className="flex items-center gap-3"
+                                onMouseEnter={() => prefetchRoute(item.url)}
+                                onFocus={() => prefetchRoute(item.url)}
+                              >
                                 <ItemIcon className="h-4 w-4" />
                                 {!isCollapsed && <span className="text-sm font-medium">{item.title}</span>}
                               </Link>

@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { InventoryItem } from './useInventory'; // Import InventoryItem type
-import { useOrg } from './useOrg';
+import { useOrg } from '@/hooks/useOrg';
 import { useAuth } from './useAuth';
 
 export type StockItem = {

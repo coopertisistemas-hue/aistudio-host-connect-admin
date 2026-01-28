@@ -1,51 +1,262 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSelectedProperty } from '@/hooks/useSelectedProperty';
-import { useOrg } from '@/hooks/useOrg';
 import { useAuth } from '@/hooks/useAuth';
 import { useRooms } from '@/hooks/useRooms';
-import { useUpdateRoomStatus, RoomStatus, getStatusLabel, getStatusVariant } from '@/hooks/useUpdateRoomStatus';
+import { useDemands } from '@/hooks/useDemands';
+import { RoomStatus, useUpdateRoomStatus } from '@/hooks/useUpdateRoomStatus';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { useProperties } from '@/hooks/useProperties';
-import { OnboardingBanner } from '@/components/onboarding/OnboardingBanner';
-import { Loader2, Home, Filter, AlertTriangle } from 'lucide-react';
-import { format } from 'date-fns';
-import { ptBR } from 'date-fns/locale';
+import { Home, Search, Loader2 } from 'lucide-react';
 import { EmptyState } from '@/components/onboarding/EmptyState';
-import { Building2, Search, PlusCircle } from 'lucide-react';
+import { Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Input } from '@/components/ui/input';
+import FullPageLoading from '@/components/FullPageLoading';
+import { Skeleton } from '@/components/ui/skeleton';
+import MobileRoomCard from '@/components/housekeeping/MobileRoomCard';
+import { Button } from '@/components/ui/button';
+import { toast } from '@/hooks/use-toast';
+import { BulkAction, getBulkActionState } from '@/lib/housekeeping/bulkRules';
+import { isFeatureEnabled } from '@/lib/featureFlags';
+import { useQueryClient } from '@tanstack/react-query';
 
 const MobileHousekeepingPage = () => {
     const { selectedPropertyId, setSelectedPropertyId } = useSelectedProperty();
     const { properties, isLoading: propertiesLoading } = useProperties();
-    const { currentOrgId } = useOrg();
     const { userRole } = useAuth();
     const isViewer = userRole === 'viewer';
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
     const [statusFilter, setStatusFilter] = useState<RoomStatus | 'all'>('all');
+    const [searchQuery, setSearchQuery] = useState('');
+    const [selectionMode, setSelectionMode] = useState(false);
+    const [selectedRoomIds, setSelectedRoomIds] = useState<string[]>([]);
+    const [bulkAction, setBulkAction] = useState<BulkAction | ''>('');
+    const [bulkProgress, setBulkProgress] = useState({
+        isRunning: false,
+        current: 0,
+        total: 0,
+        success: 0,
+        failure: 0,
+        cancelled: false,
+        showSummary: false,
+    });
+    const cancelRef = useRef(false);
+    const bulkActionsEnabled = isFeatureEnabled('HK_BULK_ACTIONS');
 
     // Fetch rooms for selected property
-    const { rooms, isLoading: roomsLoading } = useRooms(selectedPropertyId);
-    const updateRoomStatus = useUpdateRoomStatus();
+    const { rooms, isLoading: roomsLoading, error: roomsError } = useRooms(selectedPropertyId);
+    const { createDemand } = useDemands(selectedPropertyId);
+    const bulkUpdateStatus = useUpdateRoomStatus({ suppressToast: true });
+
+    const statusCounts = useMemo(() => {
+        const counts = {
+            dirty: 0,
+            cleaning: 0,
+            clean: 0,
+            inspected: 0,
+            out_of_order: 0,
+            all: rooms.length,
+        };
+
+        rooms.forEach((room) => {
+            switch (room.status) {
+                case 'dirty':
+                    counts.dirty += 1;
+                    break;
+                case 'cleaning':
+                    counts.cleaning += 1;
+                    break;
+                case 'clean':
+                    counts.clean += 1;
+                    break;
+                case 'inspected':
+                    counts.inspected += 1;
+                    break;
+                case 'out_of_order':
+                    counts.out_of_order += 1;
+                    break;
+                default:
+                    break;
+            }
+        });
+
+        return counts;
+    }, [rooms]);
+
+    const selectedRooms = useMemo(
+        () => rooms.filter((room) => selectedRoomIds.includes(room.id)),
+        [rooms, selectedRoomIds],
+    );
+
+    const bulkActionState = useMemo(
+        () => getBulkActionState(selectedRooms, bulkAction),
+        [selectedRooms, bulkAction],
+    );
+
+    useEffect(() => {
+        if (!bulkActionsEnabled) {
+            setSelectionMode(false);
+        }
+    }, [bulkActionsEnabled]);
+
+    useEffect(() => {
+        if (!selectionMode) {
+            setSelectedRoomIds([]);
+            setBulkAction('');
+            setBulkProgress({
+                isRunning: false,
+                current: 0,
+                total: 0,
+                success: 0,
+                failure: 0,
+                cancelled: false,
+                showSummary: false,
+            });
+            cancelRef.current = false;
+        }
+    }, [selectionMode]);
+
+    useEffect(() => {
+        if (selectedRoomIds.length === 0) return;
+        setSelectedRoomIds((prev) => prev.filter((id) => rooms.some((room) => room.id === id)));
+    }, [rooms, selectedRoomIds.length]);
+
+    const handleToggleSelection = (roomId: string) => {
+        setSelectedRoomIds((prev) =>
+            prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId],
+        );
+    };
+
+    const handleClearSelection = () => {
+        setSelectedRoomIds([]);
+        setBulkAction('');
+        setBulkProgress({
+            isRunning: false,
+            current: 0,
+            total: 0,
+            success: 0,
+            failure: 0,
+            cancelled: false,
+            showSummary: false,
+        });
+        cancelRef.current = false;
+    };
+
+    const handleCancelBulk = () => {
+        cancelRef.current = true;
+        setBulkProgress((prev) => ({
+            ...prev,
+            cancelled: true,
+        }));
+    };
+
+    const handleBulkApply = async () => {
+        if (!selectedRooms.length || bulkProgress.isRunning) return;
+        if (isViewer) return;
+        if (!bulkActionState.canApply) return;
+        if (!selectedPropertyId) return;
+        if (!bulkAction) return;
+
+        const targetStatus = bulkAction as RoomStatus;
+
+        cancelRef.current = false;
+        setBulkProgress({
+            isRunning: true,
+            current: 0,
+            total: selectedRooms.length,
+            success: 0,
+            failure: 0,
+            cancelled: false,
+            showSummary: false,
+        });
+
+        let successCount = 0;
+        let failureCount = 0;
+
+        for (let index = 0; index < selectedRooms.length; index += 1) {
+            if (cancelRef.current) {
+                break;
+            }
+            const room = selectedRooms[index];
+            setBulkProgress((prev) => ({
+                ...prev,
+                current: index + 1,
+                success: successCount,
+                failure: failureCount,
+            }));
+
+            try {
+                await bulkUpdateStatus.mutateAsync({
+                    roomId: room.id,
+                    newStatus: targetStatus,
+                    propertyId: selectedPropertyId,
+                });
+                successCount += 1;
+            } catch {
+                failureCount += 1;
+            }
+        }
+
+        if (cancelRef.current) {
+            failureCount += Math.max(0, selectedRooms.length - successCount - failureCount);
+        }
+
+        setBulkProgress({
+            isRunning: false,
+            current: selectedRooms.length,
+            total: selectedRooms.length,
+            success: successCount,
+            failure: failureCount,
+            cancelled: cancelRef.current,
+            showSummary: true,
+        });
+
+        if (failureCount > 0) {
+            toast({
+                title: 'Alguns quartos não puderam ser atualizados.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
+        toast({
+            title: 'Atualização concluída.',
+        });
+    };
 
     // Filter rooms by status
     const filteredRooms = useMemo(() => {
-        if (statusFilter === 'all') return rooms;
-        return rooms.filter(room => room.status === statusFilter);
-    }, [rooms, statusFilter]);
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+
+        return rooms.filter((room) => {
+            if (statusFilter !== 'all' && room.status !== statusFilter) {
+                return false;
+            }
+
+            if (!normalizedQuery) return true;
+
+            const searchText = [
+                room.room_number,
+                room.room_types?.name,
+                (room as { name?: string | null }).name,
+                (room as { notes?: string | null }).notes,
+                (room as { observation?: string | null }).observation,
+                (room as { observacao?: string | null }).observacao,
+            ]
+                .filter((value) => typeof value === 'string')
+                .join(' ')
+                .toLowerCase();
+
+            return searchText.includes(normalizedQuery);
+        });
+    }, [rooms, searchQuery, statusFilter]);
 
     // Loading state
     if (propertiesLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-                <Loader2 className="h-12 w-12 animate-spin text-primary" />
-                <p className="mt-4 text-sm text-muted-foreground">Carregando...</p>
-            </div>
-        );
+        return <FullPageLoading message="Carregando propriedades..." />;
     }
 
     // No properties at all
@@ -92,8 +303,18 @@ const MobileHousekeepingPage = () => {
         );
     }
 
+    const bulkBarVisible =
+        bulkActionsEnabled &&
+        selectionMode &&
+        (selectedRoomIds.length > 0 || bulkProgress.showSummary || bulkProgress.isRunning);
+    const bulkHelper = isViewer
+        ? 'Usuários somente leitura não podem aplicar ações.'
+        : bulkActionState.helper;
+    const bulkApplyDisabled =
+        !bulkActionState.canApply || isViewer || bulkProgress.isRunning || selectedRooms.length === 0;
+
     return (
-        <div className="min-h-screen bg-gray-50 pb-20">
+        <div className={`min-h-screen bg-gray-50 ${bulkBarVisible ? 'pb-36' : 'pb-20'}`}>
             {/* Header */}
             <div className="bg-white border-b sticky top-0 z-10">
                 <div className="p-4 space-y-3">
@@ -114,37 +335,64 @@ const MobileHousekeepingPage = () => {
                         </Select>
                     </div>
 
+                    {bulkActionsEnabled && (
+                        <Button
+                            variant={selectionMode ? 'default' : 'outline'}
+                            size="sm"
+                            className="h-9"
+                            onClick={() => setSelectionMode((prev) => !prev)}
+                        >
+                            {selectionMode ? 'Modo seleção ativo' : 'Modo seleção'}
+                        </Button>
+                    )}
+
+                    <div className="relative">
+                        <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
+                        <Input
+                            value={searchQuery}
+                            onChange={(event) => setSearchQuery(event.target.value)}
+                            placeholder="Buscar quarto, hóspede ou observação"
+                            className="pl-9 h-10"
+                        />
+                    </div>
+
                     {/* Status Filter Chips */}
                     <div className="flex gap-2 overflow-x-auto pb-2">
                         <FilterChip
-                            label="Todos"
-                            active={statusFilter === 'all'}
-                            onClick={() => setStatusFilter('all')}
-                            count={rooms.length}
-                        />
-                        <FilterChip
-                            label="Sujo"
+                            label="Pendentes"
                             active={statusFilter === 'dirty'}
                             onClick={() => setStatusFilter('dirty')}
-                            count={rooms.filter(r => r.status === 'dirty').length}
+                            count={statusCounts.dirty}
                         />
                         <FilterChip
                             label="Em limpeza"
                             active={statusFilter === 'cleaning'}
                             onClick={() => setStatusFilter('cleaning')}
-                            count={rooms.filter(r => r.status === 'cleaning').length}
+                            count={statusCounts.cleaning}
                         />
                         <FilterChip
-                            label="Limpo"
+                            label="Limpos"
                             active={statusFilter === 'clean'}
                             onClick={() => setStatusFilter('clean')}
-                            count={rooms.filter(r => r.status === 'clean').length}
+                            count={statusCounts.clean}
                         />
                         <FilterChip
-                            label="Inspecionado"
+                            label="Revisão"
                             active={statusFilter === 'inspected'}
                             onClick={() => setStatusFilter('inspected')}
-                            count={rooms.filter(r => r.status === 'inspected').length}
+                            count={statusCounts.inspected}
+                        />
+                        <FilterChip
+                            label="Fora de serviço"
+                            active={statusFilter === 'out_of_order'}
+                            onClick={() => setStatusFilter('out_of_order')}
+                            count={statusCounts.out_of_order}
+                        />
+                        <FilterChip
+                            label="Todos"
+                            active={statusFilter === 'all'}
+                            onClick={() => setStatusFilter('all')}
+                            count={statusCounts.all}
                         />
                     </div>
                 </div>
@@ -152,11 +400,34 @@ const MobileHousekeepingPage = () => {
 
             {/* Rooms List */}
             <div className="p-4 space-y-3">
+                {!roomsLoading && !roomsError && rooms.length > 0 && (
+                    <p className="text-sm text-muted-foreground">
+                        Exibindo: {filteredRooms.length} quartos
+                    </p>
+                )}
                 {roomsLoading ? (
-                    <div className="flex flex-col items-center justify-center py-12">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        <p className="mt-2 text-sm text-muted-foreground">Carregando quartos...</p>
+                    <div className="space-y-3">
+                        {Array.from({ length: 4 }).map((_, index) => (
+                            <Skeleton key={index} className="h-40 w-full" />
+                        ))}
                     </div>
+                ) : roomsError ? (
+                    <Card className="border-dashed">
+                        <CardContent className="pt-6 space-y-4">
+                            <EmptyState
+                                icon={Home}
+                                title="Não foi possível carregar os dados. Tente novamente."
+                                description=""
+                            />
+                            <Button
+                                variant="outline"
+                                className="w-full h-11"
+                                onClick={() => queryClient.invalidateQueries({ queryKey: ['rooms'] })}
+                            >
+                                Tentar novamente
+                            </Button>
+                        </CardContent>
+                    </Card>
                 ) : rooms.length === 0 ? (
                     <Card className="border-dashed">
                         <CardContent className="pt-6">
@@ -176,25 +447,94 @@ const MobileHousekeepingPage = () => {
                         <CardContent className="pt-6">
                             <EmptyState
                                 icon={Search}
-                                title="Nenhum resultado"
-                                description="Tente mudar o filtro."
+                                title="Nenhum quarto encontrado para os filtros selecionados."
+                                description=""
                             />
                         </CardContent>
                     </Card>
                 ) : (
                     <div className="space-y-3">
                         {filteredRooms.map((room) => (
-                            <RoomCard
+                            <MobileRoomCard
                                 key={room.id}
                                 room={room}
                                 isViewer={isViewer}
-                                updateStatus={updateRoomStatus}
                                 propertyId={selectedPropertyId}
+                                createDemand={createDemand}
+                                selectionMode={bulkActionsEnabled ? selectionMode : false}
+                                isSelected={bulkActionsEnabled ? selectedRoomIds.includes(room.id) : false}
+                                onToggleSelect={bulkActionsEnabled ? handleToggleSelection : undefined}
                             />
                         ))}
                     </div>
                 )}
             </div>
+
+            {bulkBarVisible && (
+                <div className="fixed bottom-0 inset-x-0 border-t bg-white/95 backdrop-blur p-3">
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-semibold">
+                                Selecionados: {selectedRoomIds.length}
+                            </p>
+                            {bulkProgress.isRunning && (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                    Atualizando {bulkProgress.current} de {bulkProgress.total}...
+                                </div>
+                            )}
+                        </div>
+
+                        {bulkProgress.showSummary && (
+                            <p className="text-xs text-muted-foreground">
+                                Sucesso: {bulkProgress.success} • Falhas: {bulkProgress.failure}
+                            </p>
+                        )}
+
+                        {!bulkProgress.isRunning && !bulkProgress.showSummary && (
+                            <Select value={bulkAction} onValueChange={(value) => setBulkAction(value as BulkAction)}>
+                                <SelectTrigger className="h-10">
+                                    <SelectValue placeholder="Selecione uma ação" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="cleaning">Marcar como em limpeza</SelectItem>
+                                    <SelectItem value="clean">Marcar como limpo</SelectItem>
+                                    <SelectItem value="inspected">Marcar como em revisão</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        )}
+
+                        {bulkHelper && (
+                            <p className="text-xs text-muted-foreground">{bulkHelper}</p>
+                        )}
+
+                        <div className="flex items-center gap-2">
+                            {bulkProgress.isRunning ? (
+                                <Button variant="outline" className="flex-1 h-10" onClick={handleCancelBulk}>
+                                    Cancelar
+                                </Button>
+                            ) : bulkProgress.showSummary ? (
+                                <Button variant="outline" className="flex-1 h-10" onClick={handleClearSelection}>
+                                    Fechar
+                                </Button>
+                            ) : (
+                                <Button variant="outline" className="flex-1 h-10" onClick={handleClearSelection}>
+                                    Limpar seleção
+                                </Button>
+                            )}
+                            {!bulkProgress.isRunning && !bulkProgress.showSummary && (
+                                <Button
+                                    className="flex-1 h-10"
+                                    onClick={handleBulkApply}
+                                    disabled={bulkApplyDisabled}
+                                >
+                                    Aplicar
+                                </Button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -219,139 +559,8 @@ const FilterChip = ({ label, active, onClick, count }: FilterChipProps) => {
                 }
       `}
         >
-            {label}
-            <span className={`text-xs ${active ? 'opacity-90' : 'opacity-60'}`}>
-                ({count})
-            </span>
+            {label} ({count})
         </button>
-    );
-};
-
-// Room Card Component
-interface RoomCardProps {
-    room: any;
-    isViewer: boolean;
-    updateStatus: any;
-    propertyId: string;
-}
-
-const RoomCard = ({ room, isViewer, updateStatus, propertyId }: RoomCardProps) => {
-    const currentStatus = room.status as RoomStatus;
-
-    const handleStatusChange = (newStatus: RoomStatus) => {
-        updateStatus.mutate({
-            roomId: room.id,
-            newStatus,
-            propertyId,
-        });
-    };
-
-    return (
-        <Card className="border-2">
-            <CardContent className="p-4 space-y-3">
-                {/* Room Header */}
-                <div className="flex items-start justify-between">
-                    <div>
-                        <h3 className="font-bold text-lg">{room.room_number}</h3>
-                        {room.room_types?.name && (
-                            <p className="text-sm text-muted-foreground">{room.room_types.name}</p>
-                        )}
-                    </div>
-                    <Badge variant={getStatusVariant(currentStatus)}>
-                        {getStatusLabel(currentStatus)}
-                    </Badge>
-                </div>
-
-                {/* Last Updated */}
-                {room.updated_at && (
-                    <p className="text-xs text-muted-foreground">
-                        Atualizado: {format(new Date(room.updated_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
-                    </p>
-                )}
-
-                {/* Status Action Buttons */}
-                {!isViewer && (
-                    <>
-                        <div className="grid grid-cols-2 gap-2">
-                            <Button
-                                size="sm"
-                                variant={currentStatus === 'dirty' ? 'default' : 'outline'}
-                                onClick={() => handleStatusChange('dirty')}
-                                disabled={updateStatus.isPending || currentStatus === 'dirty'}
-                                className="text-xs h-9"
-                            >
-                                Sujo
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={currentStatus === 'cleaning' ? 'default' : 'outline'}
-                                onClick={() => handleStatusChange('cleaning')}
-                                disabled={updateStatus.isPending || currentStatus === 'cleaning'}
-                                className="text-xs h-9"
-                            >
-                                Em limpeza
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={currentStatus === 'clean' ? 'default' : 'outline'}
-                                onClick={() => handleStatusChange('clean')}
-                                disabled={updateStatus.isPending || currentStatus === 'clean'}
-                                className="text-xs h-9"
-                            >
-                                Limpo
-                            </Button>
-                            <Button
-                                size="sm"
-                                variant={currentStatus === 'inspected' ? 'default' : 'outline'}
-                                onClick={() => handleStatusChange('inspected')}
-                                disabled={updateStatus.isPending || currentStatus === 'inspected'}
-                                className="text-xs h-9"
-                            >
-                                Inspecionado
-                            </Button>
-                        </div>
-
-                        {/* Out of Order (with confirmation) */}
-                        <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                                <Button
-                                    size="sm"
-                                    variant={currentStatus === 'out_of_order' ? 'destructive' : 'outline'}
-                                    disabled={updateStatus.isPending}
-                                    className="text-xs h-9 w-full"
-                                >
-                                    <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
-                                    Fora de serviço
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Marcar como fora de serviço?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        O quarto {room.room_number} será marcado como indisponível para uso.
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                    <AlertDialogAction onClick={() => handleStatusChange('out_of_order')}>
-                                        Confirmar
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    </>
-                )}
-
-                {/* Viewer Message */}
-                {isViewer && (
-                    <div className="text-center py-2">
-                        <p className="text-xs text-muted-foreground">
-                            Visualização somente leitura
-                        </p>
-                    </div>
-                )}
-            </CardContent>
-        </Card>
     );
 };
 

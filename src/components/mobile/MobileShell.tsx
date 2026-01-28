@@ -61,7 +61,7 @@ export const MobileTopHeader: React.FC<{
     title?: string;
     subtitle?: string;
 }> = ({ showBack, title, subtitle }) => {
-    const { user, signOut } = useAuth();
+    const { userRole, isSuperAdmin, signOut } = useAuth();
     const { selectedPropertyId } = useSelectedProperty();
     const { properties } = useProperties();
     const { unreadCount } = useNotifications();
@@ -72,6 +72,21 @@ export const MobileTopHeader: React.FC<{
     const selectedProperty = properties.find(p => p.id === selectedPropertyId);
 
     const { data: identity } = useOperationalIdentity(selectedPropertyId);
+
+    const getRoleLabel = (role?: string | null, superAdmin?: boolean) => {
+        if (superAdmin) return "Suporte";
+
+        const labels: Record<string, string> = {
+            admin: "Admin",
+            owner: "Proprietário",
+            manager: "Gerência",
+            staff_frontdesk: "Recepção",
+            staff_housekeeping: "Governança",
+            viewer: "Visualização",
+        };
+
+        return labels[role || ""] || "Equipe";
+    };
 
     const handleRefresh = async () => {
         if (isRefreshing) return;
@@ -118,7 +133,7 @@ export const MobileTopHeader: React.FC<{
                     </h1>
                     <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold text-neutral-400 truncate max-w-[200px] uppercase tracking-widest opacity-90">
-                            {subtitle || `Operações • ${identity?.staff_short_name || user?.user_metadata?.full_name?.split(' ')[0] || "Equipe"}`}
+                            {subtitle || `Operações • ${getRoleLabel(userRole, isSuperAdmin)}`}
                         </span>
                     </div>
                 </div>

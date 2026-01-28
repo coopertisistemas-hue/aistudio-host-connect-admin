@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useRooms, Room, RoomInput } from './useRooms'; // Import RoomInput
 import { useBookings, Booking } from './useBookings';
 import { useInvoices } from './useInvoices';
-import { useOrg } from './useOrg'; // Multi-tenant context
+import { useOrg } from '@/hooks/useOrg'; // Multi-tenant context
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';

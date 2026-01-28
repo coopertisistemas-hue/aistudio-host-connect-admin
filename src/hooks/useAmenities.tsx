@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
-import { useOrg } from './useOrg';
+import { useOrg } from '@/hooks/useOrg';
 
 export const amenitySchema = z.object({
   name: z.string().min(1, "O nome da comodidade é obrigatório."),

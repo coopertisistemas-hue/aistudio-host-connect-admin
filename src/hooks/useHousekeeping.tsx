@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useOrg } from "./useOrg"; // Multi-tenant context
+import { useOrg } from "@/hooks/useOrg"; // Multi-tenant context
+import { safeLogger } from "@/lib/logging/safeLogger";
 
 export interface HousekeepingTask {
     id: string;
@@ -32,15 +33,15 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
     const { currentOrgId, isLoading: isOrgLoading } = useOrg();
 
     // Fetch housekeeping tasks
-    const { data: tasks = [], isLoading } = useQuery({
+    const { data: tasks = [], isLoading } = useQuery<HousekeepingTask[]>({
         queryKey: ['housekeeping-tasks', currentOrgId, propertyId, userId],
-        queryFn: async () => {
+        queryFn: async (): Promise<HousekeepingTask[]> => {
             if (!currentOrgId) {
-                console.warn('[useHousekeeping] Abortando fetch: currentOrgId indefinido.');
+                safeLogger.warn('housekeeping.fetch.no_org');
                 return [];
             }
             if (!propertyId) return [];
-            let query = supabase
+            let query = (supabase as any)
                 .from('tasks')
                 .select(`
           *,
@@ -59,23 +60,18 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
 
             const { data, error } = await query;
             if (error) throw error;
-            return data as HousekeepingTask[];
+            return data as unknown as HousekeepingTask[];
         },
         enabled: !isOrgLoading && !!currentOrgId && !!propertyId
     });
 
     // Update task and room status
-    const updateTaskStatus = useMutation({
-        mutationFn: async ({ taskId, roomId, status, notes }: {
-            taskId: string;
-            roomId: string;
-            status: HousekeepingTask['status'];
-            notes?: string;
-        }) => {
+    const updateTaskStatus = useMutation<any, any, any>({
+        mutationFn: async ({ taskId, roomId, status, notes }: any) => {
             // 1. Update the task
-            const { error: taskError } = await supabase
+            const { error: taskError } = await (supabase as any)
                 .from('tasks')
-                .update({ status, notes, updated_at: new Date().toISOString() })
+                .update({ status, notes, updated_at: new Date().toISOString() } as any)
                 .eq('id', taskId)
                 .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 
@@ -94,9 +90,9 @@ export const useHousekeeping = (propertyId?: string, userId?: string | null) => 
             // For now, let's assume 'clean' means physically clean, 'available' means inspected.
             // Adjust based on typical hotel flows: Dirty -> Cleaning -> Clean (Vacant Dirty) -> Inspected (Vacant Clean/Ready)
 
-            const { error: roomError } = await supabase
+            const { error: roomError } = await (supabase as any)
                 .from('rooms')
-                .update({ status: roomStatus })
+                .update({ status: roomStatus } as any)
                 .eq('id', roomId)
                 .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id
 

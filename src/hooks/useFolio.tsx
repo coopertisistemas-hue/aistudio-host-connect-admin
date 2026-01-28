@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useAuth } from './useAuth';
-import { useOrg } from './useOrg'; // Multi-tenant context
+import { useOrg } from '@/hooks/useOrg'; // Multi-tenant context
 
 export interface FolioItem {
     id: string;

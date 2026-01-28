@@ -57,7 +57,7 @@ const OpsNowPage: React.FC = () => {
                                     className="p-4 border-l-4 border-l-rose-500 flex gap-3 items-start active:scale-[0.98] transition-all"
                                     onClick={() => {
                                         if (task.type === 'maintenance') navigate(`/m/maintenance/${task.id}`);
-                                        else if (task.type === 'housekeeping') navigate(`/m/housekeeping/task/${task.id}`);
+                                        else if (task.type === 'housekeeping') navigate(`/m/housekeeping`);
                                         else navigate(`/m/task/${task.id}`);
                                     }}
                                 >

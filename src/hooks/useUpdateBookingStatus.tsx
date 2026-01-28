@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { useOrg } from './useOrg';
+import { useOrg } from '@/hooks/useOrg';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
 import { BookingStatus } from '@/lib/constants/statuses';

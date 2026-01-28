@@ -1,5 +1,7 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
+import * as React from 'react';
+import type { ErrorInfo, ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
+import { safeLogger } from '@/lib/logging/safeLogger';
 import { AlertTriangle } from 'lucide-react';
 
 interface Props {
@@ -11,7 +13,7 @@ interface State {
   error: Error | null;
 }
 
-class ErrorBoundary extends Component<Props, State> {
+class ErrorBoundary extends React.Component<Props, State> {
   public state: State = {
     hasError: false,
     error: null
@@ -22,7 +24,12 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+    const includeStack = import.meta.env.MODE !== 'production';
+    safeLogger.error('ui.error_boundary', {
+      message: error.message,
+      name: error.name,
+      componentStack: includeStack ? errorInfo.componentStack : undefined,
+    });
   }
 
   public render() {
@@ -37,16 +44,10 @@ class ErrorBoundary extends Component<Props, State> {
             </div>
 
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold tracking-tight">Ops! Algo deu errado</h1>
+              <h1 className="text-2xl font-bold tracking-tight">Ops… algo deu errado.</h1>
               <p className="text-muted-foreground">
-                Ocorreu um erro inesperado na aplicação.
+                Tente recarregar a página ou voltar para o início.
               </p>
-            </div>
-
-            <div className="p-4 bg-muted rounded-md text-left overflow-auto max-h-48">
-              <code className="text-sm text-destructive font-mono">
-                {this.state.error?.message || 'Erro desconhecido'}
-              </code>
             </div>
 
             <div className="flex flex-col gap-3">
@@ -54,17 +55,16 @@ class ErrorBoundary extends Component<Props, State> {
                 onClick={() => window.location.reload()}
                 className="w-full"
               >
-                Recarregar Página
+                Recarregar
               </Button>
               <Button
                 variant="outline"
                 onClick={() => {
-                  localStorage.clear();
                   window.location.href = '/';
                 }}
                 className="w-full text-xs"
               >
-                Limpar Cache e Sair (Reset)
+                Voltar para o início
               </Button>
             </div>
           </div>

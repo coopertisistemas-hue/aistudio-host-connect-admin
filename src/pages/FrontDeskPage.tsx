@@ -73,7 +73,9 @@ const FrontDeskPage = () => {
 
   // Date filter state for peak mode
   type DateFilter = 'today' | 'tomorrow' | 'yesterday' | 'all';
+  type QuickFilter = 'today' | 'arrivals' | 'inhouse' | 'departures' | 'pending';
   const [selectedDateFilter, setSelectedDateFilter] = useState<DateFilter>('today');
+  const [quickFilter, setQuickFilter] = useState<QuickFilter>('today');
 
   const today = format(startOfDay(new Date()), 'yyyy-MM-dd');
 
@@ -96,7 +98,7 @@ const FrontDeskPage = () => {
 
   // ===== SPRINT 5.5: DEDICATED ARRIVALS TODAY QUERY =====
   // Separate query for arrivals today - focused on operational clarity
-  const { data: arrivalsToday = [], isLoading: arrivalsTodayLoading } = useQuery({
+  const { data: arrivalsToday = [], isLoading: arrivalsTodayLoading, error: arrivalsTodayError } = useQuery({
     queryKey: ['frontdesk-arrivals-today', currentOrgId, selectedPropertyId, today],
     queryFn: async () => {
       if (!currentOrgId) return [];
@@ -123,7 +125,7 @@ const FrontDeskPage = () => {
   });
 
   // Arrivals Query: check_in based on selected date, pre-arrival statuses, limit 50, ordered ASC
-  const { data: arrivals = [], isLoading: arrivalsLoading } = useQuery({
+  const { data: arrivals = [], isLoading: arrivalsLoading, error: arrivalsError } = useQuery({
     queryKey: ['frontdesk-arrivals', currentOrgId, selectedPropertyId, selectedDateValue],
     queryFn: async () => {
       if (!currentOrgId) return [];
@@ -153,7 +155,7 @@ const FrontDeskPage = () => {
   });
 
   // Departures Query: check_out based on selected date, active statuses, limit 50, ordered ASC
-  const { data: departures = [], isLoading: departuresLoading } = useQuery({
+  const { data: departures = [], isLoading: departuresLoading, error: departuresError } = useQuery({
     queryKey: ['frontdesk-departures', currentOrgId, selectedPropertyId, selectedDateValue],
     queryFn: async () => {
       if (!currentOrgId) return [];
@@ -183,7 +185,7 @@ const FrontDeskPage = () => {
   });
 
   // In-House Query: active statuses, limit 50, ordered by check_in ASC
-  const { data: inHouse = [], isLoading: inHouseLoading } = useQuery({
+  const { data: inHouse = [], isLoading: inHouseLoading, error: inHouseError } = useQuery({
     queryKey: ['frontdesk-inhouse', currentOrgId, selectedPropertyId],
     queryFn: async () => {
       if (!currentOrgId) return [];
@@ -209,6 +211,7 @@ const FrontDeskPage = () => {
   });
 
   const isLoading = arrivalsLoading || departuresLoading || inHouseLoading;
+  const hasError = !!(arrivalsError || departuresError || inHouseError || arrivalsTodayError);
 
   //  const [searchQuery, setSearchQuery] = useState('');
 
@@ -256,7 +259,7 @@ const FrontDeskPage = () => {
     queryFn: async () => {
       if (!currentOrgId || allDisplayedBookingIds.length === 0) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('precheckin_sessions')
         .select('booking_id, status')
         .eq('org_id', currentOrgId)
@@ -276,7 +279,7 @@ const FrontDeskPage = () => {
     queryFn: async () => {
       if (!currentOrgId || allDisplayedBookingIds.length === 0) return [];
 
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('booking_guests')
         .select('booking_id, is_primary')
         .eq('org_id', currentOrgId)
@@ -413,10 +416,17 @@ const FrontDeskPage = () => {
       };
     }
 
-    const filterBooking = (b: Booking) =>
-      b.guest_name?.toLowerCase().includes(search) ||
-      b.guest_email?.toLowerCase().includes(search) ||
-      (b.guest_document && b.guest_document.includes(searchQuery.trim()));
+    const filterBooking = (b: Booking) => {
+      const bookingCode = String((b as any).code ?? (b as any).booking_code ?? '').toLowerCase();
+      const roomNumber = String((b as any).room_number ?? '').toLowerCase();
+      return (
+        b.guest_name?.toLowerCase().includes(search) ||
+        b.guest_email?.toLowerCase().includes(search) ||
+        (b.guest_document && b.guest_document.includes(searchQuery.trim())) ||
+        bookingCode.includes(search) ||
+        roomNumber.includes(search)
+      );
+    };
 
     return {
       filteredArrivals: arrivals.filter(filterBooking),
@@ -424,6 +434,32 @@ const FrontDeskPage = () => {
       filteredInHouse: inHouse.filter(filterBooking)
     };
   }, [arrivals, departures, inHouse, searchQuery]);
+
+  const hasPendingAlerts = (booking: Booking) => {
+    const state = alertStates[booking.id];
+    if (!state) return false;
+    return state.precheckinPending || state.noPrimaryGuest || state.arrivalNoCheckin;
+  };
+
+  const { visibleArrivals, visibleDepartures, visibleInHouse } = useMemo(() => {
+    if (quickFilter === 'arrivals') {
+      return { visibleArrivals: filteredArrivals, visibleDepartures: [], visibleInHouse: [] };
+    }
+    if (quickFilter === 'departures') {
+      return { visibleArrivals: [], visibleDepartures: filteredDepartures, visibleInHouse: [] };
+    }
+    if (quickFilter === 'inhouse') {
+      return { visibleArrivals: [], visibleDepartures: [], visibleInHouse: filteredInHouse };
+    }
+    if (quickFilter === 'pending') {
+      return {
+        visibleArrivals: filteredArrivals.filter(hasPendingAlerts),
+        visibleDepartures: filteredDepartures.filter(hasPendingAlerts),
+        visibleInHouse: filteredInHouse.filter(hasPendingAlerts),
+      };
+    }
+    return { visibleArrivals: filteredArrivals, visibleDepartures: filteredDepartures, visibleInHouse: filteredInHouse };
+  }, [quickFilter, filteredArrivals, filteredDepartures, filteredInHouse, alertStates]);
 
   if (propertiesLoading) {
     return (
@@ -510,8 +546,7 @@ const FrontDeskPage = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Quick Booking Button - Non-viewer only */}
+            <div className="flex items-center gap-3 flex-wrap">
               {!isViewer && (
                 <Button
                   onClick={() => setIsQuickBookingOpen(true)}
@@ -519,22 +554,20 @@ const FrontDeskPage = () => {
                   className="h-12 rounded-xl shadow-sm"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Nova Reserva Rápida
+                  Nova reserva rápida
                 </Button>
               )}
 
-              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Buscar hóspede..."
+                  placeholder="Buscar hóspede, reserva ou quarto"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-[240px] pl-9 rounded-xl"
+                  className="w-[260px] pl-9 rounded-xl"
                 />
               </div>
 
-              {/* Property Selector */}
               <Select value={selectedPropertyId} onValueChange={setSelectedPropertyId}>
                 <SelectTrigger className="w-[280px] h-12 rounded-xl font-semibold shadow-sm border-2">
                   <div className="flex items-center gap-2">
@@ -552,26 +585,39 @@ const FrontDeskPage = () => {
               </Select>
             </div>
           </div>
-          {/* Date Filter Chips - Peak Mode */}
-          <div className="flex gap-2">
-            {(['today', 'tomorrow', 'yesterday', 'all'] as const).map((filter) => (
+          <div className="flex flex-wrap gap-2">
+            {([
+              { key: 'today', label: 'Hoje' },
+              { key: 'arrivals', label: 'Chegadas' },
+              { key: 'inhouse', label: 'Hospedados' },
+              { key: 'departures', label: 'Saídas' },
+              { key: 'pending', label: 'Pendências' },
+            ] as const).map((filter) => (
               <Button
-                key={filter}
-                variant={selectedDateFilter === filter ? 'default' : 'outline'}
+                key={filter.key}
+                variant={quickFilter === filter.key ? 'default' : 'outline'}
                 size="sm"
-                onClick={() => setSelectedDateFilter(filter)}
+                onClick={() => setQuickFilter(filter.key)}
                 className="h-8"
               >
-                {filter === 'today' && 'Hoje'}
-                {filter === 'tomorrow' && 'Amanhã'}
-                {filter === 'yesterday' && 'Ontem'}
-                {filter === 'all' && 'Todos'}
+                {filter.label}
               </Button>
             ))}
           </div>
 
           {/* Sprint 6.0: Onboarding Banner */}
           <OnboardingBanner />
+
+          {hasError && (
+            <Card className="border-none shadow-md">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 text-sm text-destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  Não foi possível carregar os dados. Tente novamente.
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* KPIs */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -587,7 +633,7 @@ const FrontDeskPage = () => {
                       </p>
                     </div>
                     <p className="text-4xl font-black text-emerald-700 dark:text-emerald-300 tracking-tight">
-                      {filteredArrivals.length}
+                      {visibleArrivals.length}
                     </p>
                     <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 font-medium">
                       Reservas previstas
@@ -612,7 +658,7 @@ const FrontDeskPage = () => {
                       </p>
                     </div>
                     <p className="text-4xl font-black text-rose-700 dark:text-rose-300 tracking-tight">
-                      {filteredDepartures.length}
+                      {visibleDepartures.length}
                     </p>
                     <p className="text-xs text-rose-600/80 dark:text-rose-400/80 font-medium">
                       Partidas previstas
@@ -637,7 +683,7 @@ const FrontDeskPage = () => {
                       </p>
                     </div>
                     <p className="text-4xl font-black text-blue-700 dark:text-blue-300 tracking-tight">
-                      {filteredInHouse.length}
+                      {visibleInHouse.length}
                     </p>
                     <p className="text-xs text-blue-600/80 dark:text-blue-400/80 font-medium">
                       Hóspedes hospedados
@@ -785,6 +831,7 @@ const FrontDeskPage = () => {
                             hasGroup={hasGroup}
                             precheckinCount={precheckinCount}
                             participantCount={participantCount}
+                            today={today}
                           />
 
                           {/* Task 3: Guided Check-in Button */}
@@ -810,39 +857,45 @@ const FrontDeskPage = () => {
 
           {/* Sections: Arrivals, Departures, In-House */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <BookingSection
-              title="Chegadas (Hoje)"
-              icon={LogIn}
-              iconColor="text-emerald-600"
-              bgColor="bg-emerald-50"
-              bookings={filteredArrivals}
-              isLoading={arrivalsLoading}
-              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-              alertStates={alertStates}
-            />
+              <BookingSection
+                title="Chegadas (Hoje)"
+                icon={LogIn}
+                iconColor="text-emerald-600"
+                bgColor="bg-emerald-50"
+                bookings={visibleArrivals}
+                isLoading={arrivalsLoading}
+                onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+                alertStates={alertStates}
+                hasError={!!arrivalsError}
+                today={today}
+              />
 
-            <BookingSection
-              title="Saídas (Hoje)"
-              icon={LogOut}
-              iconColor="text-rose-600"
-              bgColor="bg-rose-50"
-              bookings={filteredDepartures}
-              isLoading={departuresLoading}
-              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-              alertStates={alertStates}
-            />
+              <BookingSection
+                title="Saídas (Hoje)"
+                icon={LogOut}
+                iconColor="text-rose-600"
+                bgColor="bg-rose-50"
+                bookings={visibleDepartures}
+                isLoading={departuresLoading}
+                onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+                alertStates={alertStates}
+                hasError={!!departuresError}
+                today={today}
+              />
 
-            <BookingSection
-              title="Em Casa"
-              icon={BedDouble}
-              iconColor="text-blue-600"
-              bgColor="bg-blue-50"
-              bookings={filteredInHouse}
-              isLoading={inHouseLoading}
-              onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
-              alertStates={alertStates}
-              searchQuery={searchQuery}
-            />
+              <BookingSection
+                title="Em Casa"
+                icon={BedDouble}
+                iconColor="text-blue-600"
+                bgColor="bg-blue-50"
+                bookings={visibleInHouse}
+                isLoading={inHouseLoading}
+                onOpenFolio={(id) => navigate(`/operation/folio/${id}`)}
+                alertStates={alertStates}
+                searchQuery={searchQuery}
+                hasError={!!inHouseError}
+                today={today}
+              />
           </div>
         </div>
       </div>
@@ -879,9 +932,11 @@ interface BookingSectionProps {
   onOpenFolio: (bookingId: string) => void;
   alertStates: Record<string, { precheckinPending: boolean; noPrimaryGuest: boolean; arrivalNoCheckin: boolean }>;
   searchQuery?: string;
+  hasError?: boolean;
+  today: string;
 }
 
-const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoading, onOpenFolio, alertStates, searchQuery }: BookingSectionProps) => {
+const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoading, onOpenFolio, alertStates, searchQuery, hasError, today }: BookingSectionProps) => {
   if (isLoading) {
     return (
       <Card className="border-none shadow-lg rounded-2xl">
@@ -917,7 +972,12 @@ const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoa
         </CardTitle>
       </CardHeader>
       <CardContent className="p-4">
-        {bookings.length === 0 ? (
+        {hasError ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center">
+            <AlertCircle className="h-6 w-6 text-destructive" />
+            <p className="text-sm text-destructive mt-2">Não foi possível carregar os dados. Tente novamente.</p>
+          </div>
+        ) : bookings.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center">
             {searchQuery ? (
               <EmptyState
@@ -931,7 +991,7 @@ const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoa
                   <Icon className={`h-6 w-6 ${iconColor}`} />
                 </div>
                 <p className="text-sm font-medium text-muted-foreground">
-                  Nenhuma reserva
+                  Nenhuma reserva encontrada para os filtros selecionados.
                 </p>
               </>
             )}
@@ -952,6 +1012,7 @@ const BookingSection = ({ title, icon: Icon, iconColor, bgColor, bookings, isLoa
                   hasGroup={hasGroup}
                   precheckinCount={precheckinCount}
                   participantCount={participantCount}
+                  today={today}
                 />
               );
             })}

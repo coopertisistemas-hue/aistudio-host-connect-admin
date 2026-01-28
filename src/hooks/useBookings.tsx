@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Service } from './useServices';
 import { useNotifications } from './useNotifications';
 import { Tables, TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
-import { useOrg } from './useOrg'; // Multi-tenant context
+import { useOrg } from '@/hooks/useOrg'; // Multi-tenant context
 
 // Definindo o tipo de retorno da query de bookings com joins
 type BookingRow = Tables<'bookings'>;

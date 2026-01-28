@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
-import { useOrg } from './useOrg';
+import { useOrg } from '@/hooks/useOrg';
 
 export const serviceSchema = z.object({
   property_id: z.string().min(1, "A propriedade é obrigatória."),

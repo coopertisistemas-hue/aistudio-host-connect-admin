@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useOrg } from './useOrg';
+import { useOrg } from '@/hooks/useOrg';
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 export type BookingGroup = Tables<'booking_groups'>;

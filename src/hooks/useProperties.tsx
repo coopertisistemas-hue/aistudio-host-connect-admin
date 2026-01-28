@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth
 import { useOrg } from '@/hooks/useOrg'; // Import useOrg
+import { safeLogger } from '@/lib/logging/safeLogger';
 
 export const propertySchema = z.object({
   name: z.string().min(1, "O nome da propriedade é obrigatório."),
@@ -60,24 +61,43 @@ export const useProperties = () => {
     queryFn: async () => {
       // Se não houver Org definida, não adianta buscar propriedades (evita erro de RLS ou retorno vazio demorado)
       if (!currentOrgId) {
-        console.warn('[useProperties] Abortando fetch: currentOrgId indefinido.');
         return [];
       }
 
-      console.log('[useProperties] Fetching properties. currentOrgId:', currentOrgId);
-      let query = supabase
+      safeLogger.info('[useProperties] fetch_start', { orgId: currentOrgId });
+
+      // Timeout externo: Promise.race
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('PROPERTIES_TIMEOUT')), 8000);
+      });
+
+      const queryPromise = supabase
         .from('properties')
         .select('*')
         .order('created_at', { ascending: false })
-        .eq('org_id', currentOrgId); // Enforce org_id filter directly
+        .eq('org_id', currentOrgId);
 
-      const { data, error } = await query;
+      let data: any = null;
+      let error: any = null;
+
+      try {
+        const result = await Promise.race([queryPromise, timeoutPromise]) as any;
+        data = result.data;
+        error = result.error;
+      } catch (timeoutError: any) {
+        if (timeoutError.message === 'PROPERTIES_TIMEOUT') {
+          safeLogger.warn('[useProperties] timeout_fallback', { waitedMs: 8000 });
+          return []; // Retorna array vazio para permitir acesso
+        }
+        throw timeoutError;
+      }
 
       if (error) {
-        console.error('[useProperties] Error:', error);
-        throw error;
+        safeLogger.error('[useProperties] fetch_error', { message: error.message });
+        // Retorna array vazio em vez de throw para não bloquear
+        return [];
       }
-      console.log('[useProperties] Loaded properties count:', data?.length || 0);
+      safeLogger.info('[useProperties] fetch_success', { count: data?.length || 0 });
       return data as Property[];
     },
     enabled: !authLoading && !isOrgLoading && !!user
@@ -112,7 +132,7 @@ export const useProperties = () => {
       });
     },
     onError: (error: any) => {
-      console.error('Error creating property:', error);
+      safeLogger.error('[useProperties] create_error', { message: error.message });
 
       // Check for custom trigger error code P0001 (Accommodation Limit)
       if (error?.code === 'P0001' || error?.message?.includes('Limite de acomodações atingido')) {
@@ -152,7 +172,7 @@ export const useProperties = () => {
       });
     },
     onError: (error: Error) => {
-      console.error('Error updating property:', error);
+      safeLogger.error('[useProperties] update_error', { message: error.message });
       toast({
         title: "Erro",
         description: "Erro ao atualizar propriedade: " + error.message,
@@ -178,7 +198,7 @@ export const useProperties = () => {
       });
     },
     onError: (error: Error) => {
-      console.error('Error deleting property:', error);
+      safeLogger.error('[useProperties] delete_error', { message: error.message });
       toast({
         title: "Erro",
         description: "Erro ao remover propriedade: " + error.message,

@@ -4,18 +4,45 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
+import { useSelectedProperty } from '@/hooks/useSelectedProperty';
+import { usePilotOnboarding } from '@/hooks/usePilotOnboarding';
+import { setPropertyFeatureFlagOverrides } from '@/lib/featureFlags';
+import { getOperationalProfilePresets, type OperationalProfile } from '@/lib/pilotOnboarding';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useState, useEffect } from 'react';
-import { User, Building2, Bell, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { User, Bell, Shield } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const Settings = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { selectedPropertyId } = useSelectedProperty();
+  const { config: pilotConfig, saveConfig } = usePilotOnboarding();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingProfile, setPendingProfile] = useState<OperationalProfile | ''>('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const [profileData, setProfileData] = useState({
     full_name: '',
@@ -47,6 +74,10 @@ const Settings = () => {
       });
     }
   }, [profile]);
+
+  useEffect(() => {
+    setPendingProfile(pilotConfig?.operationalProfile || '');
+  }, [pilotConfig]);
 
   const updateProfile = useMutation({
     mutationFn: async (data: typeof profileData) => {
@@ -102,6 +133,43 @@ const Settings = () => {
         description: "Verifique seu email para redefinir sua senha.",
       });
     }
+  };
+
+  const operationalProfiles: OperationalProfile[] = [
+    'Operação Completa',
+    'Operação Enxuta',
+    'Operação Simplificada',
+  ];
+
+  const isOperationalProfileAvailable =
+    !!selectedPropertyId && !!pilotConfig?.completedAt;
+  const hasProfileChange =
+    !!pilotConfig?.operationalProfile &&
+    pendingProfile &&
+    pendingProfile !== pilotConfig.operationalProfile;
+
+  const confirmOperationalProfile = () => {
+    if (!selectedPropertyId || !pilotConfig || !pendingProfile) return;
+
+    const now = new Date().toISOString();
+    const nextConfig = {
+      ...pilotConfig,
+      operationalProfile: pendingProfile as OperationalProfile,
+      updatedAt: now,
+    };
+
+    saveConfig(nextConfig);
+    setPropertyFeatureFlagOverrides(
+      selectedPropertyId,
+      getOperationalProfilePresets(pendingProfile as OperationalProfile)
+    );
+
+    toast({
+      title: 'Configuração atualizada',
+      description: 'O perfil operacional foi atualizado com sucesso.',
+    });
+
+    setConfirmOpen(false);
   };
 
   return (
@@ -177,6 +245,75 @@ const Settings = () => {
                     {isLoading ? 'Salvando...' : 'Salvar Alterações'}
                   </Button>
                 </form>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuração da Operação</CardTitle>
+                <CardDescription>
+                  Ajuste o perfil operacional da propriedade selecionada.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!isOperationalProfileAvailable && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Finalize a configuração inicial para liberar o ajuste do perfil operacional.
+                    </p>
+                    <Button onClick={() => navigate('/pilot-onboarding')}>
+                      Ir para configuração inicial
+                    </Button>
+                  </div>
+                )}
+
+                {isOperationalProfileAvailable && (
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Perfil operacional</Label>
+                      <Select
+                        value={pendingProfile}
+                        onValueChange={(value) => setPendingProfile(value as OperationalProfile)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Selecione" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {operationalProfiles.map((profileOption) => (
+                            <SelectItem key={profileOption} value={profileOption}>
+                              {profileOption}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+                      <div className="flex justify-end">
+                        <Button
+                          disabled={!hasProfileChange}
+                          onClick={() => setConfirmOpen(true)}
+                        >
+                          Atualizar configuração
+                        </Button>
+                      </div>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Confirmar atualização</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Isso atualizará as configurações operacionais desta propriedade. Você poderá ajustar depois.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                          <AlertDialogAction onClick={confirmOperationalProfile}>
+                            Confirmar
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>

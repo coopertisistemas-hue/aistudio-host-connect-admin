@@ -36,7 +36,7 @@ interface UpdateRoomStatusParams {
  * -rooms query (orgId + propertyId)
  * - housekeeping query (if exists in future)
  */
-export const useUpdateRoomStatus = () => {
+export const useUpdateRoomStatus = (options?: { suppressToast?: boolean }) => {
     const queryClient = useQueryClient();
     const { currentOrgId } = useOrg();
     const { userRole } = useAuth();
@@ -44,7 +44,7 @@ export const useUpdateRoomStatus = () => {
 
     const isViewer = userRole === 'viewer';
 
-    return useMutation({
+    return useMutation<unknown, Error, UpdateRoomStatusParams>({
         mutationFn: async ({ roomId, newStatus, propertyId }: UpdateRoomStatusParams) => {
             // Guard: Viewer role cannot mutate
             if (isViewer) {
@@ -62,7 +62,7 @@ export const useUpdateRoomStatus = () => {
             }
 
             // Fetch room to verify ownership (multi-tenant safety)
-            const { data: room, error: fetchError } = await supabase
+            const { data: room, error: fetchError } = await (supabase as any)
                 .from('rooms')
                 .select('id, org_id, property_id, status')
                 .eq('id', roomId)
@@ -76,12 +76,12 @@ export const useUpdateRoomStatus = () => {
             }
 
             // Update room status
-            const { data, error } = await supabase
+            const { data, error } = await (supabase as any)
                 .from('rooms')
                 .update({
                     status: newStatus,
                     updated_by: (await supabase.auth.getUser()).data.user?.id // Audit trail
-                })
+                } as any)
                 .eq('id', roomId)
                 .eq('org_id', currentOrgId) // Multi-tenant protection
                 .eq('property_id', propertyId) // Property-level protection
@@ -102,11 +102,13 @@ export const useUpdateRoomStatus = () => {
             // Future: invalidate housekeeping-specific queries
             // queryClient.invalidateQueries({ queryKey: ['housekeeping-rooms', currentOrgId, variables.propertyId] });
 
-            // Success toast (PT-BR)
-            toast({
-                title: 'Status atualizado',
-                description: `Status do quarto alterado para: ${getStatusLabel(variables.newStatus)}`,
-            });
+            if (!options?.suppressToast) {
+                // Success toast (PT-BR)
+                toast({
+                    title: 'Status atualizado',
+                    description: `Status do quarto alterado para: ${getStatusLabel(variables.newStatus)}`,
+                });
+            }
         },
         onError: (error: Error) => {
             // PT-BR error messages
@@ -122,11 +124,13 @@ export const useUpdateRoomStatus = () => {
 
             console.error('[useUpdateRoomStatus] Error:', error.message);
 
-            toast({
-                title: 'Erro',
-                description: message,
-                variant: 'destructive',
-            });
+            if (!options?.suppressToast) {
+                toast({
+                    title: 'Erro',
+                    description: message,
+                    variant: 'destructive',
+                });
+            }
         },
     });
 };
