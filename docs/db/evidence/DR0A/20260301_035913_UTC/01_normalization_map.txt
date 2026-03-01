@@ -1,0 +1,33 @@
+﻿# DR0A normalization map
+# UTC: 2026-03-01 03:59:13 UTC
+
+old: docs/db/legacy_migrations/20260119_sprint2_guest_domain_model.sql
+new: supabase/migrations/20260119120000_sprint2_guest_domain_model.sql
+sha256_old: 575e03b95ba2d1e9b6423b317489fe242e5b0289dbfe1473bb42c845ec15e8c7
+sha256_new: 575e03b95ba2d1e9b6423b317489fe242e5b0289dbfe1473bb42c845ec15e8c7
+content_identical: true
+
+old: docs/db/legacy_migrations/20260120_sprint2.2_submissions.sql
+new: supabase/migrations/20260120120000_sprint2_2_submissions.sql
+sha256_old: 24e8dacf75030d41b1324cb16aae0def47a434f43dc8550bb582bad91033c357
+sha256_new: 24e8dacf75030d41b1324cb16aae0def47a434f43dc8550bb582bad91033c357
+content_identical: true
+
+old: docs/db/legacy_migrations/20260121_hotfix_status_constraint.sql
+new: supabase/migrations/20260121080000_hotfix_status_constraint.sql
+sha256_old: dbbc2064e7ea97c4efcd3d7878a0091089584459bc6e2186967e39dd45a3b228
+sha256_new: dbbc2064e7ea97c4efcd3d7878a0091089584459bc6e2186967e39dd45a3b228
+content_identical: true
+
+old: docs/db/legacy_migrations/20260121_housekeeping_foundation.sql
+new: supabase/migrations/20260121090000_housekeeping_foundation.sql
+sha256_old: 933cfe36fa03b9911212e470df36ab8f71f71fec9e37a50041b379edbbf435b7
+sha256_new: 933cfe36fa03b9911212e470df36ab8f71f71fec9e37a50041b379edbbf435b7
+content_identical: true
+
+old: docs/db/legacy_migrations/20260121_operational_alerts_tables.sql
+new: supabase/migrations/20260121100000_operational_alerts_tables.sql
+sha256_old: 87a443ff47aea37f7e6e07c5e0c6772137d1e3854617e317a9ee834340078b23
+sha256_new: 87a443ff47aea37f7e6e07c5e0c6772137d1e3854617e317a9ee834340078b23
+content_identical: true
+

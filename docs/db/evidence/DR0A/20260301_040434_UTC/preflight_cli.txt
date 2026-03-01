@@ -1,0 +1,42 @@
+﻿# DR0A preflight
+# UTC: 2026-03-01 04:04:34 UTC
+
+## supabase --version
+2.75.0
+
+## supabase status
+supabase : failed to inspect container health: error during connect: in the default daemon configuration on Windows, 
+the docker client must be run with elevated privileges to connect: Get 
+"http://%2F%2F.%2Fpipe%2Fdocker_engine/v1.51/containers/supabase_db_amcdcuivphgamytgbuvk/json": open 
+//./pipe/docker_engine: O sistema não pode encontrar o arquivo especificado.
+No linha:15 caractere:8
++ try { (supabase status) 2>&1 | Out-File $pre -Append -Encoding utf8 } ...
++        ~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (failed to inspe...o especificado.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+## supabase migration list --linked
+## supabase --version
+2.75.0
+
+## supabase status
+supabase : failed to inspect container health: error during connect: in the default daemon configuration on Windows, 
+the docker client must be run with elevated privileges to connect: Get 
+"http://%2F%2F.%2Fpipe%2Fdocker_engine/v1.51/containers/supabase_db_amcdcuivphgamytgbuvk/json": open 
+//./pipe/docker_engine: O sistema não pode encontrar o arquivo especificado.
+No linha:15 caractere:8
++ try { (supabase status) 2>&1 | Out-File $pre -Append -Encoding utf8 } ...
++        ~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (failed to inspe...o especificado.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+## supabase migration list --linked
+supabase : Connecting to remote database...
+No linha:17 caractere:8
++ try { (supabase migration list --linked) 2>&1 | Out-File $pre -Append ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Connecting to remote database...:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

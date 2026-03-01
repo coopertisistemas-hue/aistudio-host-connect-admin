@@ -13,8 +13,9 @@ const PostLoginRedirect = () => {
     const navigate = useNavigate();
 
     useEffect(() => {
-        // Wait until auth and profile data are fully loaded
-        if (loading || onboardingCompleted === null) return;
+        // Wait only for auth loading. If onboarding state is unknown (null),
+        // use a deterministic fallback to avoid redirect deadlocks.
+        if (loading) return;
 
         // If no user is present, something went wrong; back to auth
         if (!user) {
@@ -34,12 +35,21 @@ const PostLoginRedirect = () => {
             return;
         }
 
-        // 1. If onboarding is incomplete => redirect to /setup
-        // We use the tri-state onboardingCompleted from useAuth for speed
-        if (!onboardingCompleted) {
+        // 1. If onboarding is explicitly incomplete => redirect to /setup
+        if (onboardingCompleted === false) {
             console.log('[PostLoginRedirect] Onboarding incomplete, routing to /setup');
             if (window.location.pathname !== '/setup') {
                 navigate('/setup', { replace: true });
+            }
+            return;
+        }
+
+        // 1.1 If onboarding state is unknown, fail-safe to operational entrypoint
+        // to prevent post-login spinner loops after abrupt session restoration.
+        if (onboardingCompleted === null) {
+            console.log('[PostLoginRedirect] onboardingCompleted is null, routing to /front-desk fallback');
+            if (window.location.pathname !== '/front-desk') {
+                navigate('/front-desk', { replace: true });
             }
             return;
         }

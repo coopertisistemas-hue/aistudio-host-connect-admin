@@ -73,15 +73,14 @@ const AppSidebar = () => {
   const { user, signOut, userRole, userPlan, loading: authLoading } = useAuth();
   const { isAdmin, loading: isAdminLoading } = useIsAdmin();
   const { onboarding, isLoading: onboardingLoading } = useOnboardingState();
+  // Must stay before conditional returns to preserve hooks order.
+  const { canAccess } = useEntitlements();
   const currentMode = onboarding?.mode || 'standard';
 
   const isActive = (path: string) => location.pathname === path;
   const isCollapsed = state === "collapsed";
 
   if (authLoading || isAdminLoading || onboardingLoading) return null;
-
-  // Entitlement Gates
-  const { canAccess } = useEntitlements();
 
   // Mode Gating Helper
   const isModeEligible = (itemModes?: string[]) => {
@@ -110,6 +109,7 @@ const AppSidebar = () => {
       items: [
         { title: "Funil (Pipeline)", url: "/reservations/pipeline", icon: TrendingUp, modes: ['standard', 'hotel'] },
         { title: "Reservas", url: "/bookings", icon: Calendar },
+        { title: "Relatórios", url: "/reports", icon: BarChart3, modes: ['standard', 'hotel'] },
         { title: "Chegadas", url: "/arrivals", icon: LogIn },
         { title: "Partidas", url: "/departures", icon: LogOut },
         { title: "Motor de Reservas", url: "/bookings", icon: Globe, modes: ['standard', 'hotel'] },
@@ -158,11 +158,17 @@ const AppSidebar = () => {
         { title: "Meus Plantões", url: "/me/shifts", icon: Calendar, modes: ['standard', 'hotel'] },
         { title: "Colaboradores", url: "/ops/staff", icon: Users, modes: ['standard', 'hotel'] },
         { title: "Configurações", url: "/settings", icon: User },
+        { title: "Permissões", url: "/settings/permissions", icon: ShieldCheck, roles: ['admin'] },
+        { title: "Suporte", url: "/support", icon: HelpCircle, modes: ['standard', 'hotel'] },
+        { title: "Planos", url: "/plans", icon: CreditCard },
         { title: "Website", url: "/website-settings", icon: Globe, gated: !canAccess('site_bonus') },
+        { title: "Auditoria", url: "/admin/audit-log", icon: ListOrdered, roles: ['admin'] },
+        { title: "Staff Admin", url: "/admin/staff-management", icon: Users, roles: ['admin'] },
         { title: "Painel Admin", url: "/admin-panel", icon: ShieldCheck, roles: ['admin'] },
         { title: "Planos", url: "/admin/pricing-plans", icon: CreditCard, roles: ['admin'] },
         { title: "Funcionalidades", url: "/admin/features", icon: Zap, roles: ['admin'] },
         { title: "FAQ", url: "/admin/faqs", icon: HelpCircle, roles: ['admin'] },
+        { title: "Como Funciona", url: "/admin/how-it-works", icon: Heading, roles: ['admin'] },
         { title: "Depoimentos", url: "/admin/testimonials", icon: Star, roles: ['admin'] },
         { title: "Integrações", url: "/admin/integrations", icon: Wifi, roles: ['admin'] },
       ]

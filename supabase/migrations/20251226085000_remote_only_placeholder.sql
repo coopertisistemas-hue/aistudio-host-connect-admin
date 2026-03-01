@@ -1,0 +1,5 @@
+-- Remote-only placeholder migration
+-- Version: 20251226085000
+-- Purpose: Align local migration history with remote migration ledger for DR0-A Path A.
+-- This is an intentional no-op placeholder.
+-- Contains no DDL/DML and must not change schema/data.

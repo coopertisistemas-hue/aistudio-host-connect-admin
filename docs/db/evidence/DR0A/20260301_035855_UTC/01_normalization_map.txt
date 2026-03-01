@@ -1,0 +1,7 @@
+﻿# DR0A normalization map
+# UTC: 2026-03-01 03:58:55 UTC
+
+old: docs/db/legacy_migrations/20260119_sprint2_guest_domain_model.sql
+new: supabase/migrations/20260119120000_sprint2_guest_domain_model.sql
+sha256_old: 575e03b95ba2d1e9b6423b317489fe242e5b0289dbfe1473bb42c845ec15e8c7
+sha256_new: 575e03b95ba2d1e9b6423b317489fe242e5b0289dbfe1473bb42c845ec15e8c7

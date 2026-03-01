@@ -1,0 +1,9 @@
+﻿C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20251225080000_remote_only_placeholder.sql
+C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20251226085000_remote_only_placeholder.sql
+C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20260119120000_remote_only_placeholder.sql
+C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20260120120000_remote_only_placeholder.sql
+C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20260121080000_remote_only_placeholder.sql
+C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20260121090000_remote_only_placeholder.sql
+C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20260121100000_remote_only_placeholder.sql
+C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20260124143000_remote_only_placeholder.sql
+C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\supabase\migrations\20260124160000_remote_only_placeholder.sql

@@ -1,0 +1,31 @@
+name: RLS Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  rls-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run RLS Regression Gate
+        shell: pwsh
+        env:
+          # Read-only CI DB URL (configure in repo secrets)
+          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+        run: |
+          if (-not $env:DATABASE_URL) {
+            throw "CI_DATABASE_URL secret is required for RLS gate."
+          }
+          ./scripts/ci/run_rls_gate_check.ps1
+

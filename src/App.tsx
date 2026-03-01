@@ -72,6 +72,7 @@ import MyShiftsPage from "./pages/MyShiftsPage";
 import StaffManagementPage from "./pages/StaffManagementPage";
 import PipelinePage from "./pages/PipelinePage";
 import LeadDetailPage from "./pages/LeadDetailPage";
+import ReportPage from "./pages/ReportPage";
 import MarketingOverview from "./pages/MarketingOverview";
 import MarketingConnectors from "./pages/MarketingConnectors";
 import GoogleMarketingDetails from "./pages/GoogleMarketingDetails";
@@ -302,6 +303,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <LeadDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <ProtectedRoute>
+                      <ReportPage />
                     </ProtectedRoute>
                   }
                 />
