@@ -1,22 +1,24 @@
 ﻿# SP10 Report - Channel Manager Foundation
 
 ## Summary
-SP10 foi iniciado com baseline formal da Fase 4, incluindo plano executivo e milestone de kickoff alinhados ao roadmap de ecossistema e integracao global.
+SP10 evoluiu de kickoff para entrega funcional com hardening de integracao OTA: auth obrigatoria, validacao de tenant scope por propriedade, contrato de resposta versionado com trace/idempotency, matriz de retry por OTA e observabilidade operacional no frontend.
 
 ## Scope Mapping
-- Escopo SP10 (foundation de Channel Manager) definido e versionado.
-- Sequenciamento SP10/SP11/SP12 definido para Fase 4.
-- Regras de governanca, QA e criterios de saida documentados.
+- Contratos baseline de sync OTA: entregue (`SP10_CHANNEL_MANAGER_SYNC_CONTRACT.md`).
+- Matriz de erros/retries: entregue (`SP10_RETRY_ERROR_MATRIX.md`).
+- Observabilidade operacional: entregue no Channel Manager (status/code/attempts/trace).
 
 ## Files Changed
-- `docs/EXEC_PLAN_PHASE4_ECOSYSTEM_GLOBAL.md`
-- `docs/milestones/PHASE_4_KICKOFF.md`
+- `supabase/functions/sync-ota-inventory/index.ts`
+- `src/hooks/useOtaSync.tsx`
+- `src/pages/ChannelManagerPage.tsx`
+- `docs/integrations/SP10_CHANNEL_MANAGER_SYNC_CONTRACT.md`
+- `docs/integrations/SP10_RETRY_ERROR_MATRIX.md`
 - `docs/qa/SP10/SP10_REPORT.md`
 - `docs/qa/SP10/checklist.md`
 - `docs/qa/SP10/build.log`
 - `docs/qa/SP10/typecheck.log`
 - `docs/qa/SP10/lint_changed_files.log`
-- `docs/qa/SP10/notes/timestamp.txt`
 
 ## DB Changes
 No DB changes.
@@ -27,10 +29,11 @@ No DB changes.
 - Lint changed files: PASS (`docs/qa/SP10/lint_changed_files.log`)
 
 ## Gate Results
-- DB gates: not required (no migration/schema/policy changes).
+- DB gates: not required (no migration/schema/policy changes in SP10).
 
 ## Final Verdict
-**PASS (Kickoff Baseline)**
+**PASS**
 
 ## Residuals / Follow-ups
-- Proxima execucao SP10: implementacao funcional de contratos, retries e observabilidade de sync OTA.
+- SP11 deve introduzir hardening de API publica com rate limiting e escopos de chave/token.
+- SP10 atual usa adaptadores OTA simulados por contrato; conectores reais entram em sprint de implementacao de provedor.

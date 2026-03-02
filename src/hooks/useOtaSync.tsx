@@ -1,43 +1,70 @@
-import { useMutation } from '@tanstack/react-query';
+﻿import { useMutation } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 
-interface SyncOtaInput {
+export interface SyncOtaInput {
   property_id: string;
   room_type_id: string;
   date: string; // YYYY-MM-DD
   price?: number;
   availability?: number;
+  max_attempts?: number;
 }
 
-interface SyncOtaResponse {
+export interface OtaSyncResult {
+  ota: 'booking_com' | 'airbnb' | 'expedia';
+  status: 'success' | 'failed';
+  code: string;
+  message: string;
+  retryable: boolean;
+  attempts: number;
+}
+
+export interface SyncOtaResponse {
+  contract_version: string;
+  trace_id: string;
+  idempotency_key: string;
+  property_id: string;
+  room_type_id: string;
+  date: string;
   success: boolean;
-  results: Record<string, string>;
+  summary: {
+    total: number;
+    success: number;
+    failed: number;
+    retryable_failed: number;
+  };
+  results: OtaSyncResult[];
 }
 
 export const useOtaSync = () => {
-
   const syncInventory = useMutation<SyncOtaResponse, Error, SyncOtaInput>({
     mutationFn: async (data) => {
+      const idempotencyKey = `${data.property_id}:${data.room_type_id}:${data.date}:${data.price ?? 'na'}:${data.availability ?? 'na'}`;
+
       const { data: response, error } = await supabase.functions.invoke('sync-ota-inventory', {
-        body: JSON.stringify(data),
+        body: data,
+        headers: {
+          'x-idempotency-key': idempotencyKey,
+        },
       });
 
       if (error) throw error;
       return response as SyncOtaResponse;
     },
     onSuccess: (data) => {
-      console.log('OTA Sync Results:', data.results);
+      const { success, failed, retryable_failed } = data.summary;
       toast({
-        title: "Sincronização Iniciada",
-        description: "O inventário e o preço foram enviados para as OTAs configuradas.",
+        title: data.success ? 'Sincronizacao concluida' : 'Sincronizacao concluida com falhas',
+        description: `${success} OTAs OK, ${failed} falhas (${retryable_failed} retryable).`,
+        variant: data.success ? 'default' : 'destructive',
       });
     },
     onError: (error) => {
       toast({
-        title: "Erro de Sincronização OTA",
+        title: 'Erro de sincronizacao OTA',
         description: error.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     },
   });
