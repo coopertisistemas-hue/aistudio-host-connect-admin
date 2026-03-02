@@ -58,6 +58,9 @@ export const useInvoices = (propertyId?: string) => {
 
   const createInvoice = useMutation({
     mutationFn: async (invoice: InvoiceInput) => {
+      if (!currentOrgId) {
+        throw new Error('ORG_REQUIRED');
+      }
       const { data, error } = await supabase
         .from('invoices')
         .insert([{
@@ -91,7 +94,10 @@ export const useInvoices = (propertyId?: string) => {
 
   const updateInvoice = useMutation({
     mutationFn: async ({ id, invoice }: { id: string; invoice: Partial<InvoiceInput> }) => {
-      const updateData: any = { ...invoice };
+      if (!currentOrgId) {
+        throw new Error('ORG_REQUIRED');
+      }
+      const updateData: Record<string, unknown> = { ...invoice };
 
       if (invoice.issue_date) {
         updateData.issue_date = invoice.issue_date.toISOString();
@@ -106,6 +112,7 @@ export const useInvoices = (propertyId?: string) => {
         .from('invoices')
         .update(updateData)
         .eq('id', id)
+        .eq('org_id', currentOrgId)
         .select()
         .single();
 

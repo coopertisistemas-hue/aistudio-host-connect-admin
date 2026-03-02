@@ -1,0 +1,15 @@
+﻿# SP5 Checklist (Phase 2)
+
+- [x] Migration plan created (forward-only + idempotent)
+- [x] DB hardening migration implemented (`20260302143000_sp5_folio_revenue_db_hardening.sql`)
+- [x] App hook hardening implemented (`src/hooks/useInvoices.tsx`)
+- [x] Build PASS (`build.log`)
+- [x] Typecheck PASS (`typecheck.log`)
+- [x] Lint changed files PASS (`lint_changed_files.log`)
+- [x] Preflight CLI evidence captured (`sql/preflight_cli.txt`)
+- [x] db push evidence captured (`sql/db_push.log` + `sql/migration_list_after_push.log`)
+- [x] RLS Gate PASS (`sql/rls_gate.log`)
+- [x] Structural Drift Gate PASS (`sql/structural_drift_gate.log`)
+- [x] Tenant Contract Gate PASS (`sql/tenant_contract_gate.log`)
+- [x] Sprint verdict PASS
+- [ ] Sync-to-git (commit + push)
