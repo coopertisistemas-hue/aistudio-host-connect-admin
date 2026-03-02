@@ -6,6 +6,7 @@ import { Service } from './useServices';
 import { useNotifications } from './useNotifications';
 import { Tables, TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
 import { useOrg } from './useOrg'; // Multi-tenant context
+import { BookingStatus } from '@/lib/constants/statuses';
 
 // Definindo o tipo de retorno da query de bookings com joins
 type BookingRow = Tables<'bookings'>;
@@ -29,7 +30,18 @@ export const bookingSchema = z.object({
   check_out: z.date({ required_error: "A data de check-out é obrigatória." }),
   total_guests: z.number().min(1, "Informe ao menos um hóspede."),
   total_amount: z.number().min(0, "O valor total não pode ser negativo."),
-  status: z.enum(['pending', 'confirmed', 'cancelled', 'completed']).default('pending'),
+  status: z.enum([
+    'pending',
+    'confirmed',
+    'cancelled',
+    'completed',
+    BookingStatus.RESERVED,
+    BookingStatus.PRE_CHECKIN,
+    BookingStatus.CHECKED_IN,
+    BookingStatus.IN_HOUSE,
+    BookingStatus.CHECKED_OUT,
+    BookingStatus.NO_SHOW,
+  ]).default(BookingStatus.RESERVED),
   notes: z.string().optional().nullable(),
   services_json: z.array(z.string()).optional().nullable(),
   current_room_id: z.string().optional().nullable(),
@@ -56,7 +68,7 @@ export const useBookings = (propertyId?: string) => {
 
       console.log('[useBookings] Fetching bookings...', { currentOrgId, propertyId });
 
-      let query = (supabase
+      let query = supabase
         .from('bookings')
         .select(`
           *,
@@ -67,7 +79,7 @@ export const useBookings = (propertyId?: string) => {
           room_types (
             name
           )
-        `) as any)
+        `)
         .eq('org_id', currentOrgId); // 🔐 ALWAYS filter by org_id first
 
       // Optional property-level filtering
@@ -95,7 +107,7 @@ export const useBookings = (propertyId?: string) => {
       // Collect all unique service IDs to fetch them in a single query (batch)
       const allServiceIds = Array.from(new Set(data.flatMap(b => b.services_json || []))) as string[];
 
-      let servicesMap: Record<string, Service> = {};
+      const servicesMap: Record<string, Service> = {};
 
       if (allServiceIds.length > 0) {
         const { data: servicesData, error: servicesError } = await supabase
@@ -183,7 +195,7 @@ export const useBookings = (propertyId?: string) => {
 
   const updateBooking = useMutation({
     mutationFn: async ({ id, booking }: { id: string; booking: Partial<BookingInput & { current_room_id?: string | null }> }) => {
-      const updateData: any = { ...booking };
+      const updateData: Record<string, unknown> = { ...booking };
 
       if (booking.check_in) {
         updateData.check_in = booking.check_in.toISOString().split('T')[0];
@@ -261,3 +273,4 @@ export const useBookings = (propertyId?: string) => {
     deleteBooking,
   };
 };
+

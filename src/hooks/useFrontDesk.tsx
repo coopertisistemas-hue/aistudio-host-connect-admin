@@ -8,6 +8,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { format, parseISO, isWithinInterval, startOfDay, endOfDay, isSameDay } from 'date-fns'; // Import isSameDay
 import { Tables, TablesInsert } from '@/integrations/supabase/types';
+import { BookingStatus, canCheckIn, canCheckOut, normalizeLegacyStatus } from '@/lib/constants/statuses';
 
 // Define a estrutura de dados que o Front Desk precisa
 export interface RoomAllocation extends Room {
@@ -45,7 +46,8 @@ export const useFrontDesk = (propertyId?: string) => {
       const checkOutDate = parseISO(b.check_out);
 
       // Check if booking is currently active (between check-in and check-out date, excluding check-out day)
-      const isActive = (b.status === 'confirmed' || b.status === 'pending') &&
+      const normalizedStatus = normalizeLegacyStatus(b.status);
+      const isActive = canCheckOut(normalizedStatus) &&
         isWithinInterval(today, { start: checkInDate, end: checkOutDate }) &&
         !isSameDay(today, checkOutDate); // Exclude check-out day
 
@@ -54,7 +56,7 @@ export const useFrontDesk = (propertyId?: string) => {
       }
 
       // Check for check-ins today
-      if ((b.status === 'confirmed' || b.status === 'pending') && format(checkInDate, 'yyyy-MM-dd') === todayKey) {
+      if (canCheckIn(normalizedStatus) && format(checkInDate, 'yyyy-MM-dd') === todayKey) {
         // We need to find an available room of the correct type for this check-in
         // NOTE: In a real system, this would be complex. Here, we link it to the room type.
         // For simplicity, we'll rely on the checkIn mutation to handle allocation.
@@ -63,7 +65,7 @@ export const useFrontDesk = (propertyId?: string) => {
       }
 
       // Check for check-outs today
-      if ((b.status === 'confirmed' || b.status === 'pending') && format(checkOutDate, 'yyyy-MM-dd') === todayKey) {
+      if (canCheckOut(normalizedStatus) && format(checkOutDate, 'yyyy-MM-dd') === todayKey) {
         if (b.current_room_id) {
           checkOutsTodayMap.set(b.current_room_id, b);
         }
@@ -82,7 +84,7 @@ export const useFrontDesk = (propertyId?: string) => {
 
       // Check-in today: Find a pending/confirmed booking of this room type checking in today
       const checkInToday = propertyBookings.find(b =>
-        (b.status === 'confirmed' || b.status === 'pending') &&
+        canCheckIn(normalizeLegacyStatus(b.status)) &&
         format(parseISO(b.check_in), 'yyyy-MM-dd') === todayKey &&
         b.room_type_id === room.room_type_id &&
         !b.current_room_id // Only consider bookings not yet allocated
@@ -96,7 +98,7 @@ export const useFrontDesk = (propertyId?: string) => {
         check_out_today: checkOutToday,
       } as RoomAllocation;
     });
-  }, [rooms, propertyBookings, todayKey]);
+  }, [rooms, propertyBookings, todayKey, today]);
 
   // Mutation para Check-in
   const checkInMutation = useMutation({
@@ -104,8 +106,8 @@ export const useFrontDesk = (propertyId?: string) => {
       // 1. Update Room Status to 'occupied'
       await updateRoom.mutateAsync({ id: roomId, room: { status: 'occupied', last_booking_id: bookingId } });
 
-      // 2. Update Booking Status to 'confirmed' (if pending) AND set current_room_id
-      await updateBooking.mutateAsync({ id: bookingId, booking: { status: 'confirmed', current_room_id: roomId } });
+      // 2. Update Booking Status to checked_in and set current_room_id
+      await updateBooking.mutateAsync({ id: bookingId, booking: { status: BookingStatus.CHECKED_IN, current_room_id: roomId } });
     },
     onSuccess: (_, { roomId }) => {
       queryClient.invalidateQueries({ queryKey: ['rooms', currentOrgId, propertyId] });
@@ -165,8 +167,8 @@ export const useFrontDesk = (propertyId?: string) => {
   // Função para finalizar o Check-out após o pagamento
   const finalizeCheckOut = useMutation({
     mutationFn: async ({ bookingId, roomId }: { bookingId: string; roomId: string }) => {
-      // 1. Update Booking Status to 'completed' and remove current_room_id allocation
-      await updateBooking.mutateAsync({ id: bookingId, booking: { status: 'completed', current_room_id: null } });
+      // 1. Update Booking Status to checked_out and remove current_room_id allocation
+      await updateBooking.mutateAsync({ id: bookingId, booking: { status: BookingStatus.CHECKED_OUT, current_room_id: null } });
 
       // 2. Update Room Status to 'available'
       await updateRoom.mutateAsync({ id: roomId, room: { status: 'available' } });

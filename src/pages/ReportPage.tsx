@@ -14,6 +14,7 @@ import { useBookings } from "@/hooks/useBookings";
 import { useProperties } from "@/hooks/useProperties";
 import { useRooms } from "@/hooks/useRooms";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
+import { BookingStatus, normalizeLegacyStatus } from "@/lib/constants/statuses";
 
 interface ReportFilters {
   dateRange: DateRange | undefined;
@@ -56,7 +57,8 @@ const ReportPage = () => {
         if (!matchesGuest && !matchesEmail) return false;
       }
 
-      if (filters.status !== "all" && booking.status !== filters.status) {
+      const normalizedStatus = normalizeLegacyStatus(booking.status);
+      if (filters.status !== "all" && normalizedStatus !== filters.status) {
         return false;
       }
 
@@ -93,10 +95,10 @@ const ReportPage = () => {
 
     return {
       total: filteredBookings.length,
-      confirmed: filteredBookings.filter((booking) => booking.status === "confirmed").length,
-      pending: filteredBookings.filter((booking) => booking.status === "pending").length,
-      completed: filteredBookings.filter((booking) => booking.status === "completed").length,
-      cancelled: filteredBookings.filter((booking) => booking.status === "cancelled").length,
+      confirmed: filteredBookings.filter((booking) => normalizeLegacyStatus(booking.status) === BookingStatus.CHECKED_IN || normalizeLegacyStatus(booking.status) === BookingStatus.IN_HOUSE).length,
+      pending: filteredBookings.filter((booking) => normalizeLegacyStatus(booking.status) === BookingStatus.RESERVED || normalizeLegacyStatus(booking.status) === BookingStatus.PRE_CHECKIN).length,
+      completed: filteredBookings.filter((booking) => normalizeLegacyStatus(booking.status) === BookingStatus.CHECKED_OUT).length,
+      cancelled: filteredBookings.filter((booking) => normalizeLegacyStatus(booking.status) === BookingStatus.CANCELLED || normalizeLegacyStatus(booking.status) === BookingStatus.NO_SHOW).length,
       totalGuests: filteredBookings.reduce((sum, booking) => sum + (booking.total_guests || 0), 0),
       totalRevenue: filteredBookings.reduce((sum, booking) => sum + (Number(booking.total_amount) || 0), 0),
     };
@@ -203,10 +205,13 @@ const ReportPage = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Status</SelectItem>
-              <SelectItem value="pending">Pendentes</SelectItem>
-              <SelectItem value="confirmed">Confirmadas</SelectItem>
-              <SelectItem value="completed">Concluidas</SelectItem>
-              <SelectItem value="cancelled">Canceladas</SelectItem>
+              <SelectItem value={BookingStatus.RESERVED}>Reservadas</SelectItem>
+              <SelectItem value={BookingStatus.PRE_CHECKIN}>Pre-check-in</SelectItem>
+              <SelectItem value={BookingStatus.CHECKED_IN}>Check-in</SelectItem>
+              <SelectItem value={BookingStatus.IN_HOUSE}>Hospedadas</SelectItem>
+              <SelectItem value={BookingStatus.CHECKED_OUT}>Check-out</SelectItem>
+              <SelectItem value={BookingStatus.CANCELLED}>Canceladas</SelectItem>
+              <SelectItem value={BookingStatus.NO_SHOW}>No-show</SelectItem>
             </SelectContent>
           </Select>
 
@@ -292,11 +297,11 @@ const ReportPage = () => {
                         <td className="p-4">{format(parseISO(booking.check_out), "dd/MM/yyyy")}</td>
                         <td className="p-4">
                           <Badge variant={
-                            booking.status === "confirmed" ? "default" :
-                            booking.status === "pending" ? "secondary" :
-                            booking.status === "completed" ? "outline" : "destructive"
+                            normalizeLegacyStatus(booking.status) === BookingStatus.CHECKED_IN || normalizeLegacyStatus(booking.status) === BookingStatus.IN_HOUSE ? "default" :
+                            normalizeLegacyStatus(booking.status) === BookingStatus.RESERVED || normalizeLegacyStatus(booking.status) === BookingStatus.PRE_CHECKIN ? "secondary" :
+                            normalizeLegacyStatus(booking.status) === BookingStatus.CHECKED_OUT ? "outline" : "destructive"
                           }>
-                            {booking.status}
+                            {normalizeLegacyStatus(booking.status)}
                           </Badge>
                         </td>
                         <td className="p-4 text-right">{booking.total_guests}</td>

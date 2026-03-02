@@ -1,19 +1,25 @@
-# SP4 Report - Reservation Lifecycle Hardening
+ï»¿# SP4 Report - Reservation Lifecycle Hardening
 
 ## Summary
-SP4 foi iniciado formalmente dentro da Fase 2 (Reservation & Revenue Engine), com definição de escopo e pacote de evidências inicial pronto para evolução incremental.
+SP4 implementou hardening do ciclo de status de reservas com matriz de transicao canonica, guard de transicao em mutacao de status e alinhamento dos principais fluxos de UI/relatorio para reduzir ambiguidade entre status legado e canonico.
 
 ## Scope Mapping
-- Sprint objetivo definido: hardening do ciclo de reservas.
-- Critérios de QA e evidência alinhados ao protocolo CONNECT.
-- Backlog técnico inicial preparado para implementação contínua.
+- Booking transition matrix implementada no dominio de status.
+- Guard tenant-safe + role-safe reforcado em atualizacao de status de reserva.
+- Front Desk check-in/check-out alinhado para status canonico.
+- Report e Bookings alinhados com normalizacao de status para filtros e KPIs.
 
 ## Files Changed
-- `docs/EXEC_PLAN_PHASE2_RESERVATION_REVENUE.md`
-- `docs/milestones/PHASE_2_KICKOFF.md`
+- `src/lib/constants/statuses.ts`
+- `src/lib/ui-helpers.tsx`
+- `src/hooks/useUpdateBookingStatus.tsx`
+- `src/hooks/useFrontDesk.tsx`
+- `src/hooks/useBookings.tsx`
+- `src/components/BookingDialog.tsx`
+- `src/pages/Bookings.tsx`
+- `src/pages/ReportPage.tsx`
 - `docs/qa/SP4/SP4_REPORT.md`
 - `docs/qa/SP4/checklist.md`
-- `docs/qa/SP4/notes/kickoff.txt`
 - `docs/qa/SP4/build.log`
 - `docs/qa/SP4/typecheck.log`
 - `docs/qa/SP4/lint_changed_files.log`
@@ -24,13 +30,13 @@ No DB changes.
 ## QA Steps Executed + Results
 - Build: PASS (`docs/qa/SP4/build.log`)
 - Typecheck: PASS (`docs/qa/SP4/typecheck.log`)
-- Lint changed files: PASS (`docs/qa/SP4/lint_changed_files.log`, docs-only kickoff)
+- Lint changed files: PASS (`docs/qa/SP4/lint_changed_files.log`)
 
 ## Gate Results
 - DB gates: not required (no migration/schema/policy changes).
 
 ## Final Verdict
-**PASS (Kickoff + Governance Baseline)**
+**PASS**
 
 ## Residuals / Follow-ups
-- Próximo passo operacional: implementar as entregas funcionais de SP4 (matriz de transição + guards em fluxos de reserva).
+- Continuar migracao progressiva de paginas legadas que ainda exibem status `pending/confirmed/completed` sem normalizacao local.
