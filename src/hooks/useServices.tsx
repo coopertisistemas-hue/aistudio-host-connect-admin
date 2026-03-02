@@ -2,14 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
-import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
 import { useOrg } from './useOrg';
+import { useAuth } from './useAuth';
 
 export const serviceSchema = z.object({
-  property_id: z.string().min(1, "A propriedade é obrigatória."),
-  name: z.string().min(1, "O nome do serviço é obrigatório."),
+  property_id: z.string().min(1, 'A propriedade e obrigatoria.'),
+  name: z.string().min(1, 'O nome do servico e obrigatorio.'),
   description: z.string().optional().nullable(),
-  price: z.number().min(0, "O preço não pode ser negativo."),
+  price: z.number().min(0, 'O preco nao pode ser negativo.'),
   is_per_person: z.boolean().default(false),
   is_per_day: z.boolean().default(false),
   status: z.enum(['active', 'inactive']).default('active'),
@@ -17,6 +17,7 @@ export const serviceSchema = z.object({
 
 export type Service = {
   id: string;
+  org_id: string;
   property_id: string;
   name: string;
   description: string | null;
@@ -33,30 +34,37 @@ export type ServiceInput = z.infer<typeof serviceSchema>;
 export const useServices = (propertyId?: string) => {
   const queryClient = useQueryClient();
   const { currentOrgId } = useOrg();
+  const { userRole } = useAuth();
+  const isViewer = userRole === 'viewer';
 
   const { data: services, isLoading, error } = useQuery({
     queryKey: ['services', currentOrgId, propertyId],
     queryFn: async () => {
       if (!propertyId || !currentOrgId) return [];
-      const { data, error } = await (supabase as any)
+
+      const { data, error } = await supabase
         .from('services')
         .select('*')
         .eq('property_id', propertyId)
-        .eq('org_id', currentOrgId)
+        .filter('org_id', 'eq', currentOrgId)
         .order('name', { ascending: true });
 
       if (error) throw error;
       return data as Service[];
     },
-    enabled: !!propertyId && !!currentOrgId, // Only run query if propertyId and currentOrgId are provided
+    enabled: !!propertyId && !!currentOrgId,
   });
 
   const createService = useMutation({
     mutationFn: async (service: ServiceInput) => {
-      if (!currentOrgId) throw new Error("No Organization ID");
+      if (isViewer) throw new Error('VIEWER_BLOCKED');
+      if (!currentOrgId) throw new Error('ORG_CONTEXT_REQUIRED');
+      if (!propertyId) throw new Error('PROPERTY_CONTEXT_REQUIRED');
+
+      const payload = { ...service, org_id: currentOrgId, property_id: propertyId };
       const { data, error } = await supabase
         .from('services')
-        .insert([{ ...service, org_id: currentOrgId } as any]) // Use any to handle org_id
+        .insert([payload as never])
         .select()
         .single();
 
@@ -65,28 +73,24 @@ export const useServices = (propertyId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services', currentOrgId, propertyId] });
-      toast({
-        title: "Sucesso!",
-        description: "Serviço criado com sucesso.",
-      });
+      toast({ title: 'Sucesso!', description: 'Servico criado com sucesso.' });
     },
     onError: (error: Error) => {
-      console.error('Error creating service:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao criar serviço: " + error.message,
-        variant: "destructive",
-      });
+      toast({ title: 'Erro', description: 'Erro ao criar servico: ' + error.message, variant: 'destructive' });
     },
   });
 
   const updateService = useMutation({
     mutationFn: async ({ id, service }: { id: string; service: Partial<ServiceInput> }) => {
+      if (isViewer) throw new Error('VIEWER_BLOCKED');
+      if (!currentOrgId || !propertyId) throw new Error('TENANT_CONTEXT_REQUIRED');
+
       const { data, error } = await supabase
         .from('services')
         .update(service)
         .eq('id', id)
         .eq('org_id', currentOrgId)
+        .eq('property_id', propertyId)
         .select()
         .single();
 
@@ -95,45 +99,33 @@ export const useServices = (propertyId?: string) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services', currentOrgId, propertyId] });
-      toast({
-        title: "Sucesso!",
-        description: "Serviço atualizado com sucesso.",
-      });
+      toast({ title: 'Sucesso!', description: 'Servico atualizado com sucesso.' });
     },
     onError: (error: Error) => {
-      console.error('Error updating service:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao atualizar serviço: " + error.message,
-        variant: "destructive",
-      });
+      toast({ title: 'Erro', description: 'Erro ao atualizar servico: ' + error.message, variant: 'destructive' });
     },
   });
 
   const deleteService = useMutation({
     mutationFn: async (id: string) => {
+      if (isViewer) throw new Error('VIEWER_BLOCKED');
+      if (!currentOrgId || !propertyId) throw new Error('TENANT_CONTEXT_REQUIRED');
+
       const { error } = await supabase
         .from('services')
         .delete()
         .eq('id', id)
-        .eq('org_id', currentOrgId);
+        .eq('org_id', currentOrgId)
+        .eq('property_id', propertyId);
 
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['services', currentOrgId, propertyId] });
-      toast({
-        title: "Sucesso!",
-        description: "Serviço removido com sucesso.",
-      });
+      toast({ title: 'Sucesso!', description: 'Servico removido com sucesso.' });
     },
     onError: (error: Error) => {
-      console.error('Error deleting service:', error);
-      toast({
-        title: "Erro",
-        description: "Erro ao remover serviço: " + error.message,
-        variant: "destructive",
-      });
+      toast({ title: 'Erro', description: 'Erro ao remover servico: ' + error.message, variant: 'destructive' });
     },
   });
 
@@ -144,5 +136,7 @@ export const useServices = (propertyId?: string) => {
     createService,
     updateService,
     deleteService,
+    isViewer,
   };
 };
+
