@@ -1,4 +1,4 @@
-import DashboardLayout from "@/components/DashboardLayout";
+﻿import DashboardLayout from "@/components/DashboardLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useBookings } from '@/hooks/useBookings';
@@ -6,9 +6,9 @@ import { useProperties } from '@/hooks/useProperties';
 import { useExpenses } from '@/hooks/useExpenses';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 import { useInvoices } from '@/hooks/useInvoices';
-import { DollarSign, TrendingUp, Calendar, PieChart, Wallet, FileText, Download, CalendarIcon, Home, Percent, BarChart3 } from 'lucide-react';
+import { DollarSign, TrendingUp, PieChart, Wallet, FileText, Download, CalendarIcon, Home, Percent, BarChart3, RotateCcw } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart as RechartPieChart, Pie, Cell } from 'recharts';
-import { useMemo, useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { format, parseISO, startOfMonth, endOfMonth, eachMonthOfInterval, subMonths, startOfYear, endOfYear, isWithinInterval } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import DataTableSkeleton from "@/components/DataTableSkeleton";
@@ -20,12 +20,26 @@ import { DateRange } from "react-day-picker";
 import { Link } from "react-router-dom";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
 import { useAuth } from "@/hooks/useAuth";
+import { useOrg } from "@/hooks/useOrg";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { BookingStatus, normalizeLegacyStatus } from "@/lib/constants/statuses";
+
+type OrchestrationEvent = {
+  id: string;
+  event_type: string;
+  idempotency_key: string;
+  external_reservation_id: string | null;
+  status: 'received' | 'processing' | 'processed' | 'failed';
+  created_at: string;
+  processed_at: string | null;
+};
 
 const Financial = () => {
   const { properties, isLoading: propertiesLoading } = useProperties();
   const { selectedPropertyId, setSelectedPropertyId, isLoading: propertyStateLoading } = useSelectedProperty();
   const { userRole } = useAuth();
+  const { currentOrgId } = useOrg();
   const isViewer = userRole === 'viewer';
 
   const defaultDateRange = useMemo(() => ({
@@ -45,6 +59,31 @@ const Financial = () => {
   );
 
   const isLoading = bookingsLoading || propertiesLoading || expensesLoading || invoicesLoading || summaryLoading || propertyStateLoading;
+
+  const { data: orchestrationEvents = [], isLoading: orchestrationLoading } = useQuery({
+    queryKey: ['reservation-orchestration-events', currentOrgId, selectedPropertyId, dateRange?.from?.toISOString(), dateRange?.to?.toISOString()],
+    queryFn: async () => {
+      if (!currentOrgId || !selectedPropertyId) return [];
+
+      let query = supabase
+        .from('reservation_orchestration_events')
+        .select('id, event_type, idempotency_key, external_reservation_id, status, created_at, processed_at')
+        .eq('org_id', currentOrgId)
+        .eq('property_id', selectedPropertyId);
+
+      if (dateRange?.from) {
+        query = query.gte('created_at', dateRange.from.toISOString());
+      }
+      if (dateRange?.to) {
+        query = query.lte('created_at', dateRange.to.toISOString());
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false }).limit(200);
+      if (error) throw error;
+      return (data || []) as OrchestrationEvent[];
+    },
+    enabled: !!currentOrgId && !!selectedPropertyId && !isViewer,
+  });
 
   const filteredBookings = useMemo(() => {
     let filtered = selectedPropertyId
@@ -139,6 +178,71 @@ const Financial = () => {
       invoiceCount: filteredInvoices.length,
     };
   }, [filteredBookings, filteredInvoices]);
+
+  const integrationFeedback = useMemo(() => {
+    const failed = orchestrationEvents.filter((event) => event.status === 'failed');
+    const processing = orchestrationEvents.filter((event) => event.status === 'processing');
+    const now = Date.now();
+    const staleProcessing = processing.filter((event) => now - new Date(event.created_at).getTime() > 15 * 60 * 1000);
+
+    const pendingSettlement = filteredInvoices.filter((invoice) => {
+      const status = String(invoice.status || '').toLowerCase();
+      return status === 'pending' || status === 'partially_paid';
+    });
+
+    const overdueSettlement = pendingSettlement.filter((invoice) => {
+      if (!invoice.due_date) return false;
+      return new Date(invoice.due_date).getTime() < now;
+    });
+
+    const checkedOutNoPaidInvoice = filteredBookings.filter((booking) => {
+      const normalized = normalizeLegacyStatus(booking.status);
+      if (normalized !== BookingStatus.CHECKED_OUT) return false;
+      const invoiceForBooking = filteredInvoices.find((invoice) => invoice.booking_id === booking.id);
+      if (!invoiceForBooking) return true;
+      const status = String(invoiceForBooking.status || '').toLowerCase();
+      return status !== 'paid';
+    });
+
+    const anomalyRows = [
+      ...failed.slice(0, 20).map((event) => ({
+        created_at: event.created_at,
+        type: 'orchestration_failed',
+        reference: event.external_reservation_id || event.idempotency_key,
+        detail: event.event_type,
+      })),
+      ...staleProcessing.slice(0, 20).map((event) => ({
+        created_at: event.created_at,
+        type: 'orchestration_stale_processing',
+        reference: event.external_reservation_id || event.idempotency_key,
+        detail: event.event_type,
+      })),
+      ...overdueSettlement.slice(0, 20).map((invoice) => ({
+        created_at: invoice.due_date || invoice.created_at,
+        type: 'settlement_overdue',
+        reference: invoice.booking_id || invoice.id,
+        detail: `invoice_status=${invoice.status}`,
+      })),
+      ...checkedOutNoPaidInvoice.slice(0, 20).map((booking) => ({
+        created_at: booking.check_out,
+        type: 'checkout_without_paid_invoice',
+        reference: booking.id,
+        detail: `booking_status=${booking.status}`,
+      })),
+    ]
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+      .slice(0, 30);
+
+    return {
+      failedCount: failed.length,
+      processingCount: processing.length,
+      staleProcessingCount: staleProcessing.length,
+      pendingSettlementCount: pendingSettlement.length,
+      overdueSettlementCount: overdueSettlement.length,
+      checkedOutNoPaidInvoiceCount: checkedOutNoPaidInvoice.length,
+      anomalies: anomalyRows,
+    };
+  }, [orchestrationEvents, filteredInvoices, filteredBookings]);
 
   const revenueByProperty = useMemo(() => {
     const propertyMap = new Map<string, number>();
@@ -238,6 +342,23 @@ const Financial = () => {
     URL.revokeObjectURL(url);
   };
 
+  const handleExportFeedbackCsv = () => {
+    const rows = [
+      ['created_at', 'anomaly_type', 'reference', 'detail'],
+      ...integrationFeedback.anomalies.map((row) => [row.created_at, row.type, row.reference, row.detail]),
+    ];
+    const csvContent = rows
+      .map((line) => line.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(','))
+      .join('\n');
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `integration_feedback_${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   const COLORS = ['hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))'];
 
   return (
@@ -245,7 +366,7 @@ const Financial = () => {
       <div className="p-8 space-y-8">
         <div>
           <h1 className="text-3xl font-bold mb-2">Financeiro</h1>
-          <p className="text-muted-foreground">Análise completa de receitas e despesas</p>
+          <p className="text-muted-foreground">AnÃ¡lise completa de receitas e despesas</p>
         </div>
 
         <Card>
@@ -356,7 +477,7 @@ const Financial = () => {
 
                   <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Lucro Líquido</CardTitle>
+                      <CardTitle className="text-sm font-medium">Lucro LÃ­quido</CardTitle>
                       <TrendingUp className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
@@ -378,7 +499,7 @@ const Financial = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Taxa de Ocupação</CardTitle>
+                  <CardTitle className="text-sm font-medium">Taxa de OcupaÃ§Ã£o</CardTitle>
                   <Percent className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
@@ -391,13 +512,13 @@ const Financial = () => {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Diária Média (ADR)</CardTitle>
+                  <CardTitle className="text-sm font-medium">DiÃ¡ria MÃ©dia (ADR)</CardTitle>
                   <BarChart3 className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">R$ {summary.adr.toFixed(2)}</div>
                   <p className="text-xs text-muted-foreground">
-                    Média por noite ocupada
+                    MÃ©dia por noite ocupada
                   </p>
                 </CardContent>
               </Card>
@@ -406,8 +527,8 @@ const Financial = () => {
             {!isViewer && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Conciliação de Receita e Liquidação</CardTitle>
-                  <CardDescription>Booked x Realizado x Faturado x Pago no período selecionado.</CardDescription>
+                  <CardTitle>ConciliaÃ§Ã£o de Receita e LiquidaÃ§Ã£o</CardTitle>
+                  <CardDescription>Booked x Realizado x Faturado x Pago no perÃ­odo selecionado.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div>
@@ -435,13 +556,81 @@ const Financial = () => {
               </Card>
             )}
 
+            {!isViewer && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Feedback Operacional da Integracao</CardTitle>
+                  <CardDescription>
+                    Eventos falhos, retries em aberto e pendencias de settlement no periodo selecionado.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Eventos Falhos</p>
+                      <p className="text-xl font-bold text-destructive">{integrationFeedback.failedCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Processing em Aberto (&gt;15min)</p>
+                      <p className="text-xl font-bold">{integrationFeedback.staleProcessingCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Settlement Pendente / Vencido</p>
+                      <p className="text-xl font-bold">
+                        {integrationFeedback.pendingSettlementCount} / {integrationFeedback.overdueSettlementCount}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Checkout sem Invoice Pago</p>
+                      <p className="text-xl font-bold">{integrationFeedback.checkedOutNoPaidInvoiceCount}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Eventos em Processing</p>
+                      <p className="text-xl font-bold">{integrationFeedback.processingCount}</p>
+                    </div>
+                    <div className="flex items-end">
+                      <Button variant="outline" onClick={handleExportFeedbackCsv} disabled={integrationFeedback.anomalies.length === 0}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar Excecoes CSV
+                      </Button>
+                    </div>
+                  </div>
+
+                  {orchestrationLoading ? (
+                    <p className="text-sm text-muted-foreground">Carregando feedback operacional...</p>
+                  ) : integrationFeedback.anomalies.length === 0 ? (
+                    <div className="rounded-md border p-4 text-sm text-muted-foreground">
+                      Sem anomalias detectadas no periodo selecionado.
+                    </div>
+                  ) : (
+                    <div className="rounded-md border">
+                      <div className="grid grid-cols-4 gap-2 border-b bg-muted/30 px-3 py-2 text-xs font-semibold">
+                        <span>Data</span>
+                        <span>Tipo</span>
+                        <span>Referencia</span>
+                        <span>Detalhe</span>
+                      </div>
+                      {integrationFeedback.anomalies.slice(0, 12).map((row) => (
+                        <div key={`${row.type}-${row.reference}-${row.created_at}`} className="grid grid-cols-4 gap-2 px-3 py-2 text-xs border-b last:border-b-0">
+                          <span>{format(new Date(row.created_at), 'dd/MM/yyyy HH:mm')}</span>
+                          <span className="font-medium">{row.type}</span>
+                          <span className="truncate">{row.reference}</span>
+                          <span className="truncate">{row.detail}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             {!isViewer ? (
               <>
                 <div className="grid gap-4 md:grid-cols-2">
                   <Card>
                     <CardHeader>
                       <CardTitle>Fluxo de Caixa Mensal (Receita vs. Despesas)</CardTitle>
-                      <CardDescription>No período selecionado</CardDescription>
+                      <CardDescription>No perÃ­odo selecionado</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
@@ -462,7 +651,7 @@ const Financial = () => {
                   <Card>
                     <CardHeader>
                       <CardTitle>Receita por Propriedade</CardTitle>
-                      <CardDescription>Distribuição de receita (todas as reservas)</CardDescription>
+                      <CardDescription>DistribuiÃ§Ã£o de receita (todas as reservas)</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <ResponsiveContainer width="100%" height={300}>
@@ -481,8 +670,8 @@ const Financial = () => {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Distribuição de Status das Reservas</CardTitle>
-                    <CardDescription>No período selecionado</CardDescription>
+                    <CardTitle>DistribuiÃ§Ã£o de Status das Reservas</CardTitle>
+                    <CardDescription>No perÃ­odo selecionado</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
@@ -511,7 +700,7 @@ const Financial = () => {
               <Card>
                 <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground opacity-60">
                   <BarChart3 className="h-16 w-16 mb-4" />
-                  <p>Gráficos e analytics financeiros estão disponíveis apenas para administradores.</p>
+                  <p>GrÃ¡ficos e analytics financeiros estÃ£o disponÃ­veis apenas para administradores.</p>
                 </CardContent>
               </Card>
             )}
@@ -519,23 +708,29 @@ const Financial = () => {
             {/* Advanced Reports Section - Placeholders */}
             <Card>
               <CardHeader>
-                <CardTitle>Relatórios Avançados</CardTitle>
-                <CardDescription>Gere relatórios detalhados e exporte para análise.</CardDescription>
+                <CardTitle>RelatÃ³rios AvanÃ§ados</CardTitle>
+                <CardDescription>Gere relatÃ³rios detalhados e exporte para anÃ¡lise.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Relatório de Previsibilidade Financeira</p>
+                  <p className="text-sm font-medium">RelatÃ³rio de Previsibilidade Financeira</p>
                   <Button variant="outline" disabled>
                     <FileText className="h-4 w-4 mr-2" />
-                    Gerar Relatório (Em Breve)
+                    Gerar RelatÃ³rio (Em Breve)
                   </Button>
                 </div>
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium">Exportar Dados (CSV/PDF)</p>
-                  <Button variant="outline" onClick={handleExportSettlementCsv}>
-                    <Download className="h-4 w-4 mr-2" />
-                    Exportar Conciliação CSV
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={handleExportSettlementCsv}>
+                      <Download className="h-4 w-4 mr-2" />
+                      Exportar Conciliacao CSV
+                    </Button>
+                    <Button variant="outline" onClick={handleExportFeedbackCsv}>
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                      Exportar Feedback CSV
+                    </Button>
+                  </div>
                 </div>
                 <Link to="/expenses">
                   <Button variant="secondary" className="w-full">
@@ -553,3 +748,4 @@ const Financial = () => {
 };
 
 export default Financial;
+

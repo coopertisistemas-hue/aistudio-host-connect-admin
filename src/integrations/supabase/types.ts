@@ -844,6 +844,79 @@ export type Database = {
           },
         ]
       }
+      reservation_orchestration_events: {
+        Row: {
+          booking_id: string | null
+          created_at: string
+          event_type: string
+          external_reservation_id: string | null
+          id: string
+          idempotency_key: string
+          org_id: string
+          payload: Json
+          processed_at: string | null
+          property_id: string
+          response_payload: Json | null
+          source_system: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          booking_id?: string | null
+          created_at?: string
+          event_type: string
+          external_reservation_id?: string | null
+          id?: string
+          idempotency_key: string
+          org_id: string
+          payload?: Json
+          processed_at?: string | null
+          property_id: string
+          response_payload?: Json | null
+          source_system?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          booking_id?: string | null
+          created_at?: string
+          event_type?: string
+          external_reservation_id?: string | null
+          id?: string
+          idempotency_key?: string
+          org_id?: string
+          payload?: Json
+          processed_at?: string | null
+          property_id?: string
+          response_payload?: Json | null
+          source_system?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reservation_orchestration_events_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_orchestration_events_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reservation_orchestration_events_property_id_fkey"
+            columns: ["property_id"]
+            isOneToOne: false
+            referencedRelation: "properties"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rooms: {
         Row: {
           created_at: string
