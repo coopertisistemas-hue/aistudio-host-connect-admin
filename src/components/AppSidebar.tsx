@@ -33,6 +33,7 @@ import {
   Construction,
   CalendarClock,
   TrendingUp,
+  RefreshCw,
   ChevronDown,
   Hash,
   Heading,
@@ -148,6 +149,7 @@ const AppSidebar = () => {
       items: [
         { title: "Financeiro", url: "/financial", icon: DollarSign },
         { title: "Billing Orchestration", url: "/billing/orchestration", icon: Receipt },
+        { title: "Subscription Lifecycle", url: "/billing/subscription-lifecycle", icon: RefreshCw },
         { title: "Monetization Console", url: "/monetization/console", icon: TrendingUp },
         { title: "Consolidação Executiva", url: "/executive/consolidation", icon: BarChart3 },
         { title: "Despesas", url: "/expenses", icon: Wallet, modes: ['standard', 'hotel'] },

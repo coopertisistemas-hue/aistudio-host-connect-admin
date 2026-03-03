@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useOrg } from "@/hooks/useOrg";
 import { evaluateEntitlementAccess, type EntitlementDecision } from "@/lib/monetization/entitlementDecision";
+import { deriveSubscriptionSnapshot } from "@/lib/monetization/subscriptionLifecycle";
 
 export type PlanType = "free" | "basic" | "pro" | "premium" | "founder";
 
@@ -163,12 +164,21 @@ export const useEntitlements = () => {
 
     const now = new Date();
     const trialEndDate = trialExpiresAt ? new Date(trialExpiresAt) : null;
-    const isTrialActive = planStatus === "trial" && trialEndDate !== null && now <= trialEndDate;
-    const isTrialExpired = planStatus === "trial" && trialEndDate !== null && now > trialEndDate;
+    const subscriptionSnapshot = deriveSubscriptionSnapshot({
+      rawStatus: planStatus,
+      trialExpiresAt,
+      overdueInvoices: 0,
+      outstandingValue: 0,
+    });
+    const isTrialActive = subscriptionSnapshot.effectiveStatus === "trial";
+    const isTrialExpired = subscriptionSnapshot.trialExpired;
+    const isGrace = subscriptionSnapshot.effectiveStatus === "grace";
+    const isSuspended = subscriptionSnapshot.effectiveStatus === "suspended";
+    const isCancelled = subscriptionSnapshot.effectiveStatus === "cancelled";
 
     if (isTrialActive) {
       plan = "premium";
-    } else if (isTrialExpired) {
+    } else if (isSuspended || isCancelled || isTrialExpired) {
       plan = "free";
     }
 
@@ -207,6 +217,11 @@ export const useEntitlements = () => {
       trialExpiresAt,
       trialDaysLeft: Math.max(0, trialDaysLeft),
       role: orgRole,
+      sourceSubscriptionStatus: subscriptionSnapshot.sourceStatus,
+      subscriptionStatus: subscriptionSnapshot.effectiveStatus,
+      isGrace,
+      isSuspended,
+      isCancelled,
     };
   }, [entitlementsData?.permissions, entitlementsData?.profile, orgRole]);
 
@@ -215,4 +230,3 @@ export const useEntitlements = () => {
     isLoading: isEntitlementsLoading || isOrgLoading,
   };
 };
-

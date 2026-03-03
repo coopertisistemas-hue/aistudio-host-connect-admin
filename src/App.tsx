@@ -107,6 +107,7 @@ import ExecutiveConsolidationPage from "./pages/ExecutiveConsolidationPage";
 import MarketplaceExperiencesPage from "./pages/MarketplaceExperiencesPage";
 import BillingOrchestrationPage from "./pages/BillingOrchestrationPage";
 import MonetizationConsolePage from "./pages/MonetizationConsolePage";
+import SubscriptionLifecyclePage from "./pages/SubscriptionLifecyclePage";
 
 import { usePageTracking } from "./hooks/usePageTracking"; // GA4 Tracking
 
@@ -441,6 +442,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <BillingOrchestrationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/billing/subscription-lifecycle"
+                  element={
+                    <ProtectedRoute>
+                      <SubscriptionLifecyclePage />
                     </ProtectedRoute>
                   }
                 />
