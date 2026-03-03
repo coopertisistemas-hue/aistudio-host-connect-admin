@@ -39,6 +39,7 @@ import {
   Package,
   Utensils,
   ShoppingCart,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -147,6 +148,7 @@ const AppSidebar = () => {
       items: [
         { title: "Financeiro", url: "/financial", icon: DollarSign },
         { title: "Billing Orchestration", url: "/billing/orchestration", icon: Receipt },
+        { title: "Monetization Console", url: "/monetization/console", icon: TrendingUp },
         { title: "Consolidação Executiva", url: "/executive/consolidation", icon: BarChart3 },
         { title: "Despesas", url: "/expenses", icon: Wallet, modes: ['standard', 'hotel'] },
         { title: "Regras de Precificação", url: "/pricing-rules", icon: Tag, modes: ['standard', 'hotel'] },

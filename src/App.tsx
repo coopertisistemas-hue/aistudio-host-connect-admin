@@ -106,6 +106,7 @@ import PostLoginRedirect from "./components/auth/PostLoginRedirect";
 import ExecutiveConsolidationPage from "./pages/ExecutiveConsolidationPage";
 import MarketplaceExperiencesPage from "./pages/MarketplaceExperiencesPage";
 import BillingOrchestrationPage from "./pages/BillingOrchestrationPage";
+import MonetizationConsolePage from "./pages/MonetizationConsolePage";
 
 import { usePageTracking } from "./hooks/usePageTracking"; // GA4 Tracking
 
@@ -440,6 +441,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <BillingOrchestrationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/monetization/console"
+                  element={
+                    <ProtectedRoute>
+                      <MonetizationConsolePage />
                     </ProtectedRoute>
                   }
                 />
