@@ -4,6 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useOrg } from "@/hooks/useOrg";
 import { useSelectedProperty } from "@/hooks/useSelectedProperty";
 import { normalizeLegacyStatus } from "@/lib/constants/statuses";
+import {
+  buildBillingIdempotencyKey,
+  classifyBillingRecovery,
+  type BillingInvoiceStatus,
+} from "@/lib/monetization/billingIdempotency";
 
 type BookingRow = {
   id: string;
@@ -16,7 +21,7 @@ type InvoiceRow = {
   id: string;
   booking_id: string | null;
   property_id: string;
-  status: "pending" | "paid" | "partially_paid" | "cancelled";
+  status: BillingInvoiceStatus;
   total_amount: number | null;
   paid_amount: number | null;
   due_date: string | null;
@@ -30,9 +35,12 @@ export type BillingEventRow = {
   bookingId: string | null;
   propertyId: string;
   amount: number;
-  status: string;
+  status: BillingInvoiceStatus;
   dueDate: string | null;
   retryStage: "none" | "d0" | "d3" | "d7" | "d14";
+  idempotencyKey: string;
+  isDuplicate: boolean;
+  recoveryClass: "none" | "recoverable" | "terminal";
   createdAt: string;
 };
 
@@ -57,10 +65,20 @@ export type BillingOrchestrationSummary = {
     checkedOutWithoutPaidInvoice: number;
   };
   dunning: DunningSummary;
+  idempotency: {
+    uniqueKeys: number;
+    duplicateEvents: number;
+    dedupeRate: number;
+  };
+  recovery: {
+    recoverableEvents: number;
+    terminalEvents: number;
+    retryQueue: number;
+  };
   billingEvents: BillingEventRow[];
 };
 
-function getRetryStage(status: string, dueDate: string | null): BillingEventRow["retryStage"] {
+function getRetryStage(status: BillingInvoiceStatus, dueDate: string | null): BillingEventRow["retryStage"] {
   if (!dueDate || (status !== "pending" && status !== "partially_paid")) {
     return "none";
   }
@@ -78,7 +96,7 @@ function getRetryStage(status: string, dueDate: string | null): BillingEventRow[
   return "d14";
 }
 
-function mapInvoiceStatusToEvent(status: InvoiceRow["status"], retryStage: BillingEventRow["retryStage"]): string {
+function mapInvoiceStatusToEvent(status: BillingInvoiceStatus, retryStage: BillingEventRow["retryStage"]): string {
   if (status === "paid") return "billing.payment.paid";
   if (status === "cancelled") return "billing.payment.cancelled";
   if (status === "partially_paid") return retryStage === "none" ? "billing.payment.partial" : "billing.payment.failed";
@@ -146,23 +164,45 @@ export const useBillingOrchestration = () => {
     const outstandingValue = Math.max(0, invoicedValue - paidValue);
     const collectionRate = invoicedValue > 0 ? (paidValue / invoicedValue) * 100 : 0;
 
-    const billingEvents = invoices
+    const billingEventsBase = invoices
       .map<BillingEventRow>((invoice) => {
         const retryStage = getRetryStage(invoice.status, invoice.due_date);
+        const amount = Number(invoice.total_amount ?? 0);
+        const idempotencyKey = buildBillingIdempotencyKey({
+          invoiceId: invoice.id,
+          status: invoice.status,
+          retryStage,
+          dueDate: invoice.due_date,
+          amount,
+        });
+
         return {
           id: `${invoice.id}:${retryStage}`,
           eventType: mapInvoiceStatusToEvent(invoice.status, retryStage),
           invoiceId: invoice.id,
           bookingId: invoice.booking_id,
           propertyId: invoice.property_id,
-          amount: Number(invoice.total_amount ?? 0),
+          amount,
           status: invoice.status,
           dueDate: invoice.due_date,
           retryStage,
+          idempotencyKey,
+          isDuplicate: false,
+          recoveryClass: classifyBillingRecovery({ status: invoice.status, retryStage }),
           createdAt: invoice.created_at,
         };
       })
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const keyCounts = new Map<string, number>();
+    billingEventsBase.forEach((event) => {
+      keyCounts.set(event.idempotencyKey, (keyCounts.get(event.idempotencyKey) ?? 0) + 1);
+    });
+
+    const billingEvents = billingEventsBase.map((event) => ({
+      ...event,
+      isDuplicate: (keyCounts.get(event.idempotencyKey) ?? 0) > 1,
+    }));
 
     const dunning = billingEvents.reduce<DunningSummary>(
       (acc, event) => {
@@ -174,6 +214,14 @@ export const useBillingOrchestration = () => {
       },
       { d0: 0, d3: 0, d7: 0, d14: 0 },
     );
+
+    const uniqueKeys = keyCounts.size;
+    const duplicateEvents = billingEvents.filter((event) => event.isDuplicate).length;
+    const dedupeRate = billingEvents.length > 0 ? ((billingEvents.length - duplicateEvents) / billingEvents.length) * 100 : 100;
+
+    const recoverableEvents = billingEvents.filter((event) => event.recoveryClass === "recoverable").length;
+    const terminalEvents = billingEvents.filter((event) => event.recoveryClass === "terminal").length;
+    const retryQueue = billingEvents.filter((event) => event.retryStage !== "none" && event.status !== "paid").length;
 
     const invoicesByBooking = new Map<string, InvoiceRow>();
     invoices.forEach((invoice) => {
@@ -203,6 +251,16 @@ export const useBillingOrchestration = () => {
         checkedOutWithoutPaidInvoice,
       },
       dunning,
+      idempotency: {
+        uniqueKeys,
+        duplicateEvents,
+        dedupeRate: Number(dedupeRate.toFixed(1)),
+      },
+      recovery: {
+        recoverableEvents,
+        terminalEvents,
+        retryQueue,
+      },
       billingEvents,
     };
   }, [data?.bookings, data?.invoices]);
