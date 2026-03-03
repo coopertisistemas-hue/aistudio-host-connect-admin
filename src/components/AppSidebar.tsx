@@ -124,6 +124,7 @@ const AppSidebar = () => {
         { title: "Overview", url: "/marketing/overview", icon: BarChart3 },
         { title: "Conectores", url: "/marketing/connectors", icon: Globe, gated: !canAccess('otas') },
         { title: "Google Performance", url: "/marketing/google", icon: Monitor, gated: !canAccess('gmb') },
+        { title: "Marketplace", url: "/marketplace/experiences", icon: ShoppingCart },
       ]
     },
     {
@@ -145,6 +146,7 @@ const AppSidebar = () => {
       icon: BarChart3,
       items: [
         { title: "Financeiro", url: "/financial", icon: DollarSign },
+        { title: "Consolidação Executiva", url: "/executive/consolidation", icon: BarChart3 },
         { title: "Despesas", url: "/expenses", icon: Wallet, modes: ['standard', 'hotel'] },
         { title: "Regras de Precificação", url: "/pricing-rules", icon: Tag, modes: ['standard', 'hotel'] },
         { title: "Hóspedes", url: "/guests", icon: Users },

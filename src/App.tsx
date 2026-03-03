@@ -103,6 +103,8 @@ import PublicPreCheckinPage from "./pages/PublicPreCheckinPage";
 import PublicGroupPreCheckinPage from "./pages/PublicGroupPreCheckinPage";
 import SetupWizardPage from "./pages/SetupWizardPage";
 import PostLoginRedirect from "./components/auth/PostLoginRedirect";
+import ExecutiveConsolidationPage from "./pages/ExecutiveConsolidationPage";
+import MarketplaceExperiencesPage from "./pages/MarketplaceExperiencesPage";
 
 import { usePageTracking } from "./hooks/usePageTracking"; // GA4 Tracking
 
@@ -263,6 +265,22 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <ChannelManagerPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/marketplace/experiences"
+                  element={
+                    <ProtectedRoute>
+                      <MarketplaceExperiencesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/executive/consolidation"
+                  element={
+                    <ProtectedRoute>
+                      <ExecutiveConsolidationPage />
                     </ProtectedRoute>
                   }
                 />
