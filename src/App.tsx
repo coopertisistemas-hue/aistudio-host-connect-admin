@@ -105,6 +105,7 @@ import SetupWizardPage from "./pages/SetupWizardPage";
 import PostLoginRedirect from "./components/auth/PostLoginRedirect";
 import ExecutiveConsolidationPage from "./pages/ExecutiveConsolidationPage";
 import MarketplaceExperiencesPage from "./pages/MarketplaceExperiencesPage";
+import BillingOrchestrationPage from "./pages/BillingOrchestrationPage";
 
 import { usePageTracking } from "./hooks/usePageTracking"; // GA4 Tracking
 
@@ -431,6 +432,14 @@ const App = () => (
                       <SessionLockManager>
                         <Financial />
                       </SessionLockManager>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/billing/orchestration"
+                  element={
+                    <ProtectedRoute>
+                      <BillingOrchestrationPage />
                     </ProtectedRoute>
                   }
                 />

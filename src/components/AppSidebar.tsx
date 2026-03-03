@@ -146,6 +146,7 @@ const AppSidebar = () => {
       icon: BarChart3,
       items: [
         { title: "Financeiro", url: "/financial", icon: DollarSign },
+        { title: "Billing Orchestration", url: "/billing/orchestration", icon: Receipt },
         { title: "Consolidação Executiva", url: "/executive/consolidation", icon: BarChart3 },
         { title: "Despesas", url: "/expenses", icon: Wallet, modes: ['standard', 'hotel'] },
         { title: "Regras de Precificação", url: "/pricing-rules", icon: Tag, modes: ['standard', 'hotel'] },
