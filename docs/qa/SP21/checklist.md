@@ -11,4 +11,4 @@
 - [x] Typecheck PASS (`typecheck.log`)
 - [x] Lint changed files PASS (`lint_changed_files.log`)
 - [x] SP21 report completed (`SP21_REPORT.md`)
-- [ ] Sync-to-git
+- [x] Sync-to-git
