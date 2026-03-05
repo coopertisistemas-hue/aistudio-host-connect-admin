@@ -5,6 +5,7 @@ Phase 12 advances the integration baseline into transactional communication use-
 
 ## 2) Sprint list and verdicts
 - SP30 - PASS
+- SP31 - PASS
 
 ## 3) Files changed (high level)
 ### SP30
@@ -18,8 +19,19 @@ Phase 12 advances the integration baseline into transactional communication use-
 - `docs/milestones/PHASE_12_KICKOFF.md`
 - `docs/milestones/PHASE_12_REPORT.md`
 
+### SP31
+- `src/integrations/communication/whatsappTypes.ts`
+- `src/integrations/communication/internalTransactionalWhatsAppAdapter.ts`
+- `src/integrations/communication/whatsappCommunicationLayer.ts`
+- `src/integrations/communication/index.ts`
+- `docs/sprints/SP31_WHATSAPP_API_ADAPTER.md`
+- `docs/qa/SP31/*`
+- `docs/milestones/PHASE_12_KICKOFF.md`
+- `docs/milestones/PHASE_12_REPORT.md`
+
 ## 4) DB changes
 - SP30: none
+- SP31: none
 
 ## 5) QA evidence summary
 ### SP30
@@ -27,10 +39,15 @@ Phase 12 advances the integration baseline into transactional communication use-
 - `pnpm exec tsc --noEmit` - PASS (`docs/qa/SP30/typecheck.log`)
 - `pnpm exec eslint src/integrations/hub/*.ts src/integrations/communication/*.ts` - PASS (`docs/qa/SP30/lint_changed_files.log`)
 
+### SP31
+- `pnpm build` - PASS (`docs/qa/SP31/build.log`)
+- `pnpm exec tsc --noEmit` - PASS (`docs/qa/SP31/typecheck.log`)
+- `pnpm exec eslint src/integrations/communication/*.ts` - PASS (`docs/qa/SP31/lint_changed_files.log`)
+
 ## 6) Risks / residuals
 - Internal adapter is in-memory baseline and not an external delivery provider.
 - Outbox retry scheduler remains runtime-driven and non-durable.
 - Alert routing to operational channels remains pending.
 
 ## 7) Current phase status
-Phase 12 remains **IN PROGRESS** with SP30 completed as PASS.
+Phase 12 remains **IN PROGRESS** with SP30 and SP31 completed as PASS.
