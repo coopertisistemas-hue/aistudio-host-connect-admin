@@ -62,8 +62,26 @@ export class EventBus {
       return { accepted: false, reason: "no_handler" };
     }
 
+    try {
+      await handler.handle(event);
+    } catch (error) {
+      this.observability?.addLog({
+        timestamp: new Date().toISOString(),
+        level: "error",
+        component: "event_bus",
+        eventType: event.eventType,
+        orgId: event.orgId,
+        propertyId: event.propertyId,
+        correlationId: event.correlationId,
+        status: "handler_error",
+        latencyMs: Date.now() - startedAt,
+        errorCode: "HANDLER_THROW",
+        message: error instanceof Error ? error.message : "Event handler failed.",
+      });
+      throw error;
+    }
+
     this.dedupe.add(dedupeKey);
-    await handler.handle(event);
     this.observability?.recordPublishResult("accepted");
     this.observability?.addLog({
       timestamp: new Date().toISOString(),
