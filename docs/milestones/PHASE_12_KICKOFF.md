@@ -13,6 +13,6 @@ Start Phase 12 with a transactional-first communication layer to improve operati
 - Queue-first integration baseline from SP28/SP29
 
 ## Kickoff Status
-- Phase 12: IN PROGRESS
+- Phase 12: CLOSED
 - SP30: PASS
 - SP31: PASS
