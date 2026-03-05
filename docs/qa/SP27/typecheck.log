@@ -1,0 +1,4 @@
+SP27 docs-only sprint.
+Command: pnpm exec tsc --noEmit
+Status: SKIPPED
+Reason: No TypeScript source changes in SP27 scope.
