@@ -1,3 +1,4 @@
+import type { IntegrationObservability } from "./observability";
 import type { IntegrationEvent, OutboxMessage, RetryPolicy } from "./types";
 
 const DEFAULT_RETRY_POLICY: RetryPolicy = {
@@ -14,9 +15,14 @@ export class OutboxQueue {
   private readonly messages = new Map<string, OutboxMessage>();
   private readonly deadLetter = new Map<string, OutboxMessage>();
   private readonly retryPolicy: RetryPolicy;
+  private readonly observability?: IntegrationObservability;
 
-  constructor(retryPolicy: Partial<RetryPolicy> = {}) {
+  constructor(
+    retryPolicy: Partial<RetryPolicy> = {},
+    observability?: IntegrationObservability,
+  ) {
     this.retryPolicy = { ...DEFAULT_RETRY_POLICY, ...retryPolicy };
+    this.observability = observability;
   }
 
   enqueue(event: IntegrationEvent): OutboxMessage {
@@ -30,6 +36,19 @@ export class OutboxQueue {
       updatedAt: timestamp,
     };
     this.messages.set(message.messageId, message);
+    this.observability?.recordOutboxResult("enqueued");
+    this.observability?.addLog({
+      timestamp: timestamp,
+      level: "info",
+      component: "outbox_queue",
+      eventType: event.eventType,
+      messageId: message.messageId,
+      orgId: event.orgId,
+      propertyId: event.propertyId,
+      correlationId: event.correlationId,
+      status: "enqueued",
+      message: "Outbox message enqueued.",
+    });
     return message;
   }
 
@@ -52,6 +71,20 @@ export class OutboxQueue {
       ...existing,
       status: "succeeded",
       updatedAt: nowIso(),
+    });
+    this.observability?.recordOutboxResult("success");
+    this.observability?.addLog({
+      timestamp: nowIso(),
+      level: "info",
+      component: "outbox_queue",
+      eventType: existing.event.eventType,
+      messageId: existing.messageId,
+      orgId: existing.event.orgId,
+      propertyId: existing.event.propertyId,
+      correlationId: existing.event.correlationId,
+      retryCount: existing.attempt,
+      status: "succeeded",
+      message: "Outbox message processed successfully.",
     });
   }
 
@@ -76,6 +109,37 @@ export class OutboxQueue {
 
     if (shouldDeadLetter) {
       this.deadLetter.set(messageId, failedMessage);
+      this.observability?.recordOutboxResult("dead_letter");
+      this.observability?.addLog({
+        timestamp: timestamp,
+        level: "error",
+        component: "outbox_queue",
+        eventType: existing.event.eventType,
+        messageId: existing.messageId,
+        orgId: existing.event.orgId,
+        propertyId: existing.event.propertyId,
+        correlationId: existing.event.correlationId,
+        retryCount: failedMessage.attempt,
+        status: "dead_letter",
+        errorCode: "RETRY_EXHAUSTED",
+        message: "Outbox message moved to dead-letter queue.",
+      });
+    } else {
+      this.observability?.recordOutboxResult("failed");
+      this.observability?.addLog({
+        timestamp: timestamp,
+        level: "warn",
+        component: "outbox_queue",
+        eventType: existing.event.eventType,
+        messageId: existing.messageId,
+        orgId: existing.event.orgId,
+        propertyId: existing.event.propertyId,
+        correlationId: existing.event.correlationId,
+        retryCount: failedMessage.attempt,
+        status: "failed",
+        errorCode: "RETRY_SCHEDULED",
+        message: "Outbox message failed and was scheduled for retry.",
+      });
     }
 
     this.messages.set(messageId, failedMessage);
@@ -104,4 +168,3 @@ export class OutboxQueue {
     return exponential + jitter;
   }
 }
-

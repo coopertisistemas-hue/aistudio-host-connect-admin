@@ -41,3 +41,37 @@ export interface IntegrationEventHandler {
   handle: (event: IntegrationEvent) => Promise<void>;
 }
 
+export interface IntegrationLogEntry {
+  timestamp: string;
+  level: "info" | "warn" | "error";
+  component: "event_bus" | "outbox_queue" | "worker";
+  eventType?: string;
+  messageId?: string;
+  orgId?: string;
+  propertyId?: string | null;
+  correlationId?: string;
+  status: string;
+  latencyMs?: number;
+  retryCount?: number;
+  errorCode?: string;
+  message: string;
+}
+
+export interface IntegrationMetricsSnapshot {
+  publishedTotal: number;
+  publishAcceptedTotal: number;
+  publishDuplicateTotal: number;
+  publishNoHandlerTotal: number;
+  outboxEnqueuedTotal: number;
+  outboxSuccessTotal: number;
+  outboxFailedTotal: number;
+  outboxDeadLetterTotal: number;
+}
+
+export interface IntegrationAlert {
+  code: "NO_HANDLER_SPIKE" | "DLQ_SPIKE";
+  severity: "warning" | "critical";
+  message: string;
+  triggeredAt: string;
+}
+
