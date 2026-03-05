@@ -5,6 +5,8 @@ Start Phase 13 with lead capture foundation for Guest CRM while protecting UPH p
 
 ## Included Sprints
 - SP33 - Lead Capture Baseline
+- SP34 - Guest CRM Baseline
+- SP35 - Guest Lifecycle Automation Baseline
 
 ## Governance Anchors
 - `AI_RULES.md`
@@ -14,5 +16,7 @@ Start Phase 13 with lead capture foundation for Guest CRM while protecting UPH p
 - `docs/EXEC_PLAN_HOST_CONNECT_PHASE11_PLUS.md`
 
 ## Kickoff Status
-- Phase 13: IN PROGRESS
+- Phase 13: CLOSED
 - SP33: PASS
+- SP34: PASS
+- SP35: PASS
