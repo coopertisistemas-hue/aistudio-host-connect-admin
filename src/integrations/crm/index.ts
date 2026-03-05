@@ -2,5 +2,8 @@ export * from "./guestProfileLayer";
 export * from "./guestProfileTypes";
 export * from "./internalLeadCaptureAdapter";
 export * from "./internalGuestProfileAdapter";
+export * from "./internalLifecycleAutomationAdapter";
 export * from "./leadCaptureLayer";
+export * from "./lifecycleAutomationLayer";
+export * from "./lifecycleTypes";
 export * from "./types";
