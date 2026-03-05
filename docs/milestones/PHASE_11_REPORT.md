@@ -1,61 +1,60 @@
 # Message to Orchestrator
-Phase 11 has started with SP27 (foundation sprint) completed as PASS in documentation and governance baseline scope. No provider integrations or DB changes were introduced. QA evidence for SP27 is attached under `docs/qa/SP27/`. Recommended next sprint kickoff: SP28 (Event Bus and Queue Processing Baseline).
+Phase 11 remains on track. SP27 and SP28 are closed as PASS with evidence under `docs/qa/SP27/` and `docs/qa/SP28/`. SP28 delivered the integration hub event/queue baseline without provider coupling and without DB changes. Recommended next kickoff: SP29 (Integration Observability Baseline).
 
 # PHASE 11 REPORT
 
 ## 1) Phase scope summary
-Phase 11 objective is to establish the Integration Platform foundation with reliability and observability controls while protecting UPH pilot stability.
-
-Current sprint in this report:
-- SP27: Integration Platform Contract and Reliability Baseline
+Phase 11 establishes a safe integration foundation (contracts, event processing baseline, and observability) while protecting UPH pilot stability.
 
 ## 2) Sprint list and verdicts
 - SP27 - PASS
-- SP28 - Pending
+- SP28 - PASS
 - SP29 - Pending
 
 ## 3) Files changed (high level)
-- Integration contract template:
-  - `docs/integrations/INTEGRATION_CONTRACT_TEMPLATE.md`
-- Phase docs:
-  - `docs/milestones/PHASE_11_KICKOFF.md`
-  - `docs/milestones/PHASE_11_REPORT.md`
-- Sprint baseline doc:
-  - `docs/sprints/SP27_INTEGRATION_PLATFORM_BASELINE.md`
-- QA evidence:
-  - `docs/qa/SP27/*`
+### SP27
+- `docs/integrations/INTEGRATION_CONTRACT_TEMPLATE.md`
+- `docs/milestones/PHASE_11_KICKOFF.md`
+- `docs/milestones/PHASE_11_REPORT.md`
+- `docs/sprints/SP27_INTEGRATION_PLATFORM_BASELINE.md`
+- `docs/qa/SP27/*`
+
+### SP28
+- `src/integrations/hub/types.ts`
+- `src/integrations/hub/eventRegistry.ts`
+- `src/integrations/hub/eventBus.ts`
+- `src/integrations/hub/outboxQueue.ts`
+- `src/integrations/hub/index.ts`
+- `docs/sprints/SP28_EVENT_BUS_QUEUE_BASELINE.md`
+- `docs/qa/SP28/*`
 
 ## 4) DB changes
-- No DB changes in SP27.
-- No migrations created.
-- DB gates not required for this sprint.
+- SP27: none
+- SP28: none
+- Migrations in Phase 11 so far: none
 
 ## 5) QA evidence summary
-SP27 is a docs/process foundation sprint.
+### SP27 (docs-only)
+- build/typecheck/eslint: skipped with rationale
+- evidence package present in `docs/qa/SP27/`
 
-Evidence package:
-- `docs/qa/SP27/SP27_REPORT.md`
-- `docs/qa/SP27/checklist.md`
-- `docs/qa/SP27/build.log`
-- `docs/qa/SP27/typecheck.log`
-- `docs/qa/SP27/lint_changed_files.log`
-- `docs/qa/SP27/notes/timestamp.txt`
+### SP28
+- `pnpm build` - PASS (`docs/qa/SP28/build.log`)
+- `pnpm exec tsc --noEmit` - PASS (`docs/qa/SP28/typecheck.log`)
+- `pnpm exec eslint src/integrations/hub/*.ts` - PASS (`docs/qa/SP28/lint_changed_files.log`)
 
-Command status for this sprint:
-- Build: skipped (docs-only scope)
-- Typecheck: skipped (docs-only scope)
-- ESLint changed files: skipped (no JS/TS files changed)
-
-## 6) Risks and residuals
-- SP28 must define executable queue/event baseline before any provider adapter work.
-- Ensure correlation_id and tenant_scope are mandatory in integration logging contract.
-- Keep feature flags mandatory for future provider onboarding.
+## 6) Risks / residuals
+- Outbox queue is currently in-memory baseline; persisted queue and worker durability still pending.
+- Observability instrumentation and alert thresholds for integration events are pending SP29.
+- No provider integration should start before SP29 closure.
 
 ## 7) Next phase recommended kickoff
 Immediate next sprint:
-- SP28 - Event Bus and Queue Processing Baseline
+- SP29 - Integration Observability Baseline
 
 ## 8) Final verdict
-Phase 11 status after SP27: **IN PROGRESS**
+Phase 11 status: **IN PROGRESS**
 
-SP27 verdict: **PASS**
+Delivered sprint verdicts:
+- SP27: **PASS**
+- SP28: **PASS**
