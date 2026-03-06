@@ -5,12 +5,12 @@ Status: IN PROGRESS
 
 ## Scope Status
 
-Phase 16 has started. Only SP41 was executed in this cycle.
+Phase 16 is in progress. SP41 and SP42 are completed.
 
 ## Sprint Results
 
 - SP41: PASS
-- SP42: NOT STARTED
+- SP42: PASS
 - SP43: NOT STARTED
 
 ## SP41 Delivered
@@ -26,10 +26,23 @@ Phase 16 has started. Only SP41 was executed in this cycle.
 - `pnpm exec tsc --noEmit`: PASS
 - `eslint changed files`: PASS
 
+## SP42 Delivered
+
+- Housekeeping board baseline module under `src/integrations/operations/`
+- Tenant-safe internal housekeeping task placeholder adapter
+- Queue-first ingestion layer with outbox/event bus flow
+- Feature flag protection and correlationId support
+
+## QA (SP42)
+
+- `pnpm build`: PASS
+- `pnpm exec tsc --noEmit`: PASS
+- `eslint changed files`: PASS
+
 ## DB Impact
 
 - None
 
 ## Notes
 
-No unrelated residual files were absorbed into SP41 scope.
+No unrelated residual files were absorbed into SP41/SP42 scope.
