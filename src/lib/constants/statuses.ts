@@ -17,6 +17,9 @@ export enum BookingStatus {
     NO_SHOW = 'no_show',
 }
 
+export type LegacyBookingStatus = 'pending' | 'confirmed' | 'completed' | 'cancelled';
+export type BookingStatusValue = BookingStatus | LegacyBookingStatus;
+
 export const BOOKING_STATUS_LABELS: Record<BookingStatus, string> = {
     [BookingStatus.RESERVED]: 'Reservado',
     [BookingStatus.PRE_CHECKIN]: 'Pré-Check-in',
@@ -109,6 +112,16 @@ export const canMarkNoShow = (status: BookingStatus): boolean => {
     return isPreArrival(status);
 };
 
+export const BOOKING_STATUS_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+    [BookingStatus.RESERVED]: [BookingStatus.PRE_CHECKIN, BookingStatus.CHECKED_IN, BookingStatus.CANCELLED, BookingStatus.NO_SHOW],
+    [BookingStatus.PRE_CHECKIN]: [BookingStatus.CHECKED_IN, BookingStatus.CANCELLED, BookingStatus.NO_SHOW],
+    [BookingStatus.CHECKED_IN]: [BookingStatus.IN_HOUSE, BookingStatus.CHECKED_OUT, BookingStatus.CANCELLED],
+    [BookingStatus.IN_HOUSE]: [BookingStatus.CHECKED_OUT, BookingStatus.CANCELLED],
+    [BookingStatus.CHECKED_OUT]: [],
+    [BookingStatus.CANCELLED]: [],
+    [BookingStatus.NO_SHOW]: [],
+};
+
 /**
  * Check if a room needs cleaning
  */
@@ -179,4 +192,17 @@ export const normalizeLegacyStatus = (status: string): BookingStatus => {
             // If already canonical or unknown, return as-is
             return status as BookingStatus;
     }
+};
+
+export const toCanonicalBookingStatus = (status: BookingStatusValue | string): BookingStatus => {
+    return normalizeLegacyStatus(status);
+};
+
+export const canTransitionBookingStatus = (
+    fromStatus: BookingStatusValue | string,
+    toStatus: BookingStatusValue | string
+): boolean => {
+    const from = toCanonicalBookingStatus(fromStatus);
+    const to = toCanonicalBookingStatus(toStatus);
+    return BOOKING_STATUS_TRANSITIONS[from]?.includes(to) ?? false;
 };

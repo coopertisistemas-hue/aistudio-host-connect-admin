@@ -31,6 +31,8 @@ const SetupWizardPage = () => {
     const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
     const [roomCount, setRoomCount] = useState<number>(5);
     const [isCreatingRooms, setIsCreatingRooms] = useState(false);
+    const canPersistOnboarding = !!currentOrgId;
+    const getErrorMessage = (error: unknown) => error instanceof Error ? error.message : 'Erro desconhecido';
 
     // Load state from onboarding
     useEffect(() => {
@@ -45,6 +47,15 @@ const SetupWizardPage = () => {
     const progress = (currentStep / totalSteps) * 100;
 
     const handleNext = () => {
+        if (!canPersistOnboarding) {
+            toast({
+                title: 'Aguardando contexto da organizaÃ§Ã£o',
+                description: 'Tente novamente em alguns segundos.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         if (currentStep < totalSteps) {
             const nextStep = currentStep + 1;
             setCurrentStep(nextStep);
@@ -53,6 +64,10 @@ const SetupWizardPage = () => {
     };
 
     const handleBack = () => {
+        if (!canPersistOnboarding) {
+            return;
+        }
+
         if (currentStep > 1) {
             const prevStep = currentStep - 1;
             setCurrentStep(prevStep);
@@ -62,10 +77,21 @@ const SetupWizardPage = () => {
 
     const handleModeSelect = (mode: OnboardingMode) => {
         setSelectedMode(mode);
-        updateOnboarding({ mode, last_step: 1 });
+        if (canPersistOnboarding) {
+            updateOnboarding({ mode, last_step: 1 });
+        }
     };
 
     const handleCreateProperty = async () => {
+        if (!currentOrgId) {
+            toast({
+                title: 'Org ID nÃ£o disponÃ­vel',
+                description: 'Aguardando vÃ­nculo da sua organizaÃ§Ã£o. Recarregue a pÃ¡gina se persistir.',
+                variant: 'destructive',
+            });
+            return;
+        }
+
         if (!propertyName || !propertyCity || !propertyState) {
             toast({
                 title: 'Campos obrigatórios',
@@ -99,10 +125,10 @@ const SetupWizardPage = () => {
                 title: 'Propriedade criada',
                 description: 'Sua propriedade foi configurada com sucesso.',
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: 'Erro ao criar propriedade',
-                description: error.message,
+                description: getErrorMessage(error),
                 variant: 'destructive',
             });
         }
@@ -190,10 +216,10 @@ const SetupWizardPage = () => {
             });
 
             updateOnboarding({ last_step: 3 });
-        } catch (error: any) {
+        } catch (error: unknown) {
             toast({
                 title: 'Erro ao criar quartos',
-                description: error.message,
+                description: getErrorMessage(error),
                 variant: 'destructive',
             });
         } finally {
@@ -290,7 +316,7 @@ const SetupWizardPage = () => {
                             <Button variant="ghost" onClick={handleDismiss}>
                                 Agora não
                             </Button>
-                            <Button onClick={handleNext} disabled={!selectedMode}>
+                            <Button onClick={handleNext} disabled={!selectedMode || !canPersistOnboarding}>
                                 Continuar <ChevronRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>
@@ -317,7 +343,9 @@ const SetupWizardPage = () => {
                                             className="justify-start"
                                             onClick={() => {
                                                 setSelectedPropertyId(prop.id);
-                                                updateOnboarding({ property_id: prop.id });
+                                                if (canPersistOnboarding) {
+                                                    updateOnboarding({ property_id: prop.id });
+                                                }
                                             }}
                                         >
                                             <Check className={`mr-2 h-4 w-4 ${selectedPropertyId === prop.id ? 'opacity-100' : 'opacity-0'}`} />
@@ -369,7 +397,7 @@ const SetupWizardPage = () => {
                             </div>
 
                             {propertyName && propertyCity && propertyState && (
-                                <Button onClick={handleCreateProperty} className="w-full">
+                                <Button onClick={handleCreateProperty} className="w-full" disabled={!canPersistOnboarding}>
                                     Criar Propriedade
                                 </Button>
                             )}
@@ -379,7 +407,7 @@ const SetupWizardPage = () => {
                             <Button variant="ghost" onClick={handleBack}>
                                 <ChevronLeft className="mr-2 h-4 w-4" /> Voltar
                             </Button>
-                            <Button onClick={handleNext} disabled={!selectedPropertyId}>
+                            <Button onClick={handleNext} disabled={!selectedPropertyId || !canPersistOnboarding}>
                                 Continuar <ChevronRight className="ml-2 h-4 w-4" />
                             </Button>
                         </div>

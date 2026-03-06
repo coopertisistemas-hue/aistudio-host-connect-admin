@@ -3,114 +3,109 @@ import { supabase } from '@/integrations/supabase/client';
 import { useOrg } from './useOrg';
 import { useAuth } from './useAuth';
 import { useToast } from './use-toast';
-import { BookingStatus } from '@/lib/constants/statuses';
+import { BookingStatus, canTransitionBookingStatus, toCanonicalBookingStatus } from '@/lib/constants/statuses';
 
 interface UpdateBookingStatusParams {
-    bookingId: string;
-    newStatus: BookingStatus;
-    propertyId?: string;
+  bookingId: string;
+  newStatus: BookingStatus;
+  propertyId?: string;
 }
 
-/**
- * Hook to safely update booking status with multi-tenant scoping and role guards
- */
 export const useUpdateBookingStatus = () => {
-    const { currentOrgId } = useOrg();
-    const { userRole } = useAuth();
-    const { toast } = useToast();
-    const queryClient = useQueryClient();
+  const { currentOrgId } = useOrg();
+  const { userRole } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
-    return useMutation({
-        mutationFn: async ({ bookingId, newStatus, propertyId }: UpdateBookingStatusParams) => {
-            // Guard: Viewer role cannot mutate
-            if (userRole === 'viewer') {
-                throw new Error('VIEWER_BLOCKED');
-            }
+  return useMutation({
+    mutationFn: async ({ bookingId, newStatus }: UpdateBookingStatusParams) => {
+      if (userRole === 'viewer') {
+        throw new Error('VIEWER_BLOCKED');
+      }
 
-            // Guard: Org context required
-            if (!currentOrgId) {
-                throw new Error('NO_ORG_CONTEXT');
-            }
+      if (!currentOrgId) {
+        throw new Error('NO_ORG_CONTEXT');
+      }
 
-            console.log('[useUpdateBookingStatus] Updating booking:', { bookingId, newStatus, orgId: currentOrgId });
+      const { data: booking, error: fetchError } = await supabase
+        .from('bookings')
+        .select('id, org_id, status')
+        .eq('id', bookingId)
+        .eq('org_id', currentOrgId)
+        .single();
 
-            // Fetch current booking to verify org ownership
-            const { data: booking, error: fetchError } = await supabase
-                .from('bookings')
-                .select('id, org_id, status')
-                .eq('id', bookingId)
-                .eq('org_id', currentOrgId) // 🔐 MANDATORY org scoping
-                .single();
+      if (fetchError || !booking) {
+        throw new Error('BOOKING_NOT_FOUND');
+      }
 
-            if (fetchError || !booking) {
-                console.error('[useUpdateBookingStatus] Booking not found or access denied:', fetchError);
-                throw new Error('BOOKING_NOT_FOUND');
-            }
+      const currentStatus = toCanonicalBookingStatus(booking.status);
+      const targetStatus = toCanonicalBookingStatus(newStatus);
 
-            // Update booking status
-            const { data, error } = await supabase
-                .from('bookings')
-                .update({ status: newStatus, updated_at: new Date().toISOString() })
-                .eq('id', bookingId)
-                .eq('org_id', currentOrgId) // 🔐 Double-check org scoping on update
-                .select()
-                .single();
+      if (!canTransitionBookingStatus(currentStatus, targetStatus)) {
+        throw new Error('INVALID_STATUS_TRANSITION');
+      }
 
-            if (error) {
-                console.error('[useUpdateBookingStatus] Update failed:', error);
-                throw new Error('UPDATE_FAILED');
-            }
+      const { data, error } = await supabase
+        .from('bookings')
+        .update({ status: targetStatus, updated_at: new Date().toISOString() })
+        .eq('id', bookingId)
+        .eq('org_id', currentOrgId)
+        .select()
+        .single();
 
-            console.log('[useUpdateBookingStatus] Status updated successfully:', data);
-            return data;
+      if (error) {
+        throw new Error('UPDATE_FAILED');
+      }
+
+      return data;
+    },
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['frontdesk-arrivals'] });
+      queryClient.invalidateQueries({ queryKey: ['frontdesk-departures'] });
+      queryClient.invalidateQueries({ queryKey: ['frontdesk-inhouse'] });
+      queryClient.invalidateQueries({ queryKey: ['booking-folio', currentOrgId, variables.bookingId] });
+      queryClient.invalidateQueries({ queryKey: ['bookings'] });
+
+      toast({
+        title: 'Status atualizado',
+        description: 'O status da reserva foi alterado com sucesso.',
+        variant: 'default',
+      });
+    },
+    onError: (error: Error) => {
+      const errorMessages: Record<string, { title: string; description: string }> = {
+        VIEWER_BLOCKED: {
+          title: 'Acao nao permitida',
+          description: 'Usuarios com perfil de visualizacao nao podem alterar status.',
         },
-        onSuccess: (data, variables) => {
-            // Invalidate all relevant queries
-            queryClient.invalidateQueries({ queryKey: ['frontdesk-arrivals'] });
-            queryClient.invalidateQueries({ queryKey: ['frontdesk-departures'] });
-            queryClient.invalidateQueries({ queryKey: ['frontdesk-inhouse'] });
-            queryClient.invalidateQueries({ queryKey: ['booking-folio', currentOrgId, variables.bookingId] });
-            queryClient.invalidateQueries({ queryKey: ['bookings'] });
-
-            toast({
-                title: 'Status atualizado',
-                description: 'O status da reserva foi alterado com sucesso.',
-                variant: 'default',
-            });
+        NO_ORG_CONTEXT: {
+          title: 'Erro de contexto',
+          description: 'Organizacao nao identificada. Recarregue a pagina.',
         },
-        onError: (error: Error) => {
-            console.error('[useUpdateBookingStatus] Mutation error:', error);
-
-            // PT-BR error messages
-            const errorMessages: Record<string, { title: string; description: string }> = {
-                VIEWER_BLOCKED: {
-                    title: 'Ação não permitida',
-                    description: 'Usuários com perfil de visualização não podem alterar status.',
-                },
-                NO_ORG_CONTEXT: {
-                    title: 'Erro de contexto',
-                    description: 'Organização não identificada. Recarregue a página.',
-                },
-                BOOKING_NOT_FOUND: {
-                    title: 'Reserva não encontrada',
-                    description: 'A reserva não existe ou você não tem permissão para acessá-la.',
-                },
-                UPDATE_FAILED: {
-                    title: 'Falha na atualização',
-                    description: 'Não foi possível atualizar o status. Tente novamente.',
-                },
-            };
-
-            const errorMessage = errorMessages[error.message] || {
-                title: 'Erro desconhecido',
-                description: 'Ocorreu um erro inesperado. Tente novamente.',
-            };
-
-            toast({
-                title: errorMessage.title,
-                description: errorMessage.description,
-                variant: 'destructive',
-            });
+        BOOKING_NOT_FOUND: {
+          title: 'Reserva nao encontrada',
+          description: 'A reserva nao existe ou voce nao tem permissao para acessa-la.',
         },
-    });
+        UPDATE_FAILED: {
+          title: 'Falha na atualizacao',
+          description: 'Nao foi possivel atualizar o status. Tente novamente.',
+        },
+        INVALID_STATUS_TRANSITION: {
+          title: 'Transicao invalida',
+          description: 'A mudanca de status solicitada nao e permitida no fluxo da reserva.',
+        },
+      };
+
+      const errorMessage = errorMessages[error.message] || {
+        title: 'Erro desconhecido',
+        description: 'Ocorreu um erro inesperado. Tente novamente.',
+      };
+
+      toast({
+        title: errorMessage.title,
+        description: errorMessage.description,
+        variant: 'destructive',
+      });
+    },
+  });
 };

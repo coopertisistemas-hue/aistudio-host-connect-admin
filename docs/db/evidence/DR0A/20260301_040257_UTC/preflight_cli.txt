@@ -1,0 +1,14 @@
+﻿# DR0A run preflight
+# UTC: 2026-03-01 04:02:57 UTC
+
+## supabase --version
+2.75.0
+
+## supabase migration list --linked
+supabase : Connecting to remote database...
+No linha:17 caractere:8
++ try { (supabase migration list --linked) 2>&1 | Out-File $pre -Append ...
++        ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Connecting to remote database...:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

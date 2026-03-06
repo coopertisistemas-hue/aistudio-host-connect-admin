@@ -1,0 +1,30 @@
+name: Structural Drift Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  structural-drift-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PostgreSQL Client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Run Structural Drift Gate
+        shell: pwsh
+        env:
+          DATABASE_URL: ${{ secrets.CI_DATABASE_URL }}
+        run: |
+          if (-not $env:DATABASE_URL) {
+            throw "CI_DATABASE_URL secret is required for structural drift gate."
+          }
+          ./scripts/ci/run_structural_drift_gate.ps1
+

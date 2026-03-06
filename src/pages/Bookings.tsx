@@ -42,6 +42,7 @@ import { useAuth } from "@/hooks/useAuth"; // Added useAuth
 import { getStatusBadge } from "@/lib/ui-helpers";
 import BookingCalendar from "@/components/BookingCalendar";
 import DataTableSkeleton from "@/components/DataTableSkeleton";
+import { BookingStatus, normalizeLegacyStatus } from "@/lib/constants/statuses";
 
 const Bookings = () => {
   const { userRole } = useAuth();
@@ -64,7 +65,7 @@ const Bookings = () => {
       booking.properties?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (booking.service_details && booking.service_details.some(service => service.name.toLowerCase().includes(searchQuery.toLowerCase())));
 
-    const matchesStatus = statusFilter === "all" || booking.status === statusFilter;
+    const matchesStatus = statusFilter === "all" || normalizeLegacyStatus(booking.status) === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -161,10 +162,13 @@ const Bookings = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os Status</SelectItem>
-              <SelectItem value="pending">Pendentes</SelectItem>
-              <SelectItem value="confirmed">Confirmadas</SelectItem>
-              <SelectItem value="cancelled">Canceladas</SelectItem>
-              <SelectItem value="completed">Concluídas</SelectItem>
+              <SelectItem value={BookingStatus.RESERVED}>Reservadas</SelectItem>
+              <SelectItem value={BookingStatus.PRE_CHECKIN}>Pre-check-in</SelectItem>
+              <SelectItem value={BookingStatus.CHECKED_IN}>Check-in</SelectItem>
+              <SelectItem value={BookingStatus.IN_HOUSE}>Hospedadas</SelectItem>
+              <SelectItem value={BookingStatus.CHECKED_OUT}>Check-out</SelectItem>
+              <SelectItem value={BookingStatus.NO_SHOW}>No-show</SelectItem>
+              <SelectItem value={BookingStatus.CANCELLED}>Canceladas</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -221,7 +225,7 @@ const Bookings = () => {
                         <div className="flex-1">
                           <CardTitle className="text-xl mb-2">{booking.guest_name}</CardTitle>
                           <div className="flex items-center gap-2 flex-wrap">
-                            {getStatusBadge(booking.status as any)}
+                            {getStatusBadge(booking.status)}
                             {booking.properties && (
                               <Badge variant="outline" className="flex items-center gap-1">
                                 <Building2 className="h-3 w-3" />

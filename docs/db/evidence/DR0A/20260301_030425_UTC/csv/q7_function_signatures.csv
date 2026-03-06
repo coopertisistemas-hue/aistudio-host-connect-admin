@@ -1,0 +1,27 @@
+﻿public,accept_invite,p_token text
+public,auto_set_accommodation_limit,
+public,calculate_movement_balance,
+public,check_accommodation_limit,
+public,check_booking_access,target_booking_id uuid
+public,check_user_access,target_property_id uuid
+public,create_organization,org_name text
+public,create_personal_org_for_user,p_user_id uuid
+public,current_org_id,
+public,extend_trial,target_user_id uuid, reason text
+public,get_user_role,
+public,handle_new_user,
+public,handle_new_user_org,
+public,handle_new_user_trial,
+public,is_hostconnect_staff,
+public,is_org_admin,p_org_id uuid
+public,is_org_admin_no_rls,p_org_id uuid
+public,is_org_member,p_org_id uuid
+public,is_super_admin,
+public,log_profile_sensitive_changes,
+public,moddatetime,
+public,prevent_super_admin_self_promotion,
+public,set_org_id_from_inventory_item,
+public,set_org_id_from_property,
+public,set_org_id_from_room_type,
+public,update_stock_balance,
+public,update_updated_at_column,

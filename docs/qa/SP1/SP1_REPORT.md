@@ -1,0 +1,61 @@
+# SP1 Report - Operational Gaps (P1)
+
+## Summary
+Sprint SP1 foi concluída com implementação de gaps operacionais (bulk room status + CRUD completo de room categories, services e amenities) com enforcement multi-tenant e proteção por role.
+
+## Scope Mapping (Exec Plan)
+- Bulk room status updates: entregue com multi-select e batch update por `org_id` + `property_id`.
+- Room categories CRUD completion: entregue com escopo por propriedade e tenant.
+- Services management pages: CRUD validado com escopo tenant/property.
+- Amenities management pages: CRUD validado com escopo tenant/property.
+
+## Files Changed
+- `src/components/AmenityDialog.tsx`
+- `src/components/RoomCategoryDialog.tsx`
+- `src/components/RoomOperationCard.tsx`
+- `src/hooks/useAmenities.tsx`
+- `src/hooks/useBulkRoomStatusUpdate.tsx`
+- `src/hooks/useRoomCategories.tsx`
+- `src/hooks/useServices.tsx`
+- `src/pages/Amenities.tsx`
+- `src/pages/RoomCategoriesPage.tsx`
+- `src/pages/RoomsBoardPage.tsx`
+- `supabase/migrations/20260302123000_sp1_property_scope_amenities.sql`
+- `scripts/sql/tenant_contract_check.sql`
+- `scripts/ci/run_tenant_contract_gate.ps1`
+- `docs/db/baselines/SP1B_baseline/structural_fingerprint.csv`
+
+## DB Changes
+- Migration adicionada/aplicada: `supabase/migrations/20260302123000_sp1_property_scope_amenities.sql`
+- Motivo:
+  - `amenities` não possuía `property_id`; SP1 exige escopo por propriedade.
+  - Foram adicionados `property_id`, FK para `properties`, índice `(org_id, property_id)` e políticas RLS property-scoped.
+
+## QA Steps Executed + Results
+- Build: PASS
+  - `docs/qa/SP1/build.log`
+- Typecheck: PASS
+  - `docs/qa/SP1/typecheck.log`
+- Lint (changed files only): PASS
+  - `docs/qa/SP1/lint_changed_files.log`
+
+## DB Gate Results
+- `supabase db push --linked`: PASS (remote up to date após aplicação)
+  - `docs/qa/SP1/sql/db_push.log`
+- RLS Gate: PASS
+  - `docs/qa/SP1/sql/rls_gate.log`
+- Structural Drift Gate: PASS (baseline atualizado para mudança estrutural intencional)
+  - `docs/qa/SP1/sql/structural_drift_gate.log`
+- Tenant Contract Gate: PASS (allowlist explícita para legado existente)
+  - `docs/qa/SP1/sql/tenant_contract_gate.log`
+
+## SQL Validation Evidence
+- `docs/qa/SP1/sql/sql_validation_outputs.txt`
+- `docs/qa/SP1/sql/sql_validation_tenant_contract.txt`
+- `docs/qa/SP1/sql/migration_list_after_push.log`
+
+## Final Verdict
+**PASS**
+
+## Residuals / Follow-ups
+- Baseline debt explícito: existem tabelas legadas RLS-enabled sem `org_id` (agora allowlisted com racional técnico) e precisam de plano futuro de migração para contrato multi-tenant pleno.

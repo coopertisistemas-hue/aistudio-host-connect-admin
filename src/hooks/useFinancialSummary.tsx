@@ -1,7 +1,8 @@
 import { useMemo } from 'react';
 import { useBookings } from './useBookings';
 import { useProperties } from './useProperties';
-import { differenceInDays, parseISO, isWithinInterval, startOfDay, endOfDay } from 'date-fns';
+import { differenceInDays, parseISO, startOfDay, endOfDay } from 'date-fns';
+import { BookingStatus, normalizeLegacyStatus } from '@/lib/constants/statuses';
 
 interface FinancialSummary {
   totalRevenue: number;
@@ -15,15 +16,29 @@ interface FinancialSummary {
 }
 
 // Helper function to calculate occupied room nights within a period
-const calculateOccupiedRoomNights = (bookings: any[], startDate: Date, endDate: Date) => {
+type FinancialBooking = {
+  check_in: string;
+  check_out: string;
+  status: string;
+};
+
+const isRevenueEligible = (status: string): boolean => {
+  const normalized = normalizeLegacyStatus(status);
+  return (
+    normalized === BookingStatus.CHECKED_IN ||
+    normalized === BookingStatus.IN_HOUSE ||
+    normalized === BookingStatus.CHECKED_OUT
+  );
+};
+
+const calculateOccupiedRoomNights = (bookings: FinancialBooking[], startDate: Date, endDate: Date) => {
   let occupiedNights = 0;
 
   bookings.forEach(booking => {
     const checkIn = parseISO(booking.check_in);
     const checkOut = parseISO(booking.check_out);
 
-    // Only consider confirmed/completed bookings for occupancy calculation
-    if (booking.status !== 'confirmed' && booking.status !== 'completed') return;
+    if (!isRevenueEligible(booking.status)) return;
 
     // Calculate overlap between booking period and reporting period
     const intervalStart = startOfDay(startDate);
@@ -72,8 +87,8 @@ export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Dat
     const totalNightsInPeriod = differenceInDays(endDate, startDate);
     const totalRoomNightsAvailable = totalAvailableRooms * totalNightsInPeriod;
 
-    const confirmedBookings = targetBookings.filter(b => b.status === 'confirmed' || b.status === 'completed');
-    const totalRevenue = confirmedBookings.reduce((sum, b) => sum + Number(b.total_amount), 0);
+    const revenueBookings = targetBookings.filter(b => isRevenueEligible(b.status));
+    const totalRevenue = revenueBookings.reduce((sum, b) => sum + Number(b.total_amount), 0);
     const totalBookingsCount = targetBookings.length;
 
     // Operational Metrics Calculation
@@ -82,7 +97,7 @@ export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Dat
     let revpar = 0;
 
     if (totalRoomNightsAvailable > 0) {
-      const occupiedRoomNights = calculateOccupiedRoomNights(confirmedBookings, startDate, endDate);
+      const occupiedRoomNights = calculateOccupiedRoomNights(revenueBookings, startDate, endDate);
 
       occupancyRate = (occupiedRoomNights / totalRoomNightsAvailable) * 100;
 

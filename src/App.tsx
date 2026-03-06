@@ -72,6 +72,7 @@ import MyShiftsPage from "./pages/MyShiftsPage";
 import StaffManagementPage from "./pages/StaffManagementPage";
 import PipelinePage from "./pages/PipelinePage";
 import LeadDetailPage from "./pages/LeadDetailPage";
+import ReportPage from "./pages/ReportPage";
 import MarketingOverview from "./pages/MarketingOverview";
 import MarketingConnectors from "./pages/MarketingConnectors";
 import GoogleMarketingDetails from "./pages/GoogleMarketingDetails";
@@ -102,6 +103,12 @@ import PublicPreCheckinPage from "./pages/PublicPreCheckinPage";
 import PublicGroupPreCheckinPage from "./pages/PublicGroupPreCheckinPage";
 import SetupWizardPage from "./pages/SetupWizardPage";
 import PostLoginRedirect from "./components/auth/PostLoginRedirect";
+import ExecutiveConsolidationPage from "./pages/ExecutiveConsolidationPage";
+import MarketplaceExperiencesPage from "./pages/MarketplaceExperiencesPage";
+import BillingOrchestrationPage from "./pages/BillingOrchestrationPage";
+import MonetizationConsolePage from "./pages/MonetizationConsolePage";
+import SubscriptionLifecyclePage from "./pages/SubscriptionLifecyclePage";
+import RevenueAssurancePage from "./pages/RevenueAssurancePage";
 
 import { usePageTracking } from "./hooks/usePageTracking"; // GA4 Tracking
 
@@ -266,6 +273,22 @@ const App = () => (
                   }
                 />
                 <Route
+                  path="/marketplace/experiences"
+                  element={
+                    <ProtectedRoute>
+                      <MarketplaceExperiencesPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/executive/consolidation"
+                  element={
+                    <ProtectedRoute>
+                      <ExecutiveConsolidationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
                   path="/ops/shifts"
                   element={
                     <ProtectedRoute>
@@ -302,6 +325,14 @@ const App = () => (
                   element={
                     <ProtectedRoute>
                       <LeadDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/reports"
+                  element={
+                    <ProtectedRoute>
+                      <ReportPage />
                     </ProtectedRoute>
                   }
                 />
@@ -404,6 +435,38 @@ const App = () => (
                       <SessionLockManager>
                         <Financial />
                       </SessionLockManager>
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/billing/orchestration"
+                  element={
+                    <ProtectedRoute>
+                      <BillingOrchestrationPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/billing/subscription-lifecycle"
+                  element={
+                    <ProtectedRoute>
+                      <SubscriptionLifecyclePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/billing/revenue-assurance"
+                  element={
+                    <ProtectedRoute>
+                      <RevenueAssurancePage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/monetization/console"
+                  element={
+                    <ProtectedRoute>
+                      <MonetizationConsolePage />
                     </ProtectedRoute>
                   }
                 />

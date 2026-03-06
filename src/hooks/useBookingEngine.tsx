@@ -55,8 +55,50 @@ interface VerifyStripeSessionInput {
 
 interface VerifyStripeSessionResponse {
   success: boolean;
-  booking?: any; // Adjust type as needed for the returned booking
+  booking?: unknown; // Adjust type as needed for the returned booking
   message?: string;
+}
+
+type PublicApiEnvelope<T> = {
+  contract_version?: string;
+  trace_id?: string;
+  code?: string;
+  error?: string;
+  data?: T;
+};
+
+const PUBLIC_API_VERSION = 'v1.0';
+
+function getClientId(): string {
+  const key = 'public-api-client-id';
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const generated = crypto.randomUUID();
+  localStorage.setItem(key, generated);
+  return generated;
+}
+
+function buildPublicApiHeaders(scope: string): Record<string, string> {
+  return {
+    'x-api-version': PUBLIC_API_VERSION,
+    'x-api-scope': scope,
+    'x-client-id': getClientId(),
+  };
+}
+
+function unwrapPublicApiResponse<T>(response: unknown): T {
+  const envelope = response as PublicApiEnvelope<T>;
+
+  if (envelope && typeof envelope === 'object') {
+    if (envelope.error) {
+      throw new Error(envelope.error);
+    }
+    if (envelope.data !== undefined) {
+      return envelope.data;
+    }
+  }
+
+  return response as T;
 }
 
 export const useBookingEngine = () => {
@@ -65,10 +107,11 @@ export const useBookingEngine = () => {
     mutationFn: async (data) => {
       const { data: response, error } = await supabase.functions.invoke('check-availability', {
         body: JSON.stringify(data),
+        headers: buildPublicApiHeaders('public.booking.availability.read'),
       });
 
       if (error) throw error;
-      return response as AvailabilityCheckResponse;
+      return unwrapPublicApiResponse<AvailabilityCheckResponse>(response);
     },
     onError: (error) => {
       toast({
@@ -83,10 +126,11 @@ export const useBookingEngine = () => {
     mutationFn: async (data) => {
       const { data: response, error } = await supabase.functions.invoke('calculate-price', {
         body: JSON.stringify(data),
+        headers: buildPublicApiHeaders('public.booking.pricing.read'),
       });
 
       if (error) throw error;
-      return response as PriceCalculationResponse;
+      return unwrapPublicApiResponse<PriceCalculationResponse>(response);
     },
     onError: (error) => {
       toast({

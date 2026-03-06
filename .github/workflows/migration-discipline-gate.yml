@@ -1,0 +1,20 @@
+name: Migration Discipline Gate
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  migration-discipline-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Migration Naming Gate
+        shell: pwsh
+        run: |
+          ./scripts/ci/check_migration_naming.ps1
+

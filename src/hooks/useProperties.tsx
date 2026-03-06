@@ -60,25 +60,39 @@ export const useProperties = () => {
     queryFn: async () => {
       // Se não houver Org definida, não adianta buscar propriedades (evita erro de RLS ou retorno vazio demorado)
       if (!currentOrgId) {
-        console.warn('[useProperties] Abortando fetch: currentOrgId indefinido.');
+        console.debug('[useProperties] Skip fetch: currentOrgId indefinido.');
         return [];
       }
 
       console.log('[useProperties] Fetching properties. currentOrgId:', currentOrgId);
-      let query = supabase
-        .from('properties')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .eq('org_id', currentOrgId); // Enforce org_id filter directly
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 12000);
 
-      const { data, error } = await query;
+      try {
+        const query = supabase
+          .from('properties')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .eq('org_id', currentOrgId) // Enforce org_id filter directly
+          .abortSignal(controller.signal);
 
-      if (error) {
-        console.error('[useProperties] Error:', error);
-        throw error;
+        const { data, error } = await query;
+
+        if (error) {
+          console.error('[useProperties] Error:', error);
+          throw error;
+        }
+        console.log('[useProperties] Loaded properties count:', data?.length || 0);
+        return data as Property[];
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.error('[useProperties] Query timeout (12s).');
+          throw new Error('PROPERTIES_QUERY_TIMEOUT');
+        }
+        throw err;
+      } finally {
+        clearTimeout(timeoutId);
       }
-      console.log('[useProperties] Loaded properties count:', data?.length || 0);
-      return data as Property[];
     },
     enabled: !authLoading && !isOrgLoading && !!user
   });

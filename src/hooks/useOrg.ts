@@ -6,198 +6,254 @@ import { useState, useEffect } from 'react';
 
 export type Organization = Tables<'organizations'>;
 
+const withTimeout = async <T>(promise: Promise<T>, timeoutMs: number, label: string): Promise<T> => {
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutHandle = setTimeout(() => reject(new Error(`${label}_TIMEOUT`)), timeoutMs);
+    });
+
+    try {
+        return await Promise.race([promise, timeoutPromise]);
+    } finally {
+        if (timeoutHandle) {
+            clearTimeout(timeoutHandle);
+        }
+    }
+};
+
 export const useOrg = () => {
     const { user, isSuperAdmin, loading: authLoading } = useAuth();
     const [selectedOrgId, setSelectedOrgId] = useState<string | null>(null);
 
-    // ============================================================================
-    // SUPER ADMIN: Fetch ALL organizations
-    // ============================================================================
     const { data: allOrganizations, isLoading: allOrgsLoading } = useQuery<Organization[]>({
         queryKey: ['all-organizations'],
         queryFn: async () => {
-            console.log('[useOrg] 🔑 Super admin mode: Fetching ALL organizations');
+            try {
+                const { data, error } = await supabase
+                    .from('organizations')
+                    .select('*')
+                    .order('name');
 
-            const { data, error } = await supabase
-                .from('organizations')
-                .select('*')
-                .order('name');
-
-            if (error) {
-                console.error('[useOrg] ❌ Error fetching all organizations:', error);
-                throw error;
+                if (error) {
+                    console.error('[useOrg] Error fetching all organizations:', error);
+                    throw error;
+                }
+                return await withTimeout(Promise.resolve(data || []), 8000, 'ALL_ORGS_QUERY');
+            } catch (err) {
+                console.error('[useOrg] allOrganizations failed:', err);
+                return [];
             }
-
-            console.log(`[useOrg] ✅ Fetched ${data?.length || 0} organizations for super admin`);
-            return data || [];
         },
         enabled: isSuperAdmin && !!user?.id && !authLoading,
-        staleTime: 2 * 60 * 1000, // 2 minutes
+        staleTime: 2 * 60 * 1000,
     });
 
-    // ============================================================================
-    // REGULAR USER: Fetch user's organization
-    // ============================================================================
     const { data: userOrganization, isLoading: userOrgLoading, error, refetch } = useQuery<Organization | null>({
         queryKey: ['organization', user?.id],
         queryFn: async () => {
-            const startTime = performance.now();
-
             if (!user?.id) {
-                console.log('[useOrg] ⏭️ No user, returning null');
                 return null;
             }
 
-            console.log('[useOrg] 🔍 Starting query for user:', user.id);
-            console.log('[useOrg] 📧 User email:', user.email);
-
             try {
-                // Log 1: Tentar buscar com log detalhado
-                console.log('[useOrg] 🔎 Executing: SELECT * FROM organizations WHERE owner_id =', user.id);
-
-                const { data, error: fetchError } = await supabase
-                    .from('organizations')
-                    .select('*')
-                    .eq('owner_id', user.id)
-                    .maybeSingle();
-
-                const queryTime = performance.now() - startTime;
-                console.log(`[useOrg] ⏱️ Query completed in ${queryTime.toFixed(2)}ms`);
-
-                // Log 2: Resultado da query
-                console.log('[useOrg] 📦 Query result:', {
-                    hasData: !!data,
-                    hasError: !!fetchError,
-                    errorCode: fetchError?.code,
-                    errorMessage: fetchError?.message,
-                    errorDetails: fetchError?.details
-                });
-
-                // Erro específico: RLS bloqueando
-                if (fetchError) {
-                    if (fetchError.code === '42501') { // Insufficient privilege
-                        console.error('[useOrg] 🚫 RLS ERROR: User não tem permissão para ler organizations');
-                        console.error('[useOrg] 💡 Solução: Verificar políticas RLS da tabela organizations');
-                        throw new Error('RLS_PERMISSION_DENIED: Verifique as políticas de segurança');
+                // Step 1: fast-path via RPC. If it times out/fails, continue with fallback queries.
+                let currentOrgId: string | null = null;
+                try {
+                    const currentOrgResponse = await withTimeout(
+                        supabase.rpc('current_org_id'),
+                        4000,
+                        'CURRENT_ORG_RPC'
+                    );
+                    const currentOrgError = currentOrgResponse.error;
+                    if (currentOrgError && currentOrgError.code !== 'PGRST116') {
+                        console.warn('[useOrg] current_org_id RPC error, falling back:', currentOrgError.message);
+                    } else {
+                        currentOrgId = currentOrgResponse.data;
                     }
+                } catch (rpcError) {
+                    console.warn('[useOrg] current_org_id RPC timeout/failure, falling back');
+                }
 
-                    if (fetchError.code !== 'PGRST116') { // Not found é OK
-                        console.error('[useOrg] ❌ Supabase error:', fetchError);
-                        throw fetchError;
+                if (currentOrgId) {
+                    const orgByIdResponse = await withTimeout(
+                        supabase
+                            .from('organizations')
+                            .select('*')
+                            .eq('id', currentOrgId)
+                            .maybeSingle(),
+                        8000,
+                        'ORG_BY_ID_QUERY'
+                    );
+
+                    if (orgByIdResponse.error && orgByIdResponse.error.code !== 'PGRST116') {
+                        console.warn('[useOrg] orgById failed, continuing fallback:', orgByIdResponse.error.message);
+                    } else if (orgByIdResponse.data) {
+                        return orgByIdResponse.data;
                     }
                 }
 
-                // Sucesso
-                if (data) {
-                    console.log('[useOrg] ✅ Organization found:', {
-                        id: data.id,
-                        name: data.name,
-                        owner_id: data.owner_id,
-                        match: data.owner_id === user.id ? '✅' : '❌'
-                    });
-                    return data;
+                const ownerOrgResponse = await withTimeout(
+                    supabase
+                        .from('organizations')
+                        .select('*')
+                        .eq('owner_id', user.id)
+                        .limit(1)
+                        .maybeSingle(),
+                    8000,
+                    'OWNER_ORG_QUERY'
+                );
+
+                if (ownerOrgResponse.error && ownerOrgResponse.error.code !== 'PGRST116') {
+                    console.warn('[useOrg] ownerOrg query failed:', ownerOrgResponse.error.message);
+                } else if (ownerOrgResponse.data) {
+                    return ownerOrgResponse.data;
                 }
 
-                // Não encontrou - tentar criar
-                console.warn('[useOrg] ⚠️ No organization found, creating default...');
+                try {
+                    const membershipResponse = await withTimeout(
+                        supabase
+                            .from('org_members')
+                            .select('org_id, created_at')
+                            .eq('user_id', user.id)
+                            .order('created_at', { ascending: true })
+                            .limit(1)
+                            .maybeSingle(),
+                        3000,
+                        'ORG_MEMBERSHIP_QUERY'
+                    );
+
+                    if (membershipResponse.error && membershipResponse.error.code !== 'PGRST116') {
+                        console.warn('[useOrg] membership query failed, continuing fallback:', membershipResponse.error.message);
+                    } else {
+                        const membershipOrgId = membershipResponse.data?.org_id;
+                        if (membershipOrgId) {
+                            const memberOrgResponse = await withTimeout(
+                                supabase
+                                    .from('organizations')
+                                    .select('*')
+                                    .eq('id', membershipOrgId)
+                                    .maybeSingle(),
+                                5000,
+                                'MEMBER_ORG_QUERY'
+                            );
+
+                            if (memberOrgResponse.error && memberOrgResponse.error.code !== 'PGRST116') {
+                                console.warn('[useOrg] memberOrg query failed, continuing fallback:', memberOrgResponse.error.message);
+                            } else if (memberOrgResponse.data) {
+                                return memberOrgResponse.data;
+                            }
+                        }
+                    }
+                } catch {
+                    console.warn('[useOrg] membership fallback timed out; continuing create_organization fallback');
+                }
 
                 const defaultName = user.user_metadata?.full_name
                     ? `${user.user_metadata.full_name}'s Organization`
                     : user.email?.split('@')[0]
                         ? `${user.email.split('@')[0]}'s Organization`
-                        : 'Minha Organização';
+                        : 'Minha Organizacao';
 
-                console.log('[useOrg] 🏗️ Creating org with name:', defaultName);
+                const createOrgResponse = await withTimeout(
+                    supabase.rpc('create_organization', { org_name: defaultName }),
+                    8000,
+                    'CREATE_ORG_RPC'
+                );
 
-                const { data: newOrg, error: createError } = await supabase
-                    .from('organizations')
-                    .insert({
-                        owner_id: user.id,
-                        name: defaultName,
-                    })
-                    .select()
-                    .single();
+                const createError = createOrgResponse.error;
+                const rpcResult = createOrgResponse.data;
 
                 if (createError) {
-                    console.error('[useOrg] ❌ Failed to create organization:', createError);
-
-                    // Se já existe (race condition), buscar novamente
                     if (createError.code === '23505') {
-                        console.log('[useOrg] 🔄 Duplicate detected, retrying fetch...');
-                        const { data: retryData } = await supabase
-                            .from('organizations')
-                            .select('*')
-                            .eq('owner_id', user.id)
-                            .single();
+                        const retryMembershipResponse = await withTimeout(
+                            supabase
+                                .from('org_members')
+                                .select('org_id, created_at')
+                                .eq('user_id', user.id)
+                                .order('created_at', { ascending: true })
+                                .limit(1)
+                                .maybeSingle(),
+                            8000,
+                            'RETRY_MEMBERSHIP_QUERY'
+                        );
 
-                        if (retryData) {
-                            console.log('[useOrg] ✅ Found on retry:', retryData.id);
-                            return retryData;
+                        const retryMembership = retryMembershipResponse.data;
+
+                        if (retryMembership?.org_id) {
+                            const retryOrgResponse = await withTimeout(
+                                supabase
+                                    .from('organizations')
+                                    .select('*')
+                                    .eq('id', retryMembership.org_id)
+                                    .maybeSingle(),
+                                8000,
+                                'RETRY_ORG_QUERY'
+                            );
+
+                            const retryOrg = retryOrgResponse.data;
+
+                            if (retryOrg) {
+                                return retryOrg;
+                            }
                         }
                     }
 
-                    throw createError;
+                    console.error('[useOrg] Unable to create organization via RPC:', createError);
+                    return null;
                 }
 
-                console.log('[useOrg] ✅ Organization created:', newOrg.id);
-                return newOrg;
+                const createdOrgId = (rpcResult as { id?: string } | null)?.id;
+                if (!createdOrgId) {
+                    console.warn('[useOrg] create_organization RPC returned no id');
+                    return null;
+                }
 
-            } catch (err: any) {
-                console.error('[useOrg] 💥 Critical error:', {
-                    message: err?.message,
-                    code: err?.code,
-                    details: err?.details,
-                    hint: err?.hint
-                });
-                throw err;
+                const createdOrgResponse = await withTimeout(
+                    supabase
+                        .from('organizations')
+                        .select('*')
+                        .eq('id', createdOrgId)
+                        .maybeSingle(),
+                    8000,
+                    'CREATED_ORG_QUERY'
+                );
+
+                const createdOrg = createdOrgResponse.data;
+                const createdOrgError = createdOrgResponse.error;
+                if (createdOrgError && createdOrgError.code !== 'PGRST116') {
+                    throw createdOrgError;
+                }
+
+                return createdOrg ?? null;
+            } catch (err: unknown) {
+                console.error('[useOrg] Critical org query error:', err instanceof Error ? err.message : err);
+                return null;
             }
         },
         enabled: !isSuperAdmin && !!user?.id && !authLoading,
-        retry: 1,
+        retry: 0,
         retryDelay: 1000,
         staleTime: 5 * 60 * 1000,
         gcTime: 10 * 60 * 1000,
         meta: {
-            errorMessage: 'Falha ao carregar organização'
-        }
+            errorMessage: 'Falha ao carregar organizacao',
+        },
     });
 
-    // ============================================================================
-    // DETERMINE CURRENT ORGANIZATION
-    // ============================================================================
-
-    // Super admin: use selected org or first available
-    // Regular user: use their organization
     const currentOrganization = isSuperAdmin
         ? (selectedOrgId
             ? allOrganizations?.find(o => o.id === selectedOrgId)
             : allOrganizations?.[0])
         : userOrganization;
 
-    // Auto-select first org for super admin if none selected
     useEffect(() => {
         if (isSuperAdmin && allOrganizations && allOrganizations.length > 0 && !selectedOrgId) {
-            console.log('[useOrg] 🎯 Auto-selecting first org for super admin:', allOrganizations[0].name);
             setSelectedOrgId(allOrganizations[0].id);
         }
     }, [isSuperAdmin, allOrganizations, selectedOrgId]);
 
     const isLoading = authLoading || (isSuperAdmin ? allOrgsLoading : (!!user && userOrgLoading));
-
-    // Log consolidado do estado
-    console.log('[useOrg] 📊 Hook State:', {
-        authLoading,
-        hasUser: !!user,
-        userId: user?.id,
-        isSuperAdmin,
-        selectedOrgId,
-        allOrgsCount: allOrganizations?.length,
-        isLoading,
-        hasOrg: !!currentOrganization,
-        orgId: currentOrganization?.id,
-        orgName: currentOrganization?.name,
-        hasError: !!error
-    });
 
     return {
         organization: currentOrganization || null,

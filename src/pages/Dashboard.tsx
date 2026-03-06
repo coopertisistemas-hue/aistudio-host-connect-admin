@@ -35,7 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as ShadcnCalendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 const getDefaultDateRange = () => ({
   from: startOfMonth(subMonths(new Date(), 5)),
@@ -125,6 +125,33 @@ const Dashboard = () => {
       };
     });
   }, [summary]);
+
+  const revenueTrendData = useMemo(() => {
+    const months = eachMonthOfInterval({
+      start: subMonths(new Date(), 5),
+      end: new Date(),
+    });
+
+    return months.map((month) => {
+      const monthStart = startOfMonth(month);
+      const monthEnd = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+      const monthlyBookings = bookings.filter((booking) => {
+        const checkIn = parseISO(booking.check_in);
+        return checkIn >= monthStart && checkIn <= monthEnd;
+      });
+
+      const totalRevenue = monthlyBookings.reduce(
+        (sum, booking) => sum + Number(booking.total_amount || 0),
+        0
+      );
+
+      return {
+        month: format(month, "MMM", { locale: ptBR }),
+        revenue: Math.round(totalRevenue),
+        reservations: monthlyBookings.length,
+      };
+    });
+  }, [bookings]);
 
   // ═══════════════════════════════════════════════════════════
   // GUARDS — Ordem Crítica
@@ -282,6 +309,13 @@ const Dashboard = () => {
     return true;
   });
 
+  const toBookingStatus = (status: string): "pending" | "confirmed" | "cancelled" | "completed" | null => {
+    if (status === "pending" || status === "confirmed" || status === "cancelled" || status === "completed") {
+      return status;
+    }
+    return null;
+  };
+
   return (
     <DashboardLayout>
       <div className="space-y-8">
@@ -376,32 +410,54 @@ const Dashboard = () => {
           ))}
         </div>
 
-        {/* Occupancy Chart */}
-        <Card className="shadow-medium">
-          <CardHeader>
-            <CardTitle>Resumo de Ocupação</CardTitle>
-            <CardDescription>Taxa de ocupação nos últimos 6 meses</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={occupancyData}>
-                  <defs>
-                    <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="month" fontSize={12} />
-                  <YAxis fontSize={12} tickFormatter={(val) => `${val}%`} />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="occupancy" stroke="hsl(var(--primary))" fill="url(#colorOcc)" />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+                <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="shadow-medium">
+            <CardHeader>
+              <CardTitle>Resumo de Ocupacao</CardTitle>
+              <CardDescription>Taxa de ocupacao nos ultimos 6 meses</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={occupancyData}>
+                    <defs>
+                      <linearGradient id="colorOcc" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} tickFormatter={(val) => `${val}%`} />
+                    <Tooltip />
+                    <Area type="monotone" dataKey="occupancy" stroke="hsl(var(--primary))" fill="url(#colorOcc)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-medium">
+            <CardHeader>
+              <CardTitle>Receita e Reservas</CardTitle>
+              <CardDescription>Evolucao mensal da propriedade selecionada</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={revenueTrendData}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                    <XAxis dataKey="month" fontSize={12} />
+                    <YAxis fontSize={12} />
+                    <Tooltip />
+                    <Bar dataKey="revenue" name="Receita (R$)" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                    <Bar dataKey="reservations" name="Reservas" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Room Status */}
         <DashboardRoomStatus />
@@ -433,7 +489,10 @@ const Dashboard = () => {
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm">{booking.guest_name}</p>
-                          {getStatusBadge(booking.status as any)}
+                          {(() => {
+                            const badgeStatus = toBookingStatus(booking.status);
+                            return badgeStatus ? getStatusBadge(badgeStatus) : null;
+                          })()}
                         </div>
                         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                           <Clock className="h-3 w-3" />
@@ -478,7 +537,10 @@ const Dashboard = () => {
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
                           <p className="font-semibold text-sm">{booking.guest_name}</p>
-                          {getStatusBadge(booking.status as any)}
+                          {(() => {
+                            const badgeStatus = toBookingStatus(booking.status);
+                            return badgeStatus ? getStatusBadge(badgeStatus) : null;
+                          })()}
                         </div>
                         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
                           {isPast(parseISO(booking.check_out)) ? (
@@ -537,3 +599,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

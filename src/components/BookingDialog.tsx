@@ -19,6 +19,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useBookingEngine } from "@/hooks/useBookingEngine";
 import { useRooms } from "@/hooks/useRooms";
+import { BookingStatus, normalizeLegacyStatus } from "@/lib/constants/statuses";
 
 interface BookingDialogProps {
   open: boolean;
@@ -45,7 +46,7 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
       check_out: new Date(Date.now() + 86400000), // +1 day
       total_guests: 1,
       total_amount: 0,
-      status: "pending",
+      status: BookingStatus.RESERVED,
       notes: "",
       services_json: [], // Default para array vazio
       current_room_id: null, // Default para null
@@ -72,7 +73,7 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
         check_out: new Date(booking.check_out),
         total_guests: booking.total_guests,
         total_amount: booking.total_amount,
-        status: booking.status as BookingInput['status'], // Cast to correct enum type
+        status: normalizeLegacyStatus(booking.status),
         notes: booking.notes || "",
         services_json: booking.services_json || [], // Carregar serviços existentes
         current_room_id: booking.current_room_id || null, // Carregar current_room_id
@@ -88,7 +89,7 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
         check_out: new Date(Date.now() + 86400000),
         total_guests: 1,
         total_amount: 0,
-        status: "pending",
+        status: BookingStatus.RESERVED,
         notes: "",
         services_json: [],
         current_room_id: null,
@@ -124,8 +125,9 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
       const priceResponse = await calculatePrice.mutateAsync(priceData);
 
       form.setValue("total_amount", priceResponse.total_amount, { shouldValidate: true });
-    } catch (error: any) {
-      form.setError("total_amount", { message: error.message || "Erro ao calcular preço." });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao calcular preco.";
+      form.setError("total_amount", { message });
     } finally {
       setIsCalculating(false);
     }
@@ -410,10 +412,13 @@ const BookingDialog = ({ open, onOpenChange, booking, onSubmit, isLoading }: Boo
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pending">Pendente</SelectItem>
-                      <SelectItem value="confirmed">Confirmada</SelectItem>
-                      <SelectItem value="cancelled">Cancelada</SelectItem>
-                      <SelectItem value="completed">Concluída</SelectItem>
+                      <SelectItem value={BookingStatus.RESERVED}>Reservada</SelectItem>
+                      <SelectItem value={BookingStatus.PRE_CHECKIN}>Pre-check-in</SelectItem>
+                      <SelectItem value={BookingStatus.CHECKED_IN}>Check-in</SelectItem>
+                      <SelectItem value={BookingStatus.IN_HOUSE}>Hospedado</SelectItem>
+                      <SelectItem value={BookingStatus.CHECKED_OUT}>Check-out</SelectItem>
+                      <SelectItem value={BookingStatus.NO_SHOW}>No-show</SelectItem>
+                      <SelectItem value={BookingStatus.CANCELLED}>Cancelada</SelectItem>
                     </SelectContent>
                   </Select>
                 )}

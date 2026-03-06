@@ -1,0 +1,4 @@
+SP27 docs-only sprint.
+Command: pnpm build
+Status: SKIPPED
+Reason: No source code/runtime changes in SP27 scope.

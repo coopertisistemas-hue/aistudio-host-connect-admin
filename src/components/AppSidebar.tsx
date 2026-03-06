@@ -33,12 +33,14 @@ import {
   Construction,
   CalendarClock,
   TrendingUp,
+  RefreshCw,
   ChevronDown,
   Hash,
   Heading,
   Package,
   Utensils,
   ShoppingCart,
+  Receipt,
 } from "lucide-react";
 import {
   Sidebar,
@@ -73,15 +75,14 @@ const AppSidebar = () => {
   const { user, signOut, userRole, userPlan, loading: authLoading } = useAuth();
   const { isAdmin, loading: isAdminLoading } = useIsAdmin();
   const { onboarding, isLoading: onboardingLoading } = useOnboardingState();
+  // Must stay before conditional returns to preserve hooks order.
+  const { canAccess } = useEntitlements();
   const currentMode = onboarding?.mode || 'standard';
 
   const isActive = (path: string) => location.pathname === path;
   const isCollapsed = state === "collapsed";
 
   if (authLoading || isAdminLoading || onboardingLoading) return null;
-
-  // Entitlement Gates
-  const { canAccess } = useEntitlements();
 
   // Mode Gating Helper
   const isModeEligible = (itemModes?: string[]) => {
@@ -110,6 +111,7 @@ const AppSidebar = () => {
       items: [
         { title: "Funil (Pipeline)", url: "/reservations/pipeline", icon: TrendingUp, modes: ['standard', 'hotel'] },
         { title: "Reservas", url: "/bookings", icon: Calendar },
+        { title: "Relatórios", url: "/reports", icon: BarChart3, modes: ['standard', 'hotel'] },
         { title: "Chegadas", url: "/arrivals", icon: LogIn },
         { title: "Partidas", url: "/departures", icon: LogOut },
         { title: "Motor de Reservas", url: "/bookings", icon: Globe, modes: ['standard', 'hotel'] },
@@ -124,6 +126,7 @@ const AppSidebar = () => {
         { title: "Overview", url: "/marketing/overview", icon: BarChart3 },
         { title: "Conectores", url: "/marketing/connectors", icon: Globe, gated: !canAccess('otas') },
         { title: "Google Performance", url: "/marketing/google", icon: Monitor, gated: !canAccess('gmb') },
+        { title: "Marketplace", url: "/marketplace/experiences", icon: ShoppingCart },
       ]
     },
     {
@@ -145,6 +148,11 @@ const AppSidebar = () => {
       icon: BarChart3,
       items: [
         { title: "Financeiro", url: "/financial", icon: DollarSign },
+        { title: "Billing Orchestration", url: "/billing/orchestration", icon: Receipt },
+        { title: "Subscription Lifecycle", url: "/billing/subscription-lifecycle", icon: RefreshCw },
+        { title: "Revenue Assurance", url: "/billing/revenue-assurance", icon: ShieldCheck },
+        { title: "Monetization Console", url: "/monetization/console", icon: TrendingUp },
+        { title: "Consolidação Executiva", url: "/executive/consolidation", icon: BarChart3 },
         { title: "Despesas", url: "/expenses", icon: Wallet, modes: ['standard', 'hotel'] },
         { title: "Regras de Precificação", url: "/pricing-rules", icon: Tag, modes: ['standard', 'hotel'] },
         { title: "Hóspedes", url: "/guests", icon: Users },
@@ -158,11 +166,17 @@ const AppSidebar = () => {
         { title: "Meus Plantões", url: "/me/shifts", icon: Calendar, modes: ['standard', 'hotel'] },
         { title: "Colaboradores", url: "/ops/staff", icon: Users, modes: ['standard', 'hotel'] },
         { title: "Configurações", url: "/settings", icon: User },
+        { title: "Permissões", url: "/settings/permissions", icon: ShieldCheck, roles: ['admin'] },
+        { title: "Suporte", url: "/support", icon: HelpCircle, modes: ['standard', 'hotel'] },
+        { title: "Planos", url: "/plans", icon: CreditCard },
         { title: "Website", url: "/website-settings", icon: Globe, gated: !canAccess('site_bonus') },
+        { title: "Auditoria", url: "/admin/audit-log", icon: ListOrdered, roles: ['admin'] },
+        { title: "Staff Admin", url: "/admin/staff-management", icon: Users, roles: ['admin'] },
         { title: "Painel Admin", url: "/admin-panel", icon: ShieldCheck, roles: ['admin'] },
         { title: "Planos", url: "/admin/pricing-plans", icon: CreditCard, roles: ['admin'] },
         { title: "Funcionalidades", url: "/admin/features", icon: Zap, roles: ['admin'] },
         { title: "FAQ", url: "/admin/faqs", icon: HelpCircle, roles: ['admin'] },
+        { title: "Como Funciona", url: "/admin/how-it-works", icon: Heading, roles: ['admin'] },
         { title: "Depoimentos", url: "/admin/testimonials", icon: Star, roles: ['admin'] },
         { title: "Integrações", url: "/admin/integrations", icon: Wifi, roles: ['admin'] },
       ]

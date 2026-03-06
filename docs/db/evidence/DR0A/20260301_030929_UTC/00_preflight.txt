@@ -1,0 +1,3 @@
+﻿timestamp_utc=2026-03-01 03:09:29 UTC
+connection_env_var=DR0A_PGURL
+sql_file=C:\Users\Jose Alexandre\Documents\git\aistudio-host-connect-admin\docs\db\DR0A_EVIDENCE_SQL.sql
