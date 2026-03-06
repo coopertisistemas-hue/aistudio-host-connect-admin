@@ -1,7 +1,45 @@
-export interface ReviewEvent {
-  id: string;
+import type { IntegrationEvent } from "../hub";
+
+export const REVIEW_MONITORING_EVENT_TYPE =
+  "reputation.review.monitoring.ingest.requested";
+
+export type ReviewSource =
+  | "google_reviews"
+  | "google_business_profile"
+  | "internal";
+
+export type ReviewSentiment = "positive" | "neutral" | "negative" | "unknown";
+
+export interface ReputationTenantContext {
   orgId: string;
-  propertyId?: string;
+  propertyId?: string | null;
+}
+
+export interface ReviewMonitoringCommand {
+  tenant: ReputationTenantContext;
+  correlationId?: string;
+  source: ReviewSource;
+  review: {
+    externalReviewId: string;
+    rating: number;
+    maxRating: number;
+    title?: string;
+    content: string;
+    authorName: string;
+    reviewUrl?: string;
+    publishedAt: string;
+    metadata?: Record<string, unknown>;
+  };
+  featureFlags?: {
+    reviewMonitoring?: {
+      enabled: boolean;
+      orgId?: string;
+      propertyId?: string | null;
+    };
+  };
+}
+
+export interface ReviewMonitoringPayload {
   source: ReviewSource;
   externalReviewId: string;
   rating: number;
@@ -9,66 +47,79 @@ export interface ReviewEvent {
   title?: string;
   content: string;
   authorName: string;
-  authorUrl?: string;
   reviewUrl?: string;
   publishedAt: string;
   receivedAt: string;
-  sentiment?: ReviewSentiment;
-  response?: ReviewResponse;
   metadata?: Record<string, unknown>;
-  correlationId?: string;
 }
 
-export type ReviewSource = 'google' | 'tripadvisor' | 'booking' | 'internal';
+export type ReviewMonitoringEvent = IntegrationEvent<ReviewMonitoringPayload>;
 
-export type ReviewSentiment = 'positive' | 'neutral' | 'negative';
+export interface ReviewMonitoringResult {
+  accepted: boolean;
+  messageId?: string;
+  correlationId: string;
+  reason?: "feature_disabled" | "invalid_review";
+}
 
-export interface ReviewResponse {
+export interface ReviewMonitoringRecord {
+  reviewId: string;
+  messageId: string;
+  correlationId: string;
+  orgId: string;
+  propertyId?: string | null;
+  source: ReviewSource;
+  externalReviewId: string;
+  rating: number;
+  maxRating: number;
+  title?: string;
   content: string;
   authorName: string;
-  respondedAt: string;
+  reviewUrl?: string;
+  publishedAt: string;
+  receivedAt: string;
+  metadata?: Record<string, unknown>;
 }
 
-export interface ReviewFilter {
-  orgId: string;
-  propertyId?: string;
+export interface ReviewMonitoringQuery {
+  tenant: ReputationTenantContext;
   source?: ReviewSource;
-  sentiment?: ReviewSentiment;
-  minRating?: number;
-  maxRating?: number;
   fromDate?: string;
   toDate?: string;
   limit?: number;
-  offset?: number;
 }
 
-export interface ReputationMetrics {
-  orgId: string;
-  propertyId?: string;
-  period: MetricsPeriod;
+export interface ReputationAnalyticsCommand {
+  tenant: ReputationTenantContext;
+  correlationId?: string;
+  range?: {
+    fromDate?: string;
+    toDate?: string;
+  };
+  featureFlags?: {
+    reputationAnalytics?: {
+      enabled: boolean;
+      orgId?: string;
+      propertyId?: string | null;
+    };
+  };
+}
+
+export type ReputationTrendDirection = "improving" | "stable" | "declining";
+
+export interface ReputationAnalyticsSnapshot {
   totalReviews: number;
   averageRating: number;
-  ratingDistribution: Record<number, number>;
-  sentimentDistribution: Record<ReviewSentiment, number>;
-  responseRate: number;
-  trendDirection?: 'improving' | 'stable' | 'declining';
+  ratingAggregation: Record<1 | 2 | 3 | 4 | 5, number>;
+  trendDirection: ReputationTrendDirection;
+  sentimentPlaceholder: Record<ReviewSentiment, number>;
+  reputationScore: number;
   generatedAt: string;
 }
 
-export type MetricsPeriod = '7d' | '30d' | '90d' | '1y';
-
-export interface ReviewIngestionRequest {
-  orgId: string;
-  propertyId?: string;
-  source: ReviewSource;
-  externalReviewId: string;
-  payload: Record<string, unknown>;
-  correlationId?: string;
-}
-
-export interface ReviewIngestionResult {
-  success: boolean;
-  reviewId?: string;
+export interface ReputationAnalyticsResult {
+  accepted: boolean;
   correlationId: string;
-  error?: string;
+  snapshot?: ReputationAnalyticsSnapshot;
+  reason?: "feature_disabled";
 }

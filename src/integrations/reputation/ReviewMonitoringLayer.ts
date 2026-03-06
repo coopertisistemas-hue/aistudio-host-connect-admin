@@ -1,155 +1,200 @@
-import { reviewAdapter } from './InternalReviewAdapter';
-import type {
-  ReviewEvent,
-  ReviewFilter,
-  ReviewIngestionRequest,
-  ReviewIngestionResult,
-  ReviewSource,
-  ReviewSentiment,
-} from './types';
+import {
+  EventBus,
+  IntegrationObservability,
+  OutboxQueue,
+  type IntegrationEvent,
+  type OutboxMessage,
+} from "../hub";
+import {
+  InternalReviewAdapter,
+  type ReviewAdapter,
+} from "./internalReviewAdapter";
+import {
+  REVIEW_MONITORING_EVENT_TYPE,
+  type ReviewMonitoringCommand,
+  type ReviewMonitoringEvent,
+  type ReviewMonitoringPayload,
+  type ReviewMonitoringQuery,
+  type ReviewMonitoringRecord,
+  type ReviewMonitoringResult,
+} from "./types";
 
-function generateCorrelationId(): string {
-  return `review_${Date.now()}_${crypto.randomUUID().slice(0, 8)}`;
-}
+const createSeed = () =>
+  `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 
-function detectSentiment(content: string, rating: number): ReviewSentiment {
-  if (rating >= 4) return 'positive';
-  if (rating <= 2) return 'negative';
-  return 'neutral';
-}
+const isReviewMonitoringEnabled = (command: ReviewMonitoringCommand): boolean => {
+  const flag = command.featureFlags?.reviewMonitoring;
+  if (!flag) return true;
+  if (!flag.enabled) return false;
+  if (flag.orgId && flag.orgId !== command.tenant.orgId) return false;
+  if (
+    flag.propertyId !== undefined &&
+    (flag.propertyId ?? null) !== (command.tenant.propertyId ?? null)
+  ) {
+    return false;
+  }
 
-function transformToReviewEvent(
-  request: ReviewIngestionRequest,
-  correlationId: string
-): ReviewEvent {
-  const payload = request.payload;
-  
-  return {
-    id: crypto.randomUUID(),
-    orgId: request.orgId,
-    propertyId: request.propertyId,
-    source: request.source,
-    externalReviewId: request.externalReviewId,
-    rating: typeof payload.rating === 'number' ? payload.rating : 0,
-    maxRating: typeof payload.maxRating === 'number' ? payload.maxRating : 5,
-    title: typeof payload.title === 'string' ? payload.title : undefined,
-    content: typeof payload.content === 'string' ? payload.content : '',
-    authorName: typeof payload.authorName === 'string' ? payload.authorName : 'Anonymous',
-    authorUrl: typeof payload.authorUrl === 'string' ? payload.authorUrl : undefined,
-    reviewUrl: typeof payload.reviewUrl === 'string' ? payload.reviewUrl : undefined,
-    publishedAt: typeof payload.publishedAt === 'string' 
-      ? payload.publishedAt 
-      : new Date().toISOString(),
-    receivedAt: new Date().toISOString(),
-    sentiment: detectSentiment(
-      typeof payload.content === 'string' ? payload.content : '',
-      typeof payload.rating === 'number' ? payload.rating : 0
-    ),
-    metadata: payload.metadata as Record<string, unknown> | undefined,
-    correlationId,
-  };
+  return true;
+};
+
+const hasValidReview = (command: ReviewMonitoringCommand): boolean => {
+  const rating = command.review.rating;
+  const maxRating = command.review.maxRating;
+
+  if (!Number.isFinite(rating) || !Number.isFinite(maxRating)) return false;
+  if (maxRating <= 0 || rating <= 0 || rating > maxRating) return false;
+  if (!command.review.externalReviewId.trim()) return false;
+  if (!command.review.authorName.trim()) return false;
+  if (!command.review.content.trim()) return false;
+  if (Number.isNaN(new Date(command.review.publishedAt).getTime())) return false;
+
+  return true;
+};
+
+export interface ReviewMonitoringLayerDependencies {
+  eventBus: EventBus;
+  outboxQueue: OutboxQueue;
+  observability: IntegrationObservability;
+  adapter?: ReviewAdapter;
 }
 
 export class ReviewMonitoringLayer {
-  private adapter: typeof reviewAdapter;
+  private readonly eventBus: EventBus;
+  private readonly outboxQueue: OutboxQueue;
+  private readonly observability: IntegrationObservability;
+  private readonly adapter: ReviewAdapter;
 
-  constructor(adapter: typeof reviewAdapter = reviewAdapter) {
-    this.adapter = adapter;
+  constructor({
+    eventBus,
+    outboxQueue,
+    observability,
+    adapter,
+  }: ReviewMonitoringLayerDependencies) {
+    this.eventBus = eventBus;
+    this.outboxQueue = outboxQueue;
+    this.observability = observability;
+    this.adapter = adapter ?? new InternalReviewAdapter();
+
+    this.eventBus.registerHandler({
+      eventType: REVIEW_MONITORING_EVENT_TYPE,
+      handle: async (event) => {
+        await this.adapter.ingest({
+          messageId: `${event.id}:${event.eventType}`,
+          correlationId: event.correlationId,
+          tenant: {
+            orgId: event.orgId,
+            propertyId: event.propertyId,
+          },
+          payload: event.payload as unknown as ReviewMonitoringPayload,
+        });
+      },
+    });
   }
 
-  async ingestReview(
-    request: ReviewIngestionRequest
-  ): Promise<ReviewIngestionResult> {
-    const correlationId = request.correlationId || generateCorrelationId();
-    
+  static bootstrap(
+    adapter?: ReviewAdapter,
+  ): ReviewMonitoringLayerDependencies & { layer: ReviewMonitoringLayer } {
+    const observability = new IntegrationObservability();
+    const eventBus = new EventBus(observability);
+    const outboxQueue = new OutboxQueue({}, observability);
+    const layer = new ReviewMonitoringLayer({
+      eventBus,
+      outboxQueue,
+      observability,
+      adapter,
+    });
+
+    return { eventBus, outboxQueue, observability, layer };
+  }
+
+  async ingestReview(command: ReviewMonitoringCommand): Promise<ReviewMonitoringResult> {
+    const correlationId = command.correlationId ?? `corr-${createSeed()}`;
+
+    if (!isReviewMonitoringEnabled(command)) {
+      return { accepted: false, correlationId, reason: "feature_disabled" };
+    }
+
+    if (!hasValidReview(command)) {
+      return { accepted: false, correlationId, reason: "invalid_review" };
+    }
+
+    const event: ReviewMonitoringEvent = {
+      id: `review-${createSeed()}`,
+      eventType: REVIEW_MONITORING_EVENT_TYPE,
+      domain: "other",
+      orgId: command.tenant.orgId,
+      propertyId: command.tenant.propertyId,
+      correlationId,
+      createdAt: new Date().toISOString(),
+      payload: {
+        source: command.source,
+        externalReviewId: command.review.externalReviewId,
+        rating: command.review.rating,
+        maxRating: command.review.maxRating,
+        title: command.review.title,
+        content: command.review.content,
+        authorName: command.review.authorName,
+        reviewUrl: command.review.reviewUrl,
+        publishedAt: command.review.publishedAt,
+        receivedAt: new Date().toISOString(),
+        metadata: command.review.metadata,
+      },
+    };
+
+    const outboxMessage = this.outboxQueue.enqueue(event as unknown as IntegrationEvent);
+    await this.processOutboxMessage(outboxMessage);
+
+    return {
+      accepted: true,
+      messageId: outboxMessage.messageId,
+      correlationId,
+    };
+  }
+
+  async listReviews(query: ReviewMonitoringQuery): Promise<ReviewMonitoringRecord[]> {
+    return this.adapter.list(query);
+  }
+
+  async retryDueMessages(now = new Date()): Promise<number> {
+    const dueMessages = this.outboxQueue
+      .listMessages()
+      .filter(
+        (message) =>
+          message.status === "failed" &&
+          message.nextAttemptAt !== undefined &&
+          new Date(message.nextAttemptAt).getTime() <= now.getTime(),
+      );
+
+    for (const message of dueMessages) {
+      await this.processOutboxMessage(message);
+    }
+
+    return dueMessages.length;
+  }
+
+  private async processOutboxMessage(message: OutboxMessage): Promise<void> {
+    this.outboxQueue.markProcessing(message.messageId);
+    const activeMessage = this.findOutboxMessage(message.messageId);
+    if (!activeMessage) return;
+
     try {
-      const reviewEvent = transformToReviewEvent(request, correlationId);
-      
-      const reviewId = await this.adapter.save(reviewEvent);
-      
-      console.log(`[ReviewMonitoring] Review ingested: ${reviewId}`, {
-        correlationId,
-        orgId: request.orgId,
-        source: request.source,
-      });
-      
-      return {
-        success: true,
-        reviewId,
-        correlationId,
-      };
+      const publishResult = await this.eventBus.publish(activeMessage.event);
+      if (publishResult.accepted) {
+        this.outboxQueue.markSuccess(activeMessage.messageId);
+        return;
+      }
+
+      this.outboxQueue.markFailure(
+        activeMessage.messageId,
+        `publish_${publishResult.reason ?? "rejected"}`,
+      );
     } catch (error) {
-      const errorMessage = error instanceof Error 
-        ? error.message 
-        : 'Unknown error during review ingestion';
-      
-      console.error(`[ReviewMonitoring] Ingestion failed:`, {
-        correlationId,
-        error: errorMessage,
-      });
-      
-      return {
-        success: false,
-        correlationId,
-        error: errorMessage,
-      };
+      const errorMessage = error instanceof Error ? error.message : "unknown_error";
+      this.outboxQueue.markFailure(activeMessage.messageId, errorMessage);
     }
   }
 
-  async getReview(
-    orgId: string,
-    reviewId: string,
-    propertyId?: string
-  ): Promise<ReviewEvent | null> {
-    return this.adapter.findById(orgId, reviewId, propertyId);
-  }
-
-  async getReviews(filter: ReviewFilter): Promise<ReviewEvent[]> {
-    return this.adapter.findAll(filter);
-  }
-
-  async updateSentiment(
-    orgId: string,
-    reviewId: string,
-    sentiment: ReviewSentiment,
-    propertyId?: string
-  ): Promise<boolean> {
-    return this.adapter.updateSentiment(orgId, reviewId, sentiment, propertyId);
-  }
-
-  async respondToReview(
-    orgId: string,
-    reviewId: string,
-    response: { content: string; authorName: string },
-    propertyId?: string
-  ): Promise<boolean> {
-    return this.adapter.addResponse(orgId, reviewId, response, propertyId);
-  }
-
-  async deleteReview(
-    orgId: string,
-    reviewId: string,
-    propertyId?: string
-  ): Promise<boolean> {
-    return this.adapter.delete(orgId, reviewId, propertyId);
-  }
-
-  async ingestBatch(
-    requests: ReviewIngestionRequest[]
-  ): Promise<ReviewIngestionResult[]> {
-    const results: ReviewIngestionResult[] = [];
-    
-    for (const request of requests) {
-      const result = await this.ingestReview(request);
-      results.push(result);
-    }
-    
-    return results;
-  }
-
-  generateCorrelationId(): string {
-    return generateCorrelationId();
+  private findOutboxMessage(messageId: string): OutboxMessage | undefined {
+    return this.outboxQueue.listMessages().find((message) => message.messageId === messageId);
   }
 }
-
-export const reviewMonitoring = new ReviewMonitoringLayer();

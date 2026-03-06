@@ -1,61 +1,56 @@
 # Phase 15 Kickoff: Reputation and Local SEO Foundation
 
-**Date**: 2026-03-06
-**Status**: IN PROGRESS
+Date: 2026-03-06
+Status: IN PROGRESS
 
 ## Goal
 
-Establish reputation and local SEO integration primitives for hospitality properties.
+Establish reputation and local SEO integration primitives with tenant-safe, queue-first architecture and provider adapter isolation.
 
 ## Scope
 
-- Google Reviews integration baseline
-- Google Business Profile primitives
+- Google Reviews baseline primitives (no real API)
+- Google Business Profile baseline primitives (no real API)
 - Review monitoring layer
-- Reputation analytics foundation
-- Review alerts placeholder
+- Reputation analytics baseline
+- Review alerts foundation (future sprint)
 
 ## Constraints
 
-- NO real Google APIs integration yet
-- Use adapter pattern for future provider isolation
-- Multi-tenant safe (orgId based)
-- Queue-first for all external events
-- CorrelationId tracing required
+- No real Google provider integration in this phase stage.
+- All integration entry points must be feature-flag protected.
+- Tenant isolation is mandatory (`orgId`, optional `propertyId`).
+- CorrelationId propagation is mandatory.
+- Retry and dead-letter compatibility must remain intact.
 
-## Architecture
+## Module Structure
 
-```
-src/integrations/reputation/
-├── ReviewMonitoringLayer     # Ingest review events
-├── InternalReviewAdapter     # Tenant-safe storage
-├── ReputationAnalyticsLayer # Rating aggregation, trends
-└── types.ts                  # Interfaces
-```
+`src/integrations/reputation/`
 
-## Sprints
+- `types.ts`
+- `internalReviewAdapter.ts`
+- `reviewMonitoringLayer.ts`
+- `reputationAnalyticsLayer.ts`
+- `index.ts`
 
-| Sprint | Focus |
-|--------|-------|
-| SP39   | Review Monitoring Baseline |
-| SP40   | Reputation Analytics Baseline |
+## Sprint Progress
 
-## Dependencies
+- [x] SP39 - Review Monitoring Baseline (PASS)
+- [x] SP40 - Reputation Analytics Baseline (PASS)
+- [ ] SP41 - Reputation Dashboard
 
-- Phase 11 (Integration Platform) - Event bus, outbox queue
-- Phase 12 (Communication Layer) - Template system
-- Phase 13 (Guest CRM) - Guest profiles
+## QA Gates (SP39 and SP40)
+
+- [x] `pnpm build`
+- [x] `pnpm exec tsc --noEmit`
+- [x] `eslint changed files`
 
 ## Pilot Protection
 
-- Feature flags for new modules
-- No breaking changes to existing flows
-- Isolated from core PMS
+- No breaking changes to existing modules.
+- New functionality isolated in `src/integrations/reputation/`.
+- No real provider calls introduced.
 
-## Success Criteria
+## Next Phase 15 Step
 
-- [ ] ReviewMonitoringLayer implemented with queue-first ingestion
-- [ ] InternalReviewAdapter with tenant-safe storage
-- [ ] CorrelationId propagation
-- [ ] ReputationAnalyticsLayer baseline
-- [ ] All QA gates passing
+Proceed to dashboard and alerting extensions using the new analytics baseline.
