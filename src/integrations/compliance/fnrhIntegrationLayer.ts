@@ -14,6 +14,8 @@ import {
   type FnrhIntegrationCommand,
   type FnrhIntegrationEvent,
   type FnrhIntegrationResult,
+  type FnrhMonitoringSnapshot,
+  type FnrhTenantContext,
   type FnrhSubmissionPayload,
   type FnrhSubmissionQuery,
   type FnrhPreparedSubmissionRecord,
@@ -144,6 +146,29 @@ export class FnrhIntegrationLayer {
     query: FnrhSubmissionQuery,
   ): Promise<FnrhPreparedSubmissionRecord[]> {
     return this.adapter.listPreparedSubmissions(query);
+  }
+
+  async getMonitoringSnapshot(tenant: FnrhTenantContext): Promise<FnrhMonitoringSnapshot> {
+    const base = await this.adapter.getMonitoringSnapshot(tenant);
+
+    const tenantMessages = this.outboxQueue
+      .listMessages()
+      .filter(
+        (message) =>
+          message.event.orgId === tenant.orgId &&
+          (message.event.propertyId ?? null) === (tenant.propertyId ?? null),
+      );
+
+    return {
+      ...base,
+      totals: {
+        ...base.totals,
+        processing: tenantMessages.filter((message) => message.status === "processing").length,
+        failed: tenantMessages.filter((message) => message.status === "failed").length,
+        deadLetter: tenantMessages.filter((message) => message.status === "dead_letter").length,
+      },
+      generatedAt: new Date().toISOString(),
+    };
   }
 
   async retryDueMessages(now = new Date()): Promise<number> {

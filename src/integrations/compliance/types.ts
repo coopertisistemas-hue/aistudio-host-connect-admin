@@ -100,3 +100,21 @@ export interface FnrhSubmissionQuery {
   status?: "prepared" | "invalid";
   limit?: number;
 }
+
+export interface FnrhMonitoringSnapshot {
+  tenant: FnrhTenantContext;
+  totals: {
+    prepared: number;
+    invalid: number;
+    processing: number;
+    failed: number;
+    deadLetter: number;
+  };
+  lifecycleBreakdown: Record<FnrhLifecycleStage, number>;
+  validationSeverityBreakdown: Record<"BLOCK" | "WARN" | "INFO", number>;
+  recentInvalidSubmissions: Pick<
+    FnrhPreparedSubmissionRecord,
+    "submissionId" | "correlationId" | "lifecycleStage" | "preparedAt" | "issues"
+  >[];
+  generatedAt: string;
+}

@@ -1,4 +1,5 @@
 import type {
+  FnrhMonitoringSnapshot,
   FnrhPreparedSubmissionRecord,
   FnrhSubmissionPayload,
   FnrhSubmissionQuery,
@@ -23,6 +24,7 @@ export interface FnrhAdapterPrepareResult {
 export interface FnrhAdapter {
   prepare(input: FnrhAdapterPrepareInput): Promise<FnrhAdapterPrepareResult>;
   listPreparedSubmissions(query: FnrhSubmissionQuery): Promise<FnrhPreparedSubmissionRecord[]>;
+  getMonitoringSnapshot(tenant: FnrhTenantContext): Promise<FnrhMonitoringSnapshot>;
 }
 
 const createTenantKey = (tenant: FnrhTenantContext): string =>
@@ -328,5 +330,54 @@ export class InternalFnrhAdapter implements FnrhAdapter {
     }
 
     return records;
+  }
+
+  async getMonitoringSnapshot(tenant: FnrhTenantContext): Promise<FnrhMonitoringSnapshot> {
+    const tenantKey = createTenantKey(tenant);
+    const records = [...(this.recordsByTenant.get(tenantKey) ?? [])];
+    const invalidRecords = records.filter((record) => record.status === "invalid");
+
+    const lifecycleBreakdown: FnrhMonitoringSnapshot["lifecycleBreakdown"] = {
+      pre_checkin: 0,
+      checkin: 0,
+      checkout: 0,
+    };
+
+    const validationSeverityBreakdown: FnrhMonitoringSnapshot["validationSeverityBreakdown"] = {
+      BLOCK: 0,
+      WARN: 0,
+      INFO: 0,
+    };
+
+    records.forEach((record) => {
+      lifecycleBreakdown[record.lifecycleStage] += 1;
+      record.issues.forEach((issue) => {
+        validationSeverityBreakdown[issue.severity] += 1;
+      });
+    });
+
+    return {
+      tenant,
+      totals: {
+        prepared: records.filter((record) => record.status === "prepared").length,
+        invalid: invalidRecords.length,
+        processing: 0,
+        failed: 0,
+        deadLetter: 0,
+      },
+      lifecycleBreakdown,
+      validationSeverityBreakdown,
+      recentInvalidSubmissions: invalidRecords
+        .sort((a, b) => b.preparedAt.localeCompare(a.preparedAt))
+        .slice(0, 10)
+        .map((record) => ({
+          submissionId: record.submissionId,
+          correlationId: record.correlationId,
+          lifecycleStage: record.lifecycleStage,
+          preparedAt: record.preparedAt,
+          issues: record.issues,
+        })),
+      generatedAt: new Date().toISOString(),
+    };
   }
 }
