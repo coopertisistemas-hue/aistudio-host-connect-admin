@@ -172,3 +172,92 @@ export interface HousekeepingBoardSnapshot {
   tasks: HousekeepingBoardTaskRecord[];
   generatedAt: string;
 }
+
+export const MAINTENANCE_BOARD_EVENT_TYPE =
+  "operations.maintenance.board.ingest.requested";
+
+export type MaintenancePriority = "low" | "normal" | "high" | "critical";
+
+export type MaintenanceTaskStatus =
+  | "open"
+  | "triaged"
+  | "in_progress"
+  | "on_hold"
+  | "resolved"
+  | "closed";
+
+export interface MaintenanceBoardTaskInput {
+  taskId: string;
+  assetId: string;
+  roomId?: string;
+  category: "electrical" | "plumbing" | "hvac" | "furniture" | "general";
+  title: string;
+  description?: string;
+  status: MaintenanceTaskStatus;
+  priority: MaintenancePriority;
+  assignedTo?: string;
+  dueAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface MaintenanceBoardIngestionCommand {
+  tenant: OperationsTenantContext;
+  correlationId?: string;
+  boardId?: string;
+  task: MaintenanceBoardTaskInput;
+  featureFlags?: {
+    maintenanceBoard?: {
+      enabled: boolean;
+      orgId?: string;
+      propertyId?: string | null;
+    };
+  };
+}
+
+export interface MaintenanceBoardIngestionPayload {
+  boardId: string;
+  task: MaintenanceBoardTaskInput;
+  ingestedAt: string;
+}
+
+export type MaintenanceBoardEvent = IntegrationEvent<MaintenanceBoardIngestionPayload>;
+
+export interface MaintenanceBoardIngestionResult {
+  accepted: boolean;
+  correlationId: string;
+  messageId?: string;
+  reason?: "feature_disabled" | "invalid_task";
+}
+
+export interface MaintenanceBoardTaskRecord {
+  boardTaskId: string;
+  messageId: string;
+  correlationId: string;
+  orgId: string;
+  propertyId?: string | null;
+  boardId: string;
+  taskId: string;
+  assetId: string;
+  roomId?: string;
+  category: "electrical" | "plumbing" | "hvac" | "furniture" | "general";
+  title: string;
+  description?: string;
+  status: MaintenanceTaskStatus;
+  priority: MaintenancePriority;
+  assignedTo?: string;
+  dueAt?: string;
+  metadata?: Record<string, unknown>;
+  updatedAt: string;
+}
+
+export interface MaintenanceBoardQuery {
+  tenant: OperationsTenantContext;
+  boardId?: string;
+}
+
+export interface MaintenanceBoardSnapshot {
+  boardId: string;
+  tenant: OperationsTenantContext;
+  tasks: MaintenanceBoardTaskRecord[];
+  generatedAt: string;
+}
