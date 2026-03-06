@@ -101,8 +101,8 @@ The hub implements:
 | Phase 14 | Marketing Engine |
 | Phase 15 | Reputation & Local SEO |
 | Phase 16 | Operations Boards |
-| Phase 17 | Paid Traffic Integrations |
-| Phase 18 | Government Compliance |
+| Phase 17 | Government Compliance |
+| Phase 18 | Paid Traffic Integrations |
 
 ---
 
@@ -310,26 +310,7 @@ Maintenance Board
 
 ---
 
-# PHASE 17 - Paid Traffic Integrations
-
-Goal: connect marketing platforms.
-
-## SP45
-Google Ads Integration
-
----
-
-## SP46
-Meta Ads Integration
-
----
-
-## SP47
-Campaign Attribution Engine
-
----
-
-# PHASE 18 - Government Compliance
+# PHASE 17 - Government Compliance
 
 Goal: comply with FNRH Digital regulation.
 
@@ -356,6 +337,25 @@ FNRH Reception Interface
 
 ## SP51
 Compliance Monitoring
+
+---
+
+# PHASE 18 - Paid Traffic Integrations
+
+Goal: connect marketing platforms.
+
+## SP45
+Google Ads Integration
+
+---
+
+## SP46
+Meta Ads Integration
+
+---
+
+## SP47
+Campaign Attribution Engine
 
 ---
 
