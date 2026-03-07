@@ -7,3 +7,6 @@ export * from "./OtaMappingLayer";
 export * from "./AvailabilitySyncTypes";
 export * from "./AvailabilitySyncAdapter";
 export * from "./AvailabilitySyncLayer";
+export * from "./RateSyncTypes";
+export * from "./RateSyncAdapter";
+export * from "./RateSyncLayer";
