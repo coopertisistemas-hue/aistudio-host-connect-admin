@@ -10,3 +10,6 @@ export * from "./AvailabilitySyncLayer";
 export * from "./RateSyncTypes";
 export * from "./RateSyncAdapter";
 export * from "./RateSyncLayer";
+export * from "./ReservationIngestionTypes";
+export * from "./ReservationIngestionAdapter";
+export * from "./ReservationIngestionLayer";
