@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { useTenantContext } from "@/platform/tenant";
 
 export interface MarketingConnector {
     id: string;
@@ -34,72 +35,77 @@ export interface DailyMetric {
 
 export const useMarketing = (propertyId?: string) => {
     const queryClient = useQueryClient();
+    const { currentOrgId, currentPropertyId } = useTenantContext();
+    const scopedPropertyId = propertyId ?? currentPropertyId;
 
     // Fetch all connectors for the property
     const { data: connectors = [], isLoading: isLoadingConnectors } = useQuery({
-        queryKey: ['marketing-connectors', propertyId],
+        queryKey: ['marketing-connectors', currentOrgId, scopedPropertyId],
         queryFn: async () => {
-            if (!propertyId) return [];
+            if (!currentOrgId || !scopedPropertyId) return [];
             const { data, error } = await supabase
                 .from('marketing_connectors')
-                .select('*')
-                .eq('property_id', propertyId);
+                .select('*, properties!inner(org_id)')
+                .eq('property_id', scopedPropertyId)
+                .eq('properties.org_id', currentOrgId);
 
             if (error) throw error;
             return data as MarketingConnector[];
         },
-        enabled: !!propertyId
+        enabled: !!currentOrgId && !!scopedPropertyId
     });
 
     // Fetch day metrics
     const { data: metrics = [], isLoading: isLoadingMetrics } = useQuery({
-        queryKey: ['marketing-metrics', propertyId],
+        queryKey: ['marketing-metrics', currentOrgId, scopedPropertyId],
         queryFn: async () => {
-            if (!propertyId) return [];
+            if (!currentOrgId || !scopedPropertyId) return [];
             const { data, error } = await supabase
                 .from('marketing_metrics_daily')
-                .select('*')
-                .eq('property_id', propertyId)
+                .select('*, properties!inner(org_id)')
+                .eq('property_id', scopedPropertyId)
+                .eq('properties.org_id', currentOrgId)
                 .order('metric_date', { ascending: false })
                 .limit(30);
 
             if (error) throw error;
             return data as DailyMetric[];
         },
-        enabled: !!propertyId
+        enabled: !!currentOrgId && !!scopedPropertyId
     });
 
     // Fetch sync logs
     const { data: syncLogs = [], isLoading: isLoadingLogs } = useQuery({
-        queryKey: ['marketing-sync-logs', propertyId],
+        queryKey: ['marketing-sync-logs', currentOrgId, scopedPropertyId],
         queryFn: async () => {
-            if (!propertyId) return [];
+            if (!currentOrgId || !scopedPropertyId) return [];
             // This is a simplified fetch, might need a join with connectors
             const { data, error } = await supabase
                 .from('marketing_sync_runs')
                 .select(`
           *,
-          marketing_connectors!inner(property_id)
+          marketing_connectors!inner(property_id, properties!inner(org_id))
         `)
-                .eq('marketing_connectors.property_id', propertyId)
+                .eq('marketing_connectors.property_id', scopedPropertyId)
+                .eq('marketing_connectors.properties.org_id', currentOrgId)
                 .order('started_at', { ascending: false })
                 .limit(10);
 
             if (error) throw error;
             return data as any[];
         },
-        enabled: !!propertyId
+        enabled: !!currentOrgId && !!scopedPropertyId
     });
 
     // Mutation to connect/update a provider
     const connectProvider = useMutation({
         mutationFn: async ({ provider, config }: { provider: string, config: any }) => {
-            if (!propertyId) throw new Error("Property ID required");
+            if (!currentOrgId || !scopedPropertyId) throw new Error("Tenant context required");
 
             const { data, error } = await supabase
                 .from('marketing_connectors')
                 .upsert({
-                    property_id: propertyId,
+                    property_id: scopedPropertyId,
                     provider,
                     config,
                     status: 'connected',

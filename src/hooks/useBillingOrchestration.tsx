@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useOrg } from "@/hooks/useOrg";
-import { useSelectedProperty } from "@/hooks/useSelectedProperty";
+import { useTenantContext } from "@/platform/tenant";
 import { normalizeLegacyStatus } from "@/lib/constants/statuses";
 import {
   buildBillingIdempotencyKey,
@@ -114,14 +113,13 @@ function isCheckedOutStatus(status: string): boolean {
 }
 
 export const useBillingOrchestration = () => {
-  const { currentOrgId } = useOrg();
-  const { selectedPropertyId } = useSelectedProperty();
+  const { currentOrgId, currentPropertyId } = useTenantContext();
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["billing-orchestration", currentOrgId, selectedPropertyId],
-    enabled: !!currentOrgId && !!selectedPropertyId,
+    queryKey: ["billing-orchestration", currentOrgId, currentPropertyId],
+    enabled: !!currentOrgId && !!currentPropertyId,
     queryFn: async () => {
-      if (!currentOrgId || !selectedPropertyId) {
+      if (!currentOrgId || !currentPropertyId) {
         return {
           bookings: [] as BookingRow[],
           invoices: [] as InvoiceRow[],
@@ -133,12 +131,12 @@ export const useBillingOrchestration = () => {
           .from("bookings")
           .select("id, property_id, status, total_amount")
           .eq("org_id", currentOrgId)
-          .eq("property_id", selectedPropertyId),
+          .eq("property_id", currentPropertyId),
         supabase
           .from("invoices")
           .select("id, booking_id, property_id, status, total_amount, paid_amount, due_date, created_at")
           .eq("org_id", currentOrgId)
-          .eq("property_id", selectedPropertyId),
+          .eq("property_id", currentPropertyId),
       ]);
 
       if (bookingsRes.error) throw bookingsRes.error;

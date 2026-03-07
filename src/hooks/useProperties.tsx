@@ -4,7 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { z } from 'zod';
 import { TablesInsert } from '@/integrations/supabase/types'; // Import TablesInsert
 import { useAuth } from '@/hooks/useAuth'; // Import useAuth
-import { useOrg } from '@/hooks/useOrg'; // Import useOrg
+import { useTenantContext } from '@/platform/tenant';
 
 export const propertySchema = z.object({
   name: z.string().min(1, "O nome da propriedade é obrigatório."),
@@ -53,7 +53,7 @@ export type PropertyInput = z.infer<typeof propertySchema>;
 export const useProperties = () => {
   const queryClient = useQueryClient();
   const { user, loading: authLoading } = useAuth();
-  const { currentOrgId, isLoading: isOrgLoading } = useOrg(); // Use Org Hook
+  const { currentOrgId, isLoading: isTenantLoading } = useTenantContext();
 
   const { data: properties, isLoading: isPropertiesLoading, error } = useQuery({
     queryKey: ['properties', currentOrgId],
@@ -94,7 +94,7 @@ export const useProperties = () => {
         clearTimeout(timeoutId);
       }
     },
-    enabled: !authLoading && !isOrgLoading && !!user
+    enabled: !authLoading && !isTenantLoading && !!user
   });
 
   const createProperty = useMutation({
@@ -201,7 +201,7 @@ export const useProperties = () => {
     },
   });
 
-  const finalLoading = isPropertiesLoading || isOrgLoading || authLoading;
+  const finalLoading = isPropertiesLoading || isTenantLoading || authLoading;
 
   return {
     properties: properties || [],

@@ -1,7 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { useOrg } from './useOrg';
+import { useTenantContext } from '@/platform/tenant';
 import { Tables, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
 
 export type Guest = Tables<'guests'>;
@@ -10,7 +10,7 @@ export type GuestUpdate = TablesUpdate<'guests'>;
 
 export const useGuests = (searchTerm?: string) => {
   const queryClient = useQueryClient();
-  const { currentOrgId, isLoading: isOrgLoading } = useOrg();
+  const { currentOrgId, isLoading: isTenantLoading } = useTenantContext();
 
   const { data: guests, isLoading, error } = useQuery({
     queryKey: ['guests', currentOrgId, searchTerm],
@@ -33,7 +33,7 @@ export const useGuests = (searchTerm?: string) => {
       if (error) throw error;
       return data as Guest[];
     },
-    enabled: !!currentOrgId && !isOrgLoading,
+    enabled: !!currentOrgId && !isTenantLoading,
   });
 
   const createGuest = useMutation({
@@ -126,7 +126,7 @@ export const useGuests = (searchTerm?: string) => {
 
   return {
     guests: guests || [],
-    isLoading: isLoading || isOrgLoading,
+    isLoading: isLoading || isTenantLoading,
     error,
     createGuest,
     updateGuest,
@@ -136,7 +136,7 @@ export const useGuests = (searchTerm?: string) => {
 
 export const useGuest = (id: string | undefined) => {
   const queryClient = useQueryClient();
-  const { currentOrgId, isLoading: isOrgLoading } = useOrg();
+  const { currentOrgId, isLoading: isTenantLoading } = useTenantContext();
 
   const { data: guest, isLoading, error } = useQuery({
     queryKey: ['guest', currentOrgId, id],
@@ -154,7 +154,7 @@ export const useGuest = (id: string | undefined) => {
       if (error) throw error;
       return data as Guest;
     },
-    enabled: !!currentOrgId && !!id && !isOrgLoading,
+    enabled: !!currentOrgId && !!id && !isTenantLoading,
   });
 
   const updateGuest = useMutation({
@@ -192,7 +192,7 @@ export const useGuest = (id: string | undefined) => {
 
   return {
     guest,
-    isLoading: isLoading || isOrgLoading,
+    isLoading: isLoading || isTenantLoading,
     error,
     updateGuest,
   };

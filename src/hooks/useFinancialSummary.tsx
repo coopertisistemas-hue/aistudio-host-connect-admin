@@ -3,6 +3,7 @@ import { useBookings } from './useBookings';
 import { useProperties } from './useProperties';
 import { differenceInDays, parseISO, startOfDay, endOfDay } from 'date-fns';
 import { BookingStatus, normalizeLegacyStatus } from '@/lib/constants/statuses';
+import { useTenantContext } from '@/platform/tenant';
 
 interface FinancialSummary {
   totalRevenue: number;
@@ -60,7 +61,9 @@ const calculateOccupiedRoomNights = (bookings: FinancialBooking[], startDate: Da
 };
 
 export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Date, to: Date }) => {
-  const { bookings, isLoading: bookingsLoading } = useBookings(propertyId);
+  const { currentPropertyId } = useTenantContext();
+  const scopedPropertyId = propertyId ?? currentPropertyId ?? undefined;
+  const { bookings, isLoading: bookingsLoading } = useBookings(scopedPropertyId);
   const { properties, isLoading: propertiesLoading } = useProperties();
 
   const summary = useMemo<FinancialSummary>(() => {
@@ -71,12 +74,12 @@ export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Dat
       };
     }
 
-    const targetProperties = propertyId
-      ? properties.filter(p => p.id === propertyId)
+    const targetProperties = scopedPropertyId
+      ? properties.filter(p => p.id === scopedPropertyId)
       : properties;
 
-    const targetBookings = propertyId
-      ? bookings.filter(b => b.property_id === propertyId)
+    const targetBookings = scopedPropertyId
+      ? bookings.filter(b => b.property_id === scopedPropertyId)
       : bookings;
 
     const totalAvailableRooms = targetProperties.reduce((sum, p) => sum + p.total_rooms, 0);
@@ -121,7 +124,7 @@ export const useFinancialSummary = (propertyId?: string, dateRange?: { from: Dat
       revpar: Number(revpar.toFixed(2)),
       totalAvailableRooms,
     };
-  }, [bookings, properties, propertyId, dateRange, bookingsLoading, propertiesLoading]);
+  }, [bookings, properties, scopedPropertyId, dateRange, bookingsLoading, propertiesLoading]);
 
   return {
     summary,
