@@ -93,3 +93,86 @@ export interface GoogleAdsBaselineSnapshot {
   records: GoogleAdsCampaignBaselineRecord[];
   generatedAt: string;
 }
+
+export const META_ADS_EVENT_TYPE = "paid_traffic.meta.ads.ingest.requested";
+
+export type MetaAdsObjective =
+  | "awareness"
+  | "traffic"
+  | "engagement"
+  | "leads"
+  | "sales"
+  | "app_promotion"
+  | "other";
+
+export interface MetaAdsMetricInput {
+  campaignId: string;
+  adSetId?: string;
+  adId?: string;
+  objective: MetaAdsObjective;
+  spendAmount: number;
+  currency: string;
+  impressions: number;
+  clicks: number;
+  conversions?: number;
+  occurredAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface MetaAdsIngestionCommand {
+  tenant: PaidTrafficTenantContext;
+  correlationId?: string;
+  featureFlags?: {
+    metaAdsBaseline?: {
+      enabled: boolean;
+      orgId?: string;
+      propertyId?: string | null;
+    };
+  };
+  metrics: MetaAdsMetricInput;
+}
+
+export interface MetaAdsIngestionPayload {
+  metrics: MetaAdsMetricInput;
+  ingestedAt: string;
+}
+
+export type MetaAdsEvent = IntegrationEvent<MetaAdsIngestionPayload>;
+
+export interface MetaAdsIngestionResult {
+  accepted: boolean;
+  correlationId: string;
+  messageId?: string;
+  reason?: "feature_disabled" | "invalid_payload";
+}
+
+export interface MetaAdsMetricRecord {
+  metricRecordId: string;
+  messageId: string;
+  correlationId: string;
+  orgId: string;
+  propertyId?: string | null;
+  campaignId: string;
+  adSetId?: string;
+  adId?: string;
+  objective: MetaAdsObjective;
+  spendAmount: number;
+  currency: string;
+  impressions: number;
+  clicks: number;
+  conversions?: number;
+  occurredAt: string;
+  metadata?: Record<string, unknown>;
+  updatedAt: string;
+}
+
+export interface MetaAdsMetricsQuery {
+  tenant: PaidTrafficTenantContext;
+  campaignId?: string;
+}
+
+export interface MetaAdsMetricsSnapshot {
+  tenant: PaidTrafficTenantContext;
+  records: MetaAdsMetricRecord[];
+  generatedAt: string;
+}
