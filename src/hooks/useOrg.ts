@@ -146,86 +146,10 @@ export const useOrg = () => {
                         }
                     }
                 } catch {
-                    console.warn('[useOrg] membership fallback timed out; continuing create_organization fallback');
+                    console.warn('[useOrg] membership fallback timed out.');
                 }
 
-                const defaultName = user.user_metadata?.full_name
-                    ? `${user.user_metadata.full_name}'s Organization`
-                    : user.email?.split('@')[0]
-                        ? `${user.email.split('@')[0]}'s Organization`
-                        : 'Minha Organizacao';
-
-                const createOrgResponse = await withTimeout(
-                    supabase.rpc('create_organization', { org_name: defaultName }),
-                    8000,
-                    'CREATE_ORG_RPC'
-                );
-
-                const createError = createOrgResponse.error;
-                const rpcResult = createOrgResponse.data;
-
-                if (createError) {
-                    if (createError.code === '23505') {
-                        const retryMembershipResponse = await withTimeout(
-                            supabase
-                                .from('org_members')
-                                .select('org_id, created_at')
-                                .eq('user_id', user.id)
-                                .order('created_at', { ascending: true })
-                                .limit(1)
-                                .maybeSingle(),
-                            8000,
-                            'RETRY_MEMBERSHIP_QUERY'
-                        );
-
-                        const retryMembership = retryMembershipResponse.data;
-
-                        if (retryMembership?.org_id) {
-                            const retryOrgResponse = await withTimeout(
-                                supabase
-                                    .from('organizations')
-                                    .select('*')
-                                    .eq('id', retryMembership.org_id)
-                                    .maybeSingle(),
-                                8000,
-                                'RETRY_ORG_QUERY'
-                            );
-
-                            const retryOrg = retryOrgResponse.data;
-
-                            if (retryOrg) {
-                                return retryOrg;
-                            }
-                        }
-                    }
-
-                    console.error('[useOrg] Unable to create organization via RPC:', createError);
-                    return null;
-                }
-
-                const createdOrgId = (rpcResult as { id?: string } | null)?.id;
-                if (!createdOrgId) {
-                    console.warn('[useOrg] create_organization RPC returned no id');
-                    return null;
-                }
-
-                const createdOrgResponse = await withTimeout(
-                    supabase
-                        .from('organizations')
-                        .select('*')
-                        .eq('id', createdOrgId)
-                        .maybeSingle(),
-                    8000,
-                    'CREATED_ORG_QUERY'
-                );
-
-                const createdOrg = createdOrgResponse.data;
-                const createdOrgError = createdOrgResponse.error;
-                if (createdOrgError && createdOrgError.code !== 'PGRST116') {
-                    throw createdOrgError;
-                }
-
-                return createdOrg ?? null;
+                return null;
             } catch (err: unknown) {
                 console.error('[useOrg] Critical org query error:', err instanceof Error ? err.message : err);
                 return null;
