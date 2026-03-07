@@ -164,6 +164,53 @@ export default function Onboarding() {
         if (step > 1) setStep(step - 1);
     };
 
+    const ensureProvisionedOrganization = async (): Promise<string> => {
+        if (!user) {
+            throw new Error("Usuário não autenticado.");
+        }
+
+        if (currentOrgId) {
+            return currentOrgId;
+        }
+
+        const fallbackName = formData.propertyName?.trim().length
+            ? `${formData.propertyName.trim()} - Organização`
+            : user.user_metadata?.full_name
+                ? `${user.user_metadata.full_name}'s Organization`
+                : user.email?.split("@")[0]
+                    ? `${user.email.split("@")[0]}'s Organization`
+                    : "Minha Organização";
+
+        const { data: createdOrg, error: createOrgError } = await supabase.rpc("create_organization", {
+            org_name: fallbackName,
+        });
+
+        if (createOrgError) {
+            throw new Error(`Erro ao criar organização: ${createOrgError.message}`);
+        }
+
+        const createdOrgId = (createdOrg as { id?: string } | null)?.id;
+        if (!createdOrgId) {
+            throw new Error("Falha ao provisionar organização: ID não retornado.");
+        }
+
+        // Best-effort owner guarantee for deterministic provisioning flow.
+        const { data: orgRow } = await supabase
+            .from("organizations")
+            .select("id, owner_id")
+            .eq("id", createdOrgId)
+            .maybeSingle();
+
+        if (orgRow?.id && !orgRow.owner_id) {
+            await supabase
+                .from("organizations")
+                .update({ owner_id: user.id })
+                .eq("id", createdOrgId);
+        }
+
+        return createdOrgId;
+    };
+
     const finishOnboarding = async () => {
         setSubmitting(true);
 
@@ -175,6 +222,9 @@ export default function Onboarding() {
             if (!user) {
                 throw new Error("Usuário não autenticado.");
             }
+
+            // 0. Provisioning flow: signup -> org -> owner -> property.
+            const provisionedOrgId = await ensureProvisionedOrganization();
 
             // 1. Update Profile Status (First critical step)
             // We split this to ensure at least the status is saved.
@@ -217,7 +267,7 @@ export default function Onboarding() {
 
                 const propertiesToInsert = formData.accommodations.map(accName => ({
                     user_id: user.id,
-                    org_id: currentOrgId,
+                    org_id: provisionedOrgId,
                     name: `${formData.propertyName} - ${accName}`,
                     address: `${formData.address}, ${formData.number}${formData.complement ? ` - ${formData.complement}` : ''} - ${formData.neighborhood}, ${formData.zipCode}`,
                     city: formData.city || 'Cidade não informada',
