@@ -12,7 +12,7 @@ Provider-free baseline only; no production provider connectivity was introduced.
 ## Sprint Verdicts
 
 - SP45: PASS
-- SP46: PENDING
+- SP46: PASS
 - SP47: PENDING
 
 ## Scope Delivered So Far
@@ -24,6 +24,12 @@ SP45 delivered:
 - Feature flag and payload validation guardrails
 - Correlation and retry-safe flow
 
+SP46 delivered:
+- Meta Ads baseline ingestion contracts
+- Internal Meta adapter isolation (in-memory placeholder, tenant-safe)
+- Queue-first meta layer with feature flag guard and validation
+- Correlation and retry-safe flow compatible with Outbox/EventBus
+
 ## Files Changed (Current Phase Progress)
 
 - `docs/sprints/SP45_GOOGLE_ADS_BASELINE.md`
@@ -32,6 +38,10 @@ SP45 delivered:
 - `src/integrations/paidTraffic/googleAdsBaselineLayer.ts`
 - `src/integrations/paidTraffic/index.ts`
 - `docs/qa/SP45/*`
+- `docs/sprints/SP46_META_ADS_BASELINE.md`
+- `src/integrations/paidTraffic/internalMetaAdsAdapter.ts`
+- `src/integrations/paidTraffic/metaAdsBaselineLayer.ts`
+- `docs/qa/SP46/*`
 
 ## DB Changes
 
@@ -45,6 +55,12 @@ SP45:
 - `eslint changed files`: PASS
 - Evidence: `docs/qa/SP45/`
 
+SP46:
+- `pnpm build`: PASS
+- `pnpm exec tsc --noEmit`: PASS
+- `eslint changed files`: PASS
+- Evidence: `docs/qa/SP46/`
+
 ## Risks / Residuals
 
 - Baseline adapter is in-memory and non-persistent by design.
@@ -52,4 +68,4 @@ SP45:
 
 ## Next Step
 
-Proceed with SP46 (Meta Ads baseline) preserving the same guardrails and isolation model.
+Proceed with SP47 (Attribution engine baseline) preserving the same guardrails and isolation model.
