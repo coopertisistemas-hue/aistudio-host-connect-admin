@@ -100,3 +100,79 @@ export interface RevenueMetricsSnapshot {
   records: RevenueMetricsRecord[];
   generatedAt: string;
 }
+
+export const CONVERSION_FUNNEL_EVENT_TYPE =
+  "analytics.conversion.funnel.stage.upsert.requested";
+
+export type FunnelStage = "impression" | "click" | "lead" | "reservation";
+
+export interface ConversionFunnelStageInput {
+  campaign: string;
+  source: string;
+  medium: string;
+  clickIdentifier?: string;
+  leadId?: string;
+  reservationId?: string;
+  stage: FunnelStage;
+  occurredAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ConversionFunnelCommand {
+  tenant: AnalyticsTenantContext;
+  correlationId?: string;
+  signal: ConversionFunnelStageInput;
+  featureFlags?: {
+    conversionFunnelBaseline?: {
+      enabled: boolean;
+      orgId?: string;
+      propertyId?: string | null;
+    };
+  };
+}
+
+export interface ConversionFunnelPayload {
+  signal: ConversionFunnelStageInput;
+  capturedAt: string;
+}
+
+export type ConversionFunnelEvent = IntegrationEvent<ConversionFunnelPayload>;
+
+export interface ConversionFunnelResult {
+  accepted: boolean;
+  correlationId: string;
+  messageId?: string;
+  reason?: "feature_disabled" | "invalid_signal";
+}
+
+export interface ConversionFunnelRecord {
+  funnelRecordId: string;
+  messageId: string;
+  correlationId: string;
+  orgId: string;
+  propertyId?: string | null;
+  campaign: string;
+  source: string;
+  medium: string;
+  clickIdentifier?: string;
+  leadId?: string;
+  reservationId?: string;
+  stages: FunnelStage[];
+  firstSeenAt: string;
+  lastSeenAt: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface ConversionFunnelQuery {
+  tenant: AnalyticsTenantContext;
+  campaign?: string;
+  clickIdentifier?: string;
+  leadId?: string;
+  reservationId?: string;
+}
+
+export interface ConversionFunnelSnapshot {
+  tenant: AnalyticsTenantContext;
+  records: ConversionFunnelRecord[];
+  generatedAt: string;
+}
