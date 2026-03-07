@@ -176,3 +176,83 @@ export interface ConversionFunnelSnapshot {
   records: ConversionFunnelRecord[];
   generatedAt: string;
 }
+
+export const CAMPAIGN_METRICS_EVENT_TYPE =
+  "analytics.campaign.metrics.derive.requested";
+
+export interface CampaignRevenueInput {
+  campaign: string;
+  source: string;
+  medium: string;
+  reservationCount: number;
+  totalRevenue: number;
+  conversionRate: number;
+  periodStart: string;
+  periodEnd: string;
+  metadata?: Record<string, unknown>;
+}
+
+export interface CampaignMetricsCommand {
+  tenant: AnalyticsTenantContext;
+  correlationId?: string;
+  metrics: CampaignRevenueInput;
+  featureFlags?: {
+    campaignMetricsBaseline?: {
+      enabled: boolean;
+      orgId?: string;
+      propertyId?: string | null;
+    };
+  };
+}
+
+export interface CampaignMetricsPayload {
+  metrics: CampaignRevenueInput;
+  derivedAt: string;
+}
+
+export type CampaignMetricsEvent = IntegrationEvent<CampaignMetricsPayload>;
+
+export interface CampaignMetricsResult {
+  accepted: boolean;
+  correlationId: string;
+  messageId?: string;
+  reason?: "feature_disabled" | "invalid_payload";
+}
+
+export interface CampaignMetricsRecord {
+  metricsRecordId: string;
+  messageId: string;
+  correlationId: string;
+  orgId: string;
+  propertyId?: string | null;
+  campaign: string;
+  source: string;
+  medium: string;
+  reservationCount: number;
+  totalRevenue: number;
+  conversionRate: number;
+  revenuePerReservation: number;
+  periodStart: string;
+  periodEnd: string;
+  metadata?: Record<string, unknown>;
+  updatedAt: string;
+}
+
+export interface CampaignMetricsQuery {
+  tenant: AnalyticsTenantContext;
+  campaign?: string;
+  source?: string;
+  medium?: string;
+}
+
+export interface CampaignMetricsSnapshot {
+  tenant: AnalyticsTenantContext;
+  records: CampaignMetricsRecord[];
+  totals: {
+    revenueByCampaign: Record<string, number>;
+    reservationCountByCampaign: Record<string, number>;
+    revenuePerSource: Record<string, number>;
+    revenuePerMedium: Record<string, number>;
+  };
+  generatedAt: string;
+}
