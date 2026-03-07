@@ -4,3 +4,6 @@ export * from "./GuestProfilePersistenceLayer";
 export * from "./GuestSegmentationTypes";
 export * from "./GuestSegmentationAdapter";
 export * from "./GuestSegmentationLayer";
+export * from "./GuestLoyaltyTypes";
+export * from "./GuestLoyaltyAdapter";
+export * from "./GuestLoyaltyLayer";
