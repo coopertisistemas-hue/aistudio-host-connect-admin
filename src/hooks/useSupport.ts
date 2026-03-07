@@ -2,6 +2,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAccessContext } from '@/platform/access';
+import { useTenantContext } from '@/platform/tenant';
 
 export type Ticket = {
     id: string;
@@ -36,47 +38,87 @@ export type Comment = {
 export const useSupport = () => {
     const { toast } = useToast();
     const queryClient = useQueryClient();
+    const { accessContext } = useAccessContext();
+    const { currentOrgId } = useTenantContext();
+    const userId = accessContext?.userId ?? null;
+    const hasTenantWideAccess =
+        accessContext?.role === 'CONNECT_SUPER_ADMIN' ||
+        accessContext?.role === 'CONNECT_ADMIN' ||
+        accessContext?.role === 'CLIENT_ADMIN';
+
+    const getScopedUserIds = async (): Promise<string[]> => {
+        if (!userId) return [];
+
+        if (!hasTenantWideAccess) {
+            return [userId];
+        }
+
+        if (!currentOrgId) {
+            return [userId];
+        }
+
+        const { data, error } = await supabase
+            .from('org_members')
+            .select('user_id')
+            .eq('org_id', currentOrgId);
+
+        if (error) throw error;
+
+        return Array.from(new Set([userId, ...(data?.map((row) => row.user_id) ?? [])]));
+    };
 
     // --- Tickets ---
 
     const useTickets = () => {
         return useQuery({
-            queryKey: ['tickets'],
+            queryKey: ['tickets', currentOrgId, userId, accessContext?.role],
             queryFn: async () => {
+                if (!userId) return [];
+                const scopedUserIds = await getScopedUserIds();
+                if (!scopedUserIds.length) return [];
+
                 const { data, error } = await supabase
                     .from('tickets')
                     .select('*')
+                    .in('user_id', scopedUserIds)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
                 return data as Ticket[];
             },
+            enabled: !!userId,
         });
     };
 
     const useTicket = (id: string | undefined) => {
         return useQuery({
-            queryKey: ['ticket', id],
+            queryKey: ['ticket', id, currentOrgId, userId, accessContext?.role],
             queryFn: async () => {
-                if (!id) return null;
+                if (!id || !userId) return null;
+                const scopedUserIds = await getScopedUserIds();
+                if (!scopedUserIds.length) return null;
+
                 const { data, error } = await supabase
                     .from('tickets')
                     .select('*')
                     .eq('id', id)
-                    .single();
+                    .in('user_id', scopedUserIds)
+                    .maybeSingle();
 
                 if (error) throw error;
-                return data as Ticket;
+                return data as Ticket | null;
             },
-            enabled: !!id,
+            enabled: !!id && !!userId,
         });
     };
 
     const createTicket = useMutation({
         mutationFn: async (ticket: Pick<Ticket, 'title' | 'description' | 'category' | 'severity'>) => {
+            if (!userId) throw new Error('User context required');
+
             const { data, error } = await supabase
                 .from('tickets')
-                .insert([ticket])
+                .insert([{ ...ticket, user_id: userId }])
                 .select()
                 .single();
 
@@ -96,9 +138,22 @@ export const useSupport = () => {
 
     const useTicketComments = (ticketId: string | undefined) => {
         return useQuery({
-            queryKey: ['ticket_comments', ticketId],
+            queryKey: ['ticket_comments', ticketId, currentOrgId, userId, accessContext?.role],
             queryFn: async () => {
-                if (!ticketId) return [];
+                if (!ticketId || !userId) return [];
+                const scopedUserIds = await getScopedUserIds();
+                if (!scopedUserIds.length) return [];
+
+                const { data: ticketAccess, error: ticketAccessError } = await supabase
+                    .from('tickets')
+                    .select('id')
+                    .eq('id', ticketId)
+                    .in('user_id', scopedUserIds)
+                    .maybeSingle();
+
+                if (ticketAccessError) throw ticketAccessError;
+                if (!ticketAccess) return [];
+
                 const { data, error } = await supabase
                     .from('ticket_comments')
                     .select('*')
@@ -108,15 +163,29 @@ export const useSupport = () => {
                 if (error) throw error;
                 return data as Comment[];
             },
-            enabled: !!ticketId,
+            enabled: !!ticketId && !!userId,
         });
     };
 
     const createTicketComment = useMutation({
         mutationFn: async ({ ticketId, content }: { ticketId: string; content: string }) => {
+            if (!userId) throw new Error('User context required');
+            const scopedUserIds = await getScopedUserIds();
+            if (!scopedUserIds.length) throw new Error('No tenant scope available');
+
+            const { data: ticketAccess, error: ticketAccessError } = await supabase
+                .from('tickets')
+                .select('id')
+                .eq('id', ticketId)
+                .in('user_id', scopedUserIds)
+                .maybeSingle();
+
+            if (ticketAccessError) throw ticketAccessError;
+            if (!ticketAccess) throw new Error('Ticket access denied');
+
             const { data, error } = await supabase
                 .from('ticket_comments')
-                .insert([{ ticket_id: ticketId, content }])
+                .insert([{ ticket_id: ticketId, content, user_id: userId }])
                 .select()
                 .single();
 
@@ -137,42 +206,54 @@ export const useSupport = () => {
 
     const useIdeas = () => {
         return useQuery({
-            queryKey: ['ideas'],
+            queryKey: ['ideas', currentOrgId, userId, accessContext?.role],
             queryFn: async () => {
+                if (!userId) return [];
+                const scopedUserIds = await getScopedUserIds();
+                if (!scopedUserIds.length) return [];
+
                 const { data, error } = await supabase
                     .from('ideas')
                     .select('*')
+                    .in('user_id', scopedUserIds)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
                 return data as Idea[];
             },
+            enabled: !!userId,
         });
     };
 
     const useIdea = (id: string | undefined) => {
         return useQuery({
-            queryKey: ['idea', id],
+            queryKey: ['idea', id, currentOrgId, userId, accessContext?.role],
             queryFn: async () => {
-                if (!id) return null;
+                if (!id || !userId) return null;
+                const scopedUserIds = await getScopedUserIds();
+                if (!scopedUserIds.length) return null;
+
                 const { data, error } = await supabase
                     .from('ideas')
                     .select('*')
                     .eq('id', id)
-                    .single();
+                    .in('user_id', scopedUserIds)
+                    .maybeSingle();
 
                 if (error) throw error;
-                return data as Idea;
+                return data as Idea | null;
             },
-            enabled: !!id,
+            enabled: !!id && !!userId,
         });
     };
 
     const createIdea = useMutation({
         mutationFn: async (idea: Pick<Idea, 'title' | 'description'>) => {
+            if (!userId) throw new Error('User context required');
+
             const { data, error } = await supabase
                 .from('ideas')
-                .insert([idea])
+                .insert([{ ...idea, user_id: userId }])
                 .select()
                 .single();
 
@@ -192,9 +273,22 @@ export const useSupport = () => {
 
     const useIdeaComments = (ideaId: string | undefined) => {
         return useQuery({
-            queryKey: ['idea_comments', ideaId],
+            queryKey: ['idea_comments', ideaId, currentOrgId, userId, accessContext?.role],
             queryFn: async () => {
-                if (!ideaId) return [];
+                if (!ideaId || !userId) return [];
+                const scopedUserIds = await getScopedUserIds();
+                if (!scopedUserIds.length) return [];
+
+                const { data: ideaAccess, error: ideaAccessError } = await supabase
+                    .from('ideas')
+                    .select('id')
+                    .eq('id', ideaId)
+                    .in('user_id', scopedUserIds)
+                    .maybeSingle();
+
+                if (ideaAccessError) throw ideaAccessError;
+                if (!ideaAccess) return [];
+
                 const { data, error } = await supabase
                     .from('idea_comments')
                     .select('*')
@@ -204,15 +298,29 @@ export const useSupport = () => {
                 if (error) throw error;
                 return data as Comment[];
             },
-            enabled: !!ideaId,
+            enabled: !!ideaId && !!userId,
         });
     };
 
     const createIdeaComment = useMutation({
         mutationFn: async ({ ideaId, content }: { ideaId: string; content: string }) => {
+            if (!userId) throw new Error('User context required');
+            const scopedUserIds = await getScopedUserIds();
+            if (!scopedUserIds.length) throw new Error('No tenant scope available');
+
+            const { data: ideaAccess, error: ideaAccessError } = await supabase
+                .from('ideas')
+                .select('id')
+                .eq('id', ideaId)
+                .in('user_id', scopedUserIds)
+                .maybeSingle();
+
+            if (ideaAccessError) throw ideaAccessError;
+            if (!ideaAccess) throw new Error('Idea access denied');
+
             const { data, error } = await supabase
                 .from('idea_comments')
-                .insert([{ idea_id: ideaId, content }])
+                .insert([{ idea_id: ideaId, content, user_id: userId }])
                 .select()
                 .single();
 
@@ -232,24 +340,23 @@ export const useSupport = () => {
 
     const useIsStaff = () => {
         return useQuery({
-            queryKey: ['is_hostconnect_staff'],
-            queryFn: async () => {
-                const { data, error } = await supabase.rpc('is_hostconnect_staff');
-                if (error) {
-                    console.error('Error checking staff status:', error);
-                    return false;
-                }
-                return data as boolean;
-            },
+            queryKey: ['is_hostconnect_staff', userId, accessContext?.role],
+            queryFn: async () => !!hasTenantWideAccess,
+            enabled: !!userId,
         });
     };
 
     const updateTicket = useMutation({
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<Ticket> }) => {
+            if (!userId) throw new Error('User context required');
+            const scopedUserIds = await getScopedUserIds();
+            if (!scopedUserIds.length) throw new Error('No tenant scope available');
+
             const { data, error } = await supabase
                 .from('tickets')
                 .update(updates)
                 .eq('id', id)
+                .in('user_id', scopedUserIds)
                 .select()
                 .single();
 
@@ -268,10 +375,15 @@ export const useSupport = () => {
 
     const updateIdea = useMutation({
         mutationFn: async ({ id, updates }: { id: string; updates: Partial<Idea> }) => {
+            if (!userId) throw new Error('User context required');
+            const scopedUserIds = await getScopedUserIds();
+            if (!scopedUserIds.length) throw new Error('No tenant scope available');
+
             const { data, error } = await supabase
                 .from('ideas')
                 .update(updates)
                 .eq('id', id)
+                .in('user_id', scopedUserIds)
                 .select()
                 .single();
 
