@@ -7,3 +7,6 @@ export * from "./PricingRulesLayer";
 export * from "./CompetitorRateTypes";
 export * from "./CompetitorRateAdapter";
 export * from "./CompetitorRateMonitoringLayer";
+export * from "./DynamicPriceSuggestionTypes";
+export * from "./DynamicPriceSuggestionAdapter";
+export * from "./DynamicPriceSuggestionLayer";
