@@ -4,3 +4,6 @@ export * from "./ChannelAbstractionLayer";
 export * from "./OtaMappingTypes";
 export * from "./OtaMappingAdapter";
 export * from "./OtaMappingLayer";
+export * from "./AvailabilitySyncTypes";
+export * from "./AvailabilitySyncAdapter";
+export * from "./AvailabilitySyncLayer";
