@@ -4,3 +4,6 @@ export * from "./TariffCalendarLayer";
 export * from "./PricingRulesTypes";
 export * from "./PricingRulesEngine";
 export * from "./PricingRulesLayer";
+export * from "./CompetitorRateTypes";
+export * from "./CompetitorRateAdapter";
+export * from "./CompetitorRateMonitoringLayer";
