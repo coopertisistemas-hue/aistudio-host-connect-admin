@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuth";
 import { SelectedPropertyProvider } from "@/hooks/useSelectedProperty";
+import { AccessContextProvider } from "@/platform/access";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import DebugOverlay from "@/components/DebugOverlay";
@@ -129,9 +130,10 @@ const App = () => (
           <PageTracker />
           <AuthProvider>
             <SelectedPropertyProvider>
-              <DebugOverlay />
-              {/* DebugOverlay removed */}
-              <Routes>
+              <AccessContextProvider>
+                <DebugOverlay />
+                {/* DebugOverlay removed */}
+                <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
                 <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
@@ -614,8 +616,9 @@ const App = () => (
                 <Route path="/support/admin/ideas" element={<AdminRoute><AdminIdeaList /></AdminRoute>} />
                 <Route path="/support/admin/ideas/:id" element={<AdminRoute><AdminIdeaDetail /></AdminRoute>} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </AccessContextProvider>
             </SelectedPropertyProvider>
           </AuthProvider>
         </BrowserRouter>
