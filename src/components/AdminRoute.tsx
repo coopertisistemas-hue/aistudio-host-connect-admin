@@ -1,13 +1,11 @@
-
-import { useSupport } from '@/hooks/useSupport';
 import { Loader2, ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { AccessPolicyEngine, useAccessContext } from '@/platform/access';
 
 const AdminRoute = ({ children }: { children: React.ReactNode }) => {
     const navigate = useNavigate();
-    const { useIsStaff } = useSupport();
-    const { data: isStaff, isLoading } = useIsStaff();
+    const { accessContext, isLoading } = useAccessContext();
 
     if (isLoading) {
         return (
@@ -17,7 +15,9 @@ const AdminRoute = ({ children }: { children: React.ReactNode }) => {
         );
     }
 
-    if (!isStaff) {
+    const decision = AccessPolicyEngine.canAccessRoute(accessContext, 'support_admin');
+
+    if (!decision.allowed) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-4">
                 <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center border-t-4 border-red-500">
