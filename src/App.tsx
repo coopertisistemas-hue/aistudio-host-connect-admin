@@ -217,7 +217,7 @@ const App = () => (
                 <Route
                   path="/dashboard"
                   element={
-                    <TenantRoute>
+                    <TenantRoute requireProperty fallbackPath="/onboarding">
                       <SessionLockManager>
                         <Dashboard />
                       </SessionLockManager>
