@@ -7,7 +7,9 @@ import { AuthProvider } from "@/hooks/useAuth";
 import { SelectedPropertyProvider } from "@/hooks/useSelectedProperty";
 import { AccessContextProvider } from "@/platform/access";
 import { TenantContextProvider } from "@/platform/tenant";
-import ProtectedRoute from "@/components/ProtectedRoute";
+import RoleRoute from "@/components/guards/RoleRoute";
+import TenantRoute from "@/components/guards/TenantRoute";
+import ModuleRoute from "@/components/guards/ModuleRoute";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import DebugOverlay from "@/components/DebugOverlay";
 import Landing from "./pages/Landing";
@@ -138,479 +140,570 @@ const App = () => (
                   <Routes>
                 <Route path="/" element={<Landing />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
-                <Route path="/post-login" element={<ProtectedRoute><PostLoginRedirect /></ProtectedRoute>} />
-                <Route path="/setup" element={<ProtectedRoute><SetupWizardPage /></ProtectedRoute>} />
+                <Route path="/onboarding" element={<RoleRoute><Onboarding /></RoleRoute>} />
+                <Route path="/post-login" element={<RoleRoute><PostLoginRedirect /></RoleRoute>} />
+                <Route path="/setup" element={<RoleRoute><SetupWizardPage /></RoleRoute>} />
                 <Route path="/book/:propertyId?" element={<BookingEnginePage />} />
                 <Route path="/booking-success" element={<BookingSuccessPage />} />
                 <Route path="/booking-cancel" element={<BookingCancelPage />} />
                 <Route path="/pre-checkin/:token" element={<PublicPreCheckinPage />} />
                 <Route path="/pre-checkin-grupo/:token" element={<PublicGroupPreCheckinPage />} />
-                <Route path="/marketing/overview" element={<ProtectedRoute><MarketingOverview /></ProtectedRoute>} />
-                <Route path="/marketing/connectors" element={<ProtectedRoute><MarketingConnectors /></ProtectedRoute>} />
-                <Route path="/marketing/google" element={<ProtectedRoute><GoogleMarketingDetails /></ProtectedRoute>} />
-                <Route path="/marketing/ota/:provider" element={<ProtectedRoute><OTAMarketingDetails /></ProtectedRoute>} />
-                <Route path="/marketing/inbox" element={<ProtectedRoute><SocialInbox /></ProtectedRoute>} />
-                <Route path="/marketing/inbox/:id" element={<ProtectedRoute><SocialInbox /></ProtectedRoute>} />
+                <Route
+                  path="/marketing/overview"
+                  element={
+                    <ModuleRoute module="marketing" requireProperty>
+                      <MarketingOverview />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/marketing/connectors"
+                  element={
+                    <ModuleRoute module="marketing" requireProperty>
+                      <MarketingConnectors />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/marketing/google"
+                  element={
+                    <ModuleRoute module="marketing" requireProperty>
+                      <GoogleMarketingDetails />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/marketing/ota/:provider"
+                  element={
+                    <ModuleRoute module="marketing" requireProperty>
+                      <OTAMarketingDetails />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/marketing/inbox"
+                  element={
+                    <ModuleRoute module="marketing" requireProperty>
+                      <SocialInbox />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/marketing/inbox/:id"
+                  element={
+                    <ModuleRoute module="marketing" requireProperty>
+                      <SocialInbox />
+                    </ModuleRoute>
+                  }
+                />
 
                 {/* Mobile Routes protected by Guard & Frame & Session Lock - NOW REMOVED LOCK per instructions */}
-                <Route path="/m" element={<ProtectedRoute><MobileRouteGuard><MobileHome /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/profile" element={<ProtectedRoute><MobileRouteGuard><MobileProfile /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/housekeeping" element={<ProtectedRoute><MobileRouteGuard><MobileHousekeepingPage /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/housekeeping/task/:id" element={<ProtectedRoute><MobileRouteGuard><HousekeepingDetail /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/maintenance" element={<ProtectedRoute><MobileRouteGuard><MaintenanceList /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/maintenance/:id" element={<ProtectedRoute><MobileRouteGuard><MaintenanceDetail /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/ops-now" element={<ProtectedRoute><MobileRouteGuard><OpsNowPage /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/task/:id" element={<ProtectedRoute><MobileRouteGuard><MobileTaskDetail /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/rooms" element={<ProtectedRoute><MobileRouteGuard><MobileRoomsMap /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/rooms/:id" element={<ProtectedRoute><MobileRouteGuard><MobileRoomDetail /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/notifications" element={<ProtectedRoute><MobileRouteGuard><MobileNotifications /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/laundry" element={<ProtectedRoute><MobileRouteGuard><LaundryList /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/pantry" element={<ProtectedRoute><MobileRouteGuard><PantryList /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/financial" element={<ProtectedRoute><MobileRouteGuard><MobileFinancial /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/reservations" element={<ProtectedRoute><MobileRouteGuard><MobileReservations /></MobileRouteGuard></ProtectedRoute>} />
-                <Route path="/m/executive" element={<ProtectedRoute><MobileRouteGuard><MobileExecutive /></MobileRouteGuard></ProtectedRoute>} />
+                <Route path="/m" element={<RoleRoute><MobileRouteGuard><MobileHome /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/profile" element={<RoleRoute><MobileRouteGuard><MobileProfile /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/housekeeping" element={<RoleRoute><MobileRouteGuard><MobileHousekeepingPage /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/housekeeping/task/:id" element={<RoleRoute><MobileRouteGuard><HousekeepingDetail /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/maintenance" element={<RoleRoute><MobileRouteGuard><MaintenanceList /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/maintenance/:id" element={<RoleRoute><MobileRouteGuard><MaintenanceDetail /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/ops-now" element={<RoleRoute><MobileRouteGuard><OpsNowPage /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/task/:id" element={<RoleRoute><MobileRouteGuard><MobileTaskDetail /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/rooms" element={<RoleRoute><MobileRouteGuard><MobileRoomsMap /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/rooms/:id" element={<RoleRoute><MobileRouteGuard><MobileRoomDetail /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/notifications" element={<RoleRoute><MobileRouteGuard><MobileNotifications /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/laundry" element={<RoleRoute><MobileRouteGuard><LaundryList /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/pantry" element={<RoleRoute><MobileRouteGuard><PantryList /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/financial" element={<RoleRoute><MobileRouteGuard><MobileFinancial /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/reservations" element={<RoleRoute><MobileRouteGuard><MobileReservations /></MobileRouteGuard></RoleRoute>} />
+                <Route path="/m/executive" element={<RoleRoute><MobileRouteGuard><MobileExecutive /></MobileRouteGuard></RoleRoute>} />
                 <Route
                   path="/dashboard"
                   element={
-                    <ProtectedRoute>
+                    <TenantRoute>
                       <SessionLockManager>
                         <Dashboard />
                       </SessionLockManager>
-                    </ProtectedRoute>
+                    </TenantRoute>
                   }
                 />
                 <Route
                   path="/front-desk"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <FrontDeskPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/arrivals"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <ArrivalsPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/departures"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <DeparturesPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/operation/rooms"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <RoomsBoardPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/operation/rooms/:id"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <RoomOperationDetailPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/operation/housekeeping"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <HousekeepingPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/operation/demands"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <DemandsPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/ops/pantry-stock"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <PantryStockPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/pdv"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <PointOfSalePage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/operation/demands/:id"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <DemandDetailPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/operation/folio/:id"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <FolioPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/channel-manager"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <ChannelManagerPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/marketplace/experiences"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <MarketplaceExperiencesPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/executive/consolidation"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="reports" requireProperty>
                       <ExecutiveConsolidationPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/ops/shifts"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <ShiftPlannerPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/me/shifts"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <MyShiftsPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/ops/staff"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="operations" requireProperty>
                       <StaffManagementPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/reservations/pipeline"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <PipelinePage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/reservations/leads/:id"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <LeadDetailPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/reports"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="reports" requireProperty>
                       <ReportPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/properties"
                   element={
-                    <ProtectedRoute>
+                    <TenantRoute>
                       <SessionLockManager>
                         <Properties />
                       </SessionLockManager>
-                    </ProtectedRoute>
+                    </TenantRoute>
                   }
                 />
                 <Route
                   path="/room-types"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <RoomTypesPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/room-categories"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <RoomCategoriesPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/amenities"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <AmenitiesPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/rooms"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <RoomsPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/inventory"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <InventoryPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/pricing-rules"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <PricingRulesPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/services"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <ServicesPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/bookings"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <SessionLockManager>
                         <Bookings />
                       </SessionLockManager>
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/tasks"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <TasksPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/expenses"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <ExpensesPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/financial"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="financial" requireProperty>
                       <SessionLockManager>
                         <Financial />
                       </SessionLockManager>
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/billing/orchestration"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="billing" requireProperty>
                       <BillingOrchestrationPage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/billing/subscription-lifecycle"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="billing" requireProperty>
                       <SubscriptionLifecyclePage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/billing/revenue-assurance"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="billing" requireProperty>
                       <RevenueAssurancePage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/monetization/console"
                   element={
-                    <ProtectedRoute>
+                    <ModuleRoute module="billing" requireProperty>
                       <MonetizationConsolePage />
-                    </ProtectedRoute>
+                    </ModuleRoute>
                   }
                 />
                 <Route
                   path="/guests"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <SessionLockManager>
                         <Guests />
                       </SessionLockManager>
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/guests/:id"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <SessionLockManager>
                         <GuestDetailPage />
                       </SessionLockManager>
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/settings"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <SessionLockManager>
                         <Settings />
                       </SessionLockManager>
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/website-settings"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <WebsiteSettingsPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/settings/permissions"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <PermissionsPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin/audit-log"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <AuditLogPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin/staff-management"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <StaffManagementAdminPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/plans"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute>
                       <Plans />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin-panel"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <SessionLockManager>
                         <AdminPanel />
                       </SessionLockManager>
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin/pricing-plans"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <AdminPricingPlansPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin/features"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <AdminFeaturesPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin/faqs"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <AdminFaqsPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin/testimonials"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <AdminTestimonialsPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin/how-it-works"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <AdminHowItWorksPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 <Route
                   path="/admin/integrations"
                   element={
-                    <ProtectedRoute>
+                    <RoleRoute role="CLIENT_ADMIN" requireTenant>
                       <AdminIntegrationsPage />
-                    </ProtectedRoute>
+                    </RoleRoute>
                   }
                 />
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 {/* Support Module Routes */}
-                <Route path="/support" element={<SupportHub />} />
-                <Route path="/support/tickets" element={<TicketList />} />
-                <Route path="/support/tickets/new" element={<CreateTicket />} />
-                <Route path="/support/tickets/:id" element={<TicketDetail />} />
-                <Route path="/support/ideas" element={<IdeaList />} />
-                <Route path="/support/ideas/new" element={<CreateIdea />} />
-                <Route path="/support/ideas/:id" element={<IdeaDetail />} />
+                <Route
+                  path="/support"
+                  element={
+                    <ModuleRoute module="support" requireTenant>
+                      <SupportHub />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/support/tickets"
+                  element={
+                    <ModuleRoute module="support" requireTenant>
+                      <TicketList />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/support/tickets/new"
+                  element={
+                    <ModuleRoute module="support" requireTenant>
+                      <CreateTicket />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/support/tickets/:id"
+                  element={
+                    <ModuleRoute module="support" requireTenant>
+                      <TicketDetail />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/support/ideas"
+                  element={
+                    <ModuleRoute module="support" requireTenant>
+                      <IdeaList />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/support/ideas/new"
+                  element={
+                    <ModuleRoute module="support" requireTenant>
+                      <CreateIdea />
+                    </ModuleRoute>
+                  }
+                />
+                <Route
+                  path="/support/ideas/:id"
+                  element={
+                    <ModuleRoute module="support" requireTenant>
+                      <IdeaDetail />
+                    </ModuleRoute>
+                  }
+                />
 
                 {/* Admin Support Routes - Protected */}
                 <Route path="/support/admin/tickets" element={<AdminRoute><AdminTicketList /></AdminRoute>} />
@@ -631,3 +724,4 @@ const App = () => (
 );
 
 export default App;
+
